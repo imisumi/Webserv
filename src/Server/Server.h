@@ -41,5 +41,5 @@ private:
 
 	//TODO: maybe stack-allocate this?
 	std::shared_ptr<RequestHandler> m_RequestHandler;
-	std::shared_ptr<ResponseSender> m_ResponseSender;
+	// std::shared_ptr<ResponseSender> m_ResponseSender;
 };

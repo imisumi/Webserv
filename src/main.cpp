@@ -16,6 +16,10 @@ int main()
 {
 	Log::Init();
 
+	LOG_INFO("Starting server...");
+	LOG_WARN("This is a warning!");
+	LOG_ERROR("This is an error! {} {}", 1, "sadsad");
+
 	// std::signal(SIGINT, SignalHandler);
 
 	Server::Init();

@@ -9,7 +9,11 @@ enum class RequestType
 {
 	GET,
 	POST,
+	PUT,
+	PATCH,
 	DELETE,
+	HEAD,
+	OPTIONS,
 
 	UNKNOWN
 };
@@ -17,12 +21,13 @@ enum class RequestType
 class RequestHandler
 {
 public:
-	RequestHandler();
-	~RequestHandler();
+	RequestHandler() {};
+	~RequestHandler() {};
 
-	RequestHandler(std::shared_ptr<ResponseSender> responseSender);
+	// RequestHandler(std::shared_ptr<ResponseSender> responseSender);
 
 
+	// void handleRequest(const std::string& request);
 	void handleRequest(const std::string& request);
 
 private:
@@ -32,10 +37,11 @@ private:
 	void handleDeleteRequest();
 
 private:
-	std::shared_ptr<ResponseSender> m_ResponseSender;
+	// std::shared_ptr<ResponseSender> m_ResponseSender;
 
 	RequestType m_RequestType = RequestType::UNKNOWN;
 
 	std::string m_RequestPath;
+	std::string m_ProtocalVersion;
 	std::string m_RequestBody;
 };

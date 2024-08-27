@@ -42,6 +42,9 @@ void Server::Init()
 
 	s_Instance = new Server();
 
+	s_Instance->m_RequestHandler = std::make_shared<RequestHandler>();
+	// s_Instance->m_ResponseSender = std::make_shared<ResponseSender>();
+
 
 	//? EPOLL_CLOEXEC: automatically close the file descriptor when calling exec
 	s_Instance->m_EpollFD = epoll_create1(EPOLL_CLOEXEC);
@@ -157,6 +160,17 @@ void SendFavIcon(int client_socket)
 	}
 }
 
+static std::string readFileContents(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file: " + path.string());
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
 void Server::Run()
 {
 	WEB_ASSERT(s_Instance, "Server does not exist!");
@@ -177,6 +191,7 @@ void Server::Run()
 			LOG_ERROR("epoll_wait: {}", strerror(errno));
 			return;
 		}
+		LOG_INFO("Event count: {}", eventCount);
 		for (int i = 0; i < eventCount; ++i)
 		{
 			if (events[i].data.fd == s_Instance->m_ServerSocket)
@@ -214,17 +229,55 @@ void Server::Run()
 					LOG_INFO("Received data:\n{}", buffer);
 					const std::string bufferStr(buffer);
 
+					s_Instance->m_RequestHandler->handleRequest(bufferStr);
+					// std::string respone = "HTTP/1.1 209 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
+					// std::string response = "HTTP/1.1 209 OK\n"
+                    //    "Server: Webserv\n"
+                    //    "Content-Type: text/plain\n"
+                    //    "Content-Length: 12\n\n"
+                    //    "Hello World!";
+					std::filesystem::path path("root/html/nginx.html");
+					std::string fileContents = readFileContents(path);
+					int contentLength = fileContents.size();
+
+
+					std::string response = "HTTP/1.1 200 OK\n"
+                       "Server: Webserv\n"
+					   "Date: " + std::to_string(time(0)) + "\n"
+                       "Content-Type: text/html\n"
+						// "Content-Type: text/plain\n"
+                       "Content-Length: " + std::to_string(contentLength) + "\n\n";
+
+					response += fileContents;
+
+					LOG_INFO("Response:\n{}", response);
+
+					// std::ifstream	file;
+					// std::string line;
+					
+					// file.open("html/index.html");
+					// std::getline(file, line);
+					// while (!line.empty())
+					// {
+					// 	response += line;
+					// 	std::getline(file, line);
+					// }
+                    // file.close();
+
+					// std::string respone = "HTTP/1.1 404 Not found\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
+					send(events[i].data.fd, response.c_str(), response.size(), 0);
+
 					// Process data and prepare a response
-					if (bufferStr.find("GET /favicon.ico") != std::string::npos)
-					{
-						//TODO: get stuck on page reload
-						SendFavIcon(events[i].data.fd);
-					}
-					else if (bufferStr.find("GET") != std::string::npos)
-					{
-						std::string respone = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
-						send(events[i].data.fd, respone.c_str(), respone.size(), 0);
-					}
+					// if (bufferStr.find("GET /favicon.ico") != std::string::npos)
+					// {
+					// 	//TODO: get stuck on page reload
+					// 	SendFavIcon(events[i].data.fd);
+					// }
+					// else if (bufferStr.find("GET") != std::string::npos)
+					// {
+					// 	std::string respone = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
+					// 	send(events[i].data.fd, respone.c_str(), respone.size(), 0);
+					// }
 				}
 				else if (n == 0)
 				{
