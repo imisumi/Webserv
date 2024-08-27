@@ -242,7 +242,7 @@ void Server::Run()
 
 
 					std::string response = "HTTP/1.1 200 OK\n"
-                       "Server: Webserv\n"
+                       "Server-Name: Webserv\n"
 					   "Date: " + std::to_string(time(0)) + "\n"
                        "Content-Type: text/html\n"
 						// "Content-Type: text/plain\n"
