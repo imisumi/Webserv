@@ -5,17 +5,19 @@
 #include <memory>
 #include <string>
 
+#define BIT(n) (1 << (n))
+
 enum class RequestType
 {
-	GET,
-	POST,
-	PUT,
-	PATCH,
-	DELETE,
-	HEAD,
-	OPTIONS,
+	GET      = BIT(0),
+	POST     = BIT(1),
+	PUT      = BIT(2),
+	PATCH    = BIT(3),
+	DELETE   = BIT(4),
+	HEAD     = BIT(5),
+	OPTIONS  = BIT(6),
 
-	UNKNOWN
+	UNKNOWN = -1
 };
 
 class RequestHandler

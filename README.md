@@ -5,3 +5,4 @@
 - [ ] (http error codes)
 - [ ] config parser
 - [ ] multiple sockets with epoll
+- [ ] directory listing
