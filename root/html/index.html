@@ -1,33 +1,48 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>Welcome to nginx!</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Redirect</title>
     <style>
-        html {
-            color-scheme: light dark;
+        button {
+            background-color: #f11514;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
         }
-
-        body {
-            width: 35em;
-            margin: 0 auto;
-            font-family: Tahoma, Verdana, Arial, sans-serif;
+        #contactButton {
+            background-color: #0400ff; /* Different color for the contact button */
         }
     </style>
 </head>
-
 <body>
-    <h1>Welcome to Webserv</h1>
-    <p>If you see this page, the nginx web server is successfully installed and
-        working. Further configuration is required.</p>
-
-    <p>For online documentation and support please refer to
-        <a href="http://nginx.org/">nginx.org</a>.<br/>
-Commercial support is available at
-        <a href="http://nginx.com/">nginx.com</a>.
+    <p>
+        paragraph of text
     </p>
 
-    <p><em>Thank you for using nginx.</em></p>
-</body>
+    <button id="homeButton">
+        Go to Home
+    </button>
 
+    <button id="contactButton">
+        Go to Contact
+    </button>
+
+    <script>
+        document.getElementById('homeButton').addEventListener('click', function() {
+            window.location.href = '/home/index.html';
+        });
+
+        document.getElementById('contactButton').addEventListener('click', function() {
+            window.location.href = '/contact';
+        });
+    </script>
+</body>
 </html>

@@ -28,16 +28,21 @@ public:
 
 
 	// void handleRequest(const std::string& request);
-	void handleRequest(const std::string& request);
+	void handleRequest(const std::string& request, int epollFd);
 
 private:
 	void parseRequest(const std::string& request);
 	void handleGetRequest();
 	void handlePostRequest();
+	void handlePutRequest();
 	void handleDeleteRequest();
+	void handleHeadRequest();
+	void handleOptionsRequest();
 
 private:
 	// std::shared_ptr<ResponseSender> m_ResponseSender;
+
+	int m_EpollFd = -1;
 
 	RequestType m_RequestType = RequestType::UNKNOWN;
 

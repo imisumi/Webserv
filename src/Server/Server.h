@@ -35,6 +35,8 @@ private:
 	int m_ServerSocket = -1;
 	int m_EpollFD = -1;
 
+	int m_Connections = 0;
+
 	struct epoll_event m_EpollEvent;
 
 	struct sockaddr_in m_SockAddress;

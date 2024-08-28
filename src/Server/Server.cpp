@@ -50,9 +50,10 @@ void Server::Init()
 	s_Instance->m_EpollFD = epoll_create1(EPOLL_CLOEXEC);
 	WEB_ASSERT(s_Instance->m_EpollFD, "Failed to create epoll file descriptor!");
 
+
 	// SOCK_STREAM for TCP && SOCK_NONBLOCK for non-blocking (alternative to fcntl)
-	// s_Instance->m_ServerSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-	s_Instance->m_ServerSocket = socket(AF_INET, SOCK_STREAM, 0);
+	s_Instance->m_ServerSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	// s_Instance->m_ServerSocket = socket(AF_INET, SOCK_STREAM, 0);
 	WEB_ASSERT(s_Instance->m_ServerSocket, "Failed to create server socket!");
 
 	if (setsockopt(
@@ -171,6 +172,50 @@ static std::string readFileContents(const std::filesystem::path& path) {
     return buffer.str();
 }
 
+// static std::string getFormattedTime() {
+//     // Get the current time
+//     std::time_t t = std::time(nullptr);
+//     std::tm* tm = std::gmtime(&t); // Use gmtime for UTC time
+
+//     // Create a string stream to format the date and time
+//     std::ostringstream oss;
+
+//     // Format the date and time as [DD/Mon/YYYY:HH:MM:SS +0000]
+//     oss << '[' 
+//         << std::setfill('0') << std::setw(2) << tm->tm_mday << '/'          // Day
+//         << std::put_time(tm, "%b") << '/'                                   // Month abbreviation
+//         << (tm->tm_year + 1900) << ':'                                      // Year
+//         << std::setw(2) << tm->tm_hour << ':'                               // Hours
+//         << std::setw(2) << tm->tm_min << ':'                                // Minutes
+//         << std::setw(2) << tm->tm_sec << " +0000"                           // Seconds and timezone
+//         << ']';
+
+//     return oss.str();
+// }
+
+std::string getFormattedUTCTime() {
+    // Get the current time
+    std::time_t t = std::time(nullptr);
+
+    // Convert to UTC time
+    std::tm* tm_utc = std::gmtime(&t);
+
+    // Create a string stream to format the date and time
+    std::ostringstream oss;
+
+    // Format the date and time as [DD/Mon/YYYY:HH:MM:SS +0000]
+    oss << '[' 
+        << std::setfill('0') << std::setw(2) << tm_utc->tm_mday << '/'     // Day
+        << std::put_time(tm_utc, "%b") << '/'                              // Month abbreviation
+        << (tm_utc->tm_year + 1900) << ':'                                 // Year
+        << std::setw(2) << tm_utc->tm_hour << ':'                          // Hours
+        << std::setw(2) << tm_utc->tm_min << ':'                           // Minutes
+        << std::setw(2) << tm_utc->tm_sec << " +0000"                      // Seconds and UTC offset
+        << ']';
+
+    return oss.str();
+}
+
 void Server::Run()
 {
 	WEB_ASSERT(s_Instance, "Server does not exist!");
@@ -178,11 +223,14 @@ void Server::Run()
 	LOG_INFO("Server is running!");
 
 	struct epoll_event events[MAX_EVENTS];
+
+
+	std::string clientIP[MAX_EVENTS];
 	while (s_Instance->m_Running)
 	{
-		LOG_TRACE("Server is running...");
+		// LOG_TRACE("Server is running...");
 
-		// std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 		//? EPOLL_WAIT: wait for events on the epoll instance
 		int eventCount = epoll_wait(s_Instance->m_EpollFD, events, MAX_EVENTS, -1);
@@ -191,12 +239,14 @@ void Server::Run()
 			LOG_ERROR("epoll_wait: {}", strerror(errno));
 			return;
 		}
-		LOG_INFO("Event count: {}", eventCount);
+		// LOG_DEBUG("Event count: {}", eventCount);
+		// LOG_INFO("Event count: {}", eventCount);
+		// for (int i = 0; i < eventCount; i++)
 		for (int i = 0; i < eventCount; ++i)
 		{
 			if (events[i].data.fd == s_Instance->m_ServerSocket)
 			{
-				LOG_INFO("New connection!");
+				LOG_DEBUG("New connection!");
 				struct sockaddr_in clientAddress;
 				socklen_t clientAddressLength = sizeof(clientAddress);
 
@@ -208,7 +258,13 @@ void Server::Run()
 					continue;
 				}
 
-				LOG_INFO("Connection accepted from: {}", inet_ntoa(clientAddress.sin_addr));
+				int flags = fcntl(client_socket, F_GETFL, 0);
+				fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
+
+				LOG_DEBUG("Connection accepted from: {}", inet_ntoa(clientAddress.sin_addr));
+				clientIP[i] = inet_ntoa(clientAddress.sin_addr);
+				s_Instance->m_Connections++;
+				LOG_DEBUG("Connected clients: {}", s_Instance->m_Connections);
 
 				// Add client socket to epoll
 				s_Instance->m_EpollEvent.events = EPOLLIN | EPOLLOUT;
@@ -226,62 +282,30 @@ void Server::Run()
 				ssize_t n = read(events[i].data.fd, buffer, sizeof(buffer));
 				if (n > 0)
 				{
-					LOG_INFO("Received data:\n{}", buffer);
+					LOG_DEBUG("Received data:\n{}", buffer);
 					const std::string bufferStr(buffer);
 
-					s_Instance->m_RequestHandler->handleRequest(bufferStr);
-					// std::string respone = "HTTP/1.1 209 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
-					// std::string response = "HTTP/1.1 209 OK\n"
-                    //    "Server: Webserv\n"
-                    //    "Content-Type: text/plain\n"
-                    //    "Content-Length: 12\n\n"
-                    //    "Hello World!";
-					std::filesystem::path path("root/html/nginx.html");
-					std::string fileContents = readFileContents(path);
-					int contentLength = fileContents.size();
+					std::string bufferFirstLine = bufferStr.substr(0, bufferStr.find("\n"));
 
 
-					std::string response = "HTTP/1.1 200 OK\n"
-                       "Server-Name: Webserv\n"
-					   "Date: " + std::to_string(time(0)) + "\n"
-                       "Content-Type: text/html\n"
-						// "Content-Type: text/plain\n"
-                       "Content-Length: " + std::to_string(contentLength) + "\n\n";
+					// LOG_INFO("webserv     |  {} - - {} \"{}\"", clientIP[i], getFormattedUTCTime(), bufferFirstLine);
 
-					response += fileContents;
-
-					LOG_INFO("Response:\n{}", response);
-
-					// std::ifstream	file;
-					// std::string line;
-					
-					// file.open("html/index.html");
-					// std::getline(file, line);
-					// while (!line.empty())
-					// {
-					// 	response += line;
-					// 	std::getline(file, line);
-					// }
-                    // file.close();
-
-					// std::string respone = "HTTP/1.1 404 Not found\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
-					send(events[i].data.fd, response.c_str(), response.size(), 0);
-
-					// Process data and prepare a response
-					// if (bufferStr.find("GET /favicon.ico") != std::string::npos)
-					// {
-					// 	//TODO: get stuck on page reload
-					// 	SendFavIcon(events[i].data.fd);
-					// }
-					// else if (bufferStr.find("GET") != std::string::npos)
-					// {
-					// 	std::string respone = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
-					// 	send(events[i].data.fd, respone.c_str(), respone.size(), 0);
-					// }
+					s_Instance->m_RequestHandler->handleRequest(bufferStr, events[i].data.fd);
+				// else if (n == 0 || (events[i].events & (EPOLLRDHUP | EPOLLHUP))) 
 				}
 				else if (n == 0)
 				{
 					close(events[i].data.fd);
+					// epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+					// if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1) {
+					// 	LOG_ERROR("Failed to remove socket from epoll instance: {}", strerror(errno));
+					// }
+					s_Instance->m_Connections--;
+					LOG_DEBUG("Client disconnected. Connected clients: {}", s_Instance->m_Connections);
+				}
+				else if ((errno == EAGAIN || errno == EWOULDBLOCK)) //TODOL not allowed I think
+				{
+					continue;
 				}
 				else
 				{

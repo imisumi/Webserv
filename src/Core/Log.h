@@ -29,6 +29,7 @@ private:
 #ifdef LOGGING_ENABLED
 	#define LOG_TRACE(...)	        ::Log::GetServerLogger()->trace(__VA_ARGS__)
 	#define LOG_INFO(...)	        ::Log::GetServerLogger()->info(__VA_ARGS__)
+	#define LOG_DEBUG(...)	        ::Log::GetServerLogger()->debug(__VA_ARGS__)
 	#define LOG_WARN(...)	        ::Log::GetServerLogger()->warn(__VA_ARGS__)
 	#define LOG_ERROR(...)	        ::Log::GetServerLogger()->error(__VA_ARGS__)
 #else
