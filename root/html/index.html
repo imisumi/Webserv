@@ -20,6 +20,11 @@
         #contactButton {
             background-color: #0400ff; /* Different color for the contact button */
         }
+        #datetime {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -35,6 +40,8 @@
         Go to Contact
     </button>
 
+    <div id="datetime"></div>
+
     <script>
         document.getElementById('homeButton').addEventListener('click', function() {
             window.location.href = '/home/index.html';
@@ -43,6 +50,22 @@
         document.getElementById('contactButton').addEventListener('click', function() {
             window.location.href = '/contact';
         });
+
+        function updateDateTime() {
+            const now = new Date();
+            const date = now.toLocaleDateString();
+            const time = now.toLocaleTimeString();
+            const milliseconds = now.getMilliseconds();
+            const datetimeString = `${date} ${time}.${milliseconds.toString().padStart(3, '0')}`;
+            
+            document.getElementById('datetime').textContent = `Current Date and Time: ${datetimeString}`;
+        }
+
+        // Update the datetime display every second
+        // setInterval(updateDateTime, 1000);
+        
+        // Initial call to display the date and time immediately on page load
+        updateDateTime();
     </script>
 </body>
 </html>

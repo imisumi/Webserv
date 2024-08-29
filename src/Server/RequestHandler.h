@@ -30,11 +30,11 @@ public:
 
 
 	// void handleRequest(const std::string& request);
-	void handleRequest(const std::string& request, int epollFd);
+	int handleRequest(const std::string& request, int epollFd);
 
 private:
 	void parseRequest(const std::string& request);
-	void handleGetRequest();
+	int handleGetRequest();
 	void handlePostRequest();
 	void handlePutRequest();
 	void handleDeleteRequest();

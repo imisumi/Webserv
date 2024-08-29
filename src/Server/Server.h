@@ -30,6 +30,8 @@ private:
 	Server();
 	~Server();
 private:
+	// Config m_Config;
+	std::string bufferStr;
 	bool m_Running = true;
 
 	int m_ServerSocket = -1;

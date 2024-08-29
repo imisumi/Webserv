@@ -26,14 +26,14 @@
 // }
 
 
-void RequestHandler::handleRequest(const std::string& request, int epollFd)
+int RequestHandler::handleRequest(const std::string& request, int epollFd)
 {
 	m_EpollFd = epollFd;
 	parseRequest(request);
 
 	switch (m_RequestType)
 	{
-	case RequestType::GET:			handleGetRequest();		break;
+	case RequestType::GET:			return handleGetRequest();		// break;
 	case RequestType::POST:			handlePostRequest();	break;
 	case RequestType::PUT:			handlePutRequest();		break;
 	case RequestType::DELETE:		handleDeleteRequest();	break;
@@ -41,7 +41,7 @@ void RequestHandler::handleRequest(const std::string& request, int epollFd)
 	case RequestType::OPTIONS:		handleOptionsRequest();	break;
 	default:												break;
 	}
-
+	return 0;
 }
 
 static RequestType GetRequestType(const std::string& request)
@@ -177,6 +177,10 @@ std::string buildHttpResponse(const std::filesystem::path& path, const std::stri
 			 << "Connection: keep-alive\r\n"
 			 << "ETag: \"" << generateETag(body) << "\"\r\n"
 			 << "Accept-Ranges: bytes\r\n"
+			 // Disable caching
+			 << "Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0\r\n"
+			 << "Pragma: no-cache\r\n"
+			 << "Expires: 0\r\n"
 			 << "\r\n";  // End of headers
 
 	response << body;
@@ -184,7 +188,10 @@ std::string buildHttpResponse(const std::filesystem::path& path, const std::stri
 	return response.str();
 }
 
-void RequestHandler::handleGetRequest()
+#include <sys/socket.h>
+
+
+int RequestHandler::handleGetRequest()
 {
 	LOG_DEBUG("Handling GET request");
 
@@ -194,7 +201,7 @@ void RequestHandler::handleGetRequest()
 	std::string response = buildHttpResponse(path, fileContents);
 
 	//TODO: move to ResponseSender
-	send(m_EpollFd, response.c_str(), response.size(), 0);
+	return send(m_EpollFd, response.c_str(), response.size(), 0);
 }
 
 void RequestHandler::handlePostRequest()

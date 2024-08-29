@@ -20,6 +20,7 @@ public:
 	const std::string& getServerName() const { return m_ServerName; }
 
 
+	//? Maybe just stack allocate this
 	static std::shared_ptr<Config> CreateDefaultConfig();
 	static std::shared_ptr<Config> CreateConfigFromFile(const std::filesystem::path& path);
 
