@@ -236,6 +236,22 @@ void Server::Run()
 	struct epoll_event events[MAX_EVENTS];
 
 
+
+
+
+
+
+	// Add stdin to epoll instance
+	struct epoll_event ev;
+	ev.events = EPOLLIN;
+	ev.data.fd = STDIN_FILENO; // stdin file descriptor
+	if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, STDIN_FILENO, &ev) == -1) {
+		std::cerr << "Error adding stdin to epoll: " << strerror(errno) << std::endl;
+		close(s_Instance->m_EpollFD);
+		return;
+	}
+
+
 	std::string clientIP[MAX_EVENTS];
 	while (s_Instance->m_Running)
 	{
@@ -253,149 +269,53 @@ void Server::Run()
 			return;
 		}
 		LOG_DEBUG("Event count: {}", eventCount);
-		// LOG_INFO("Event count: {}", eventCount);
-		// for (int i = 0; i < eventCount; i++)
-		for (int i = 0; i < eventCount; ++i)
+		for (int i = 0; i < eventCount; i++)
 		{
 			if (events[i].data.fd == s_Instance->m_ServerSocket)
 			{
-				LOG_DEBUG("New connection!");
-				struct sockaddr_in clientAddress;
-				socklen_t clientAddressLength = sizeof(clientAddress);
-
-				// Handle new incoming connection
-				int client_socket = accept(s_Instance->m_ServerSocket, (struct sockaddr*)&clientAddress, &clientAddressLength);
+				int client_socket = s_Instance->AcceptConnection();
 				if (client_socket == -1)
 				{
-					LOG_ERROR("accept: {}", strerror(errno));
-					continue;
+					LOG_ERROR("Failed to accept connection!");
 				}
+			}
+			else if (events[i].data.fd == STDIN_FILENO)
+			{
+				LOG_DEBUG("Handling stdin event...");
 
-				LOG_DEBUG("Client socket: {}", client_socket);
-
-				int flags = fcntl(client_socket, F_GETFL, 0);
-				fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
-
-				LOG_DEBUG("Connection accepted from: {}", inet_ntoa(clientAddress.sin_addr));
-				clientIP[i] = inet_ntoa(clientAddress.sin_addr);
-				s_Instance->m_Connections++;
-				LOG_DEBUG("Connected clients: {}", s_Instance->m_Connections);
-
-				// Add client socket to epoll
-				// s_Instance->m_EpollEvent.events = EPOLLOUT | EPOLLIN;
-				// s_Instance->m_EpollEvent.events = EPOLLOUT;
-
-				// s_Instance->m_EpollEvent.events = EPOLLIN | EPOLLET;
-				// s_Instance->m_EpollEvent.data.fd = client_socket;
-				// if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, client_socket, &s_Instance->m_EpollEvent) == -1)
-				// {
-				// 	LOG_ERROR("epoll_ctl: {}", strerror(errno));
-				// 	close(client_socket);
-				// }
-
-				epoll_event ev;
-				ev.events = EPOLLIN | EPOLLET;
-				ev.data.fd = client_socket;
-
-				if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, client_socket, &ev) == -1)
+				char buffer[1024];
+				ssize_t n = read(STDIN_FILENO, buffer, sizeof(buffer));
+				if (n > 0)
 				{
-					LOG_ERROR("epoll_ctl: {}", strerror(errno));
-					close(client_socket);
+					buffer[n] = '\0';
+					LOG_INFO("Received input: {}", buffer);
+				}
+				else if (n == 0)
+				{
+					LOG_DEBUG("EOF on stdin");
+					s_Instance->m_Running = false;
+				}
+				else
+				{
+					LOG_ERROR("read: {}", strerror(errno));
+					s_Instance->m_Running = false;
 				}
 			}
 			else if (events[i].events & EPOLLIN)
 			{
 				LOG_DEBUG("Handling input event...");
-				// Handle I/O events on client socket
-				char buffer[BUFFER_SIZE];
 
-				//TODO: MSG_DONTWAIT or 0?
-				ssize_t n = recv(events[i].data.fd, buffer, sizeof(buffer) - 1, 0);
-				if (n > 0)
-				{
-					// LOG_DEBUG("Received data:\n{}", buffer);
-					const std::string bufferStr(buffer);
-					s_Instance->bufferStr = bufferStr;
-					LOG_INFO("Received data:\n{}", bufferStr);
-
-					std::string bufferFirstLine = bufferStr.substr(0, bufferStr.find("\n"));
-
-					// LOG_INFO("webserv     |  {} - - {} \"{}\"", clientIP[i], getFormattedUTCTime(), bufferFirstLine);
-
-
-					// Prepare to send a response, add EPOLLOUT event
-					struct epoll_event event;
-					// event.events = EPOLLIN | EPOLLOUT;  // Monitor both read and write events
-					event.events = EPOLLOUT;
-					event.data.fd = events[i].data.fd;
-
-					if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_MOD, events[i].data.fd, &event) == -1)
-					{
-						LOG_ERROR("epoll_ctl: {}", strerror(errno));
-						close(events[i].data.fd);
-						s_Instance->m_Connections--;
-						LOG_DEBUG("Client disconnected due to epoll_ctl error. Connected clients: {}", s_Instance->m_Connections);
-					}
-				}
-				else if (n == 0)
-				{
-					// close(events[i].data.fd);
-					LOG_DEBUG("Client closed connection.");
-
-					//TODO: do we need this?
-					if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_DEL, events[i].data.fd, nullptr) == -1) {
-						LOG_ERROR("epoll_ctl: {}", strerror(errno));
-					}
-					close(events[i].data.fd);
-					s_Instance->m_Connections--;
-					LOG_DEBUG("Client disconnected. Connected clients: {}", s_Instance->m_Connections);
-				}
-				else
-				{
-					close(events[i].data.fd);
-					LOG_ERROR("read: {}", strerror(errno));
-				}
+				s_Instance->HandleInputEvent(events[i].data.fd);
 			}
 			else if (events[i].events & EPOLLOUT)
 			{
 				LOG_DEBUG("Handling output event...");
-				// Handle sending the response
-				const char* RESPONSE = "HTTP/1.1 200 OK\r\n"
-									"Content-Length: 0\r\n"
-									"Connection: keep-alive\r\n"
-									"\r\n";
 
-				// ssize_t sentBytes = send(events[i].data.fd, RESPONSE, strlen(RESPONSE), 0);
-				ssize_t sentBytes = s_Instance->m_RequestHandler->handleRequest(s_Instance->bufferStr, events[i].data.fd);
-				if (sentBytes == -1)
-				{
-					LOG_ERROR("send: {}", strerror(errno));
-					close(events[i].data.fd);
-					s_Instance->m_Connections--;
-					LOG_DEBUG("Client disconnected due to send error. Connected clients: {}", s_Instance->m_Connections);
-				}
-				else
-				{
-					LOG_DEBUG("Sent response to client.");
-
-					// Modify the event mask to stop monitoring EPOLLOUT
-					struct epoll_event event;
-					event.events = EPOLLIN;  // Now only monitor for input (read) events
-					event.data.fd = events[i].data.fd;
-
-					if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_MOD, events[i].data.fd, &event) == -1)
-					{
-						LOG_ERROR("epoll_ctl: {}", strerror(errno));
-						close(events[i].data.fd);
-						s_Instance->m_Connections--;
-						LOG_DEBUG("Client disconnected due to epoll_ctl error. Connected clients: {}", s_Instance->m_Connections);
-					}
-				}
+				s_Instance->HandleOutputEvent(events[i].data.fd);
 			}
 			else
 			{
-				//print event type
-				LOG_DEBUG("Event type: {}", events[i].events);
+				LOG_DEBUG("Unhandled event type");
 			}
 		}
 	}
@@ -415,4 +335,115 @@ bool Server::IsRunning()
 	WEB_ASSERT(s_Instance, "Server does not exist!");
 
 	return s_Instance->m_Running;
+}
+
+
+
+int Server::AcceptConnection()
+{
+	struct sockaddr_in clientAddress;
+	socklen_t clientAddressLength = sizeof(clientAddress);
+
+	// Handle new incoming connection
+	int client_socket = accept(s_Instance->m_ServerSocket, (struct sockaddr*)&clientAddress, &clientAddressLength);
+	if (client_socket == -1)
+	{
+		LOG_ERROR("accept: {}", strerror(errno));
+		return -1;
+	}
+
+
+	int flags = fcntl(client_socket, F_GETFL, 0);
+	fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
+
+	epoll_event ev;
+	ev.events = EPOLLIN | EPOLLET;
+	ev.data.fd = client_socket;
+
+	if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, client_socket, &ev) == -1)
+	{
+		LOG_ERROR("epoll_ctl: {}", strerror(errno));
+		close(client_socket);
+		return -1;
+	}
+
+	LOG_DEBUG("New connection from: {}, client socker: {}", inet_ntoa(clientAddress.sin_addr), client_socket);
+
+	return client_socket;
+}
+
+void Server::HandleInputEvent(int fd)
+{
+	char buffer[BUFFER_SIZE];
+
+	//TODO: MSG_DONTWAIT or 0?
+	ssize_t n = recv(fd, buffer, sizeof(buffer) - 1, 0);
+	if (n > 0)
+	{
+		// LOG_DEBUG("Received data:\n{}", buffer);
+		const std::string bufferStr(buffer);
+		s_Instance->bufferStr = bufferStr;
+		LOG_INFO("Received data:\n{}", bufferStr);
+
+		std::string bufferFirstLine = bufferStr.substr(0, bufferStr.find("\n"));
+
+		// LOG_INFO("webserv     |  {} - - {} \"{}\"", clientIP[i], getFormattedUTCTime(), bufferFirstLine);
+
+
+		// Prepare to send a response, add EPOLLOUT event
+		struct epoll_event event;
+		// event.events = EPOLLIN | EPOLLOUT;  // Monitor both read and write events
+		event.events = EPOLLOUT;
+		event.data.fd = fd;
+
+		if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_MOD, fd, &event) == -1)
+		{
+			LOG_ERROR("epoll_ctl: {}", strerror(errno));
+			close(fd);
+		}
+	}
+	else if (n == 0)
+	{
+		LOG_DEBUG("Client closed connection.");
+
+		//TODO: do we need this?
+		if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_DEL, fd, nullptr) == -1) {
+			LOG_ERROR("epoll_ctl: {}", strerror(errno));
+		}
+		close(fd);
+	}
+	else
+	{
+		close(fd);
+		LOG_ERROR("read: {}", strerror(errno));
+	}
+}
+
+void Server::HandleOutputEvent(int fd)
+{
+	ssize_t sentBytes = s_Instance->m_RequestHandler->handleRequest(s_Instance->bufferStr, fd);
+	if (sentBytes == -1)
+	{
+		LOG_ERROR("send: {}", strerror(errno));
+		close(fd);
+		s_Instance->m_Connections--;
+		LOG_DEBUG("Client disconnected due to send error. Connected clients: {}", s_Instance->m_Connections);
+	}
+	else
+	{
+		LOG_DEBUG("Sent response to client.");
+
+		// Modify the event mask to stop monitoring EPOLLOUT
+		struct epoll_event event;
+		event.events = EPOLLIN;  // Now only monitor for input (read) events
+		event.data.fd = fd;
+
+		if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_MOD, fd, &event) == -1)
+		{
+			LOG_ERROR("epoll_ctl: {}", strerror(errno));
+			close(fd);
+			s_Instance->m_Connections--;
+			LOG_DEBUG("Client disconnected due to epoll_ctl error. Connected clients: {}", s_Instance->m_Connections);
+		}
+	}
 }

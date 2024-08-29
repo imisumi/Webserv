@@ -8,6 +8,8 @@
 
 #include <memory>
 
+#include <unordered_map>
+
 #include "RequestHandler.h"
 #include "ResponseSender.h"
 
@@ -29,6 +31,15 @@ public:
 private:
 	Server();
 	~Server();
+
+	// int CreateServerSocket();
+	// void BindServerSocket();
+	// void ListenServerSocket();
+	int AcceptConnection();
+	void HandleInputEvent(int fd);
+	void HandleOutputEvent(int fd);
+	
+
 private:
 	// Config m_Config;
 	std::string bufferStr;
@@ -46,4 +57,6 @@ private:
 	//TODO: maybe stack-allocate this?
 	std::shared_ptr<RequestHandler> m_RequestHandler;
 	// std::shared_ptr<ResponseSender> m_ResponseSender;
+
+	std::unordered_map<int, const std::string> m_ClientResponses; // Maps client socket to response data
 };
