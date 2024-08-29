@@ -12,7 +12,7 @@
 #include "ResponseSender.h"
 
 #define MAX_EVENTS 4096
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 4096 * 2
 
 class Server
 {
@@ -39,7 +39,7 @@ private:
 
 	int m_Connections = 0;
 
-	struct epoll_event m_EpollEvent;
+	// struct epoll_event m_EpollEvent;
 
 	struct sockaddr_in m_SockAddress;
 

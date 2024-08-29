@@ -86,13 +86,24 @@ void Server::Init()
 	}
 
 
-	s_Instance->m_EpollEvent.events = EPOLLIN | EPOLLET; //? EPOLLIN for read events && EPOLLET for edge-triggered mode
-	s_Instance->m_EpollEvent.data.fd = s_Instance->m_ServerSocket;
+	// s_Instance->m_EpollEvent.events = EPOLLIN | EPOLLET; //? EPOLLIN for read events && EPOLLET for edge-triggered mode
+	// s_Instance->m_EpollEvent.data.fd = s_Instance->m_ServerSocket;
 
-	//? EPOLL_CTL_ADD: add a file descriptor to the epoll instance
-	if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, s_Instance->m_ServerSocket, &s_Instance->m_EpollEvent) < 0)
+	// //? EPOLL_CTL_ADD: add a file descriptor to the epoll instance
+	// if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, s_Instance->m_ServerSocket, &s_Instance->m_EpollEvent) < 0)
+	// {
+	// 	LOG_ERROR("Failed to add server socket to epoll!");
+	// 	s_Instance->m_Running = false;
+	// 	return;
+	// }
+
+	epoll_event ev;
+	ev.events = EPOLLIN | EPOLLET;
+	ev.data.fd = s_Instance->m_ServerSocket;
+
+	if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, s_Instance->m_ServerSocket, &ev) == -1)
 	{
-		LOG_ERROR("Failed to add server socket to epoll!");
+		LOG_ERROR("epoll_ctl: {}", strerror(errno));
 		s_Instance->m_Running = false;
 		return;
 	}
@@ -232,6 +243,8 @@ void Server::Run()
 
 		// std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
+		LOG_INFO("Waiting for events...");
+
 		//? EPOLL_WAIT: wait for events on the epoll instance
 		int eventCount = epoll_wait(s_Instance->m_EpollFD, events, MAX_EVENTS, -1);
 		if (eventCount == -1)
@@ -269,9 +282,22 @@ void Server::Run()
 				LOG_DEBUG("Connected clients: {}", s_Instance->m_Connections);
 
 				// Add client socket to epoll
-				s_Instance->m_EpollEvent.events = EPOLLIN | EPOLLOUT;
-				s_Instance->m_EpollEvent.data.fd = client_socket;
-				if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, client_socket, &s_Instance->m_EpollEvent) == -1)
+				// s_Instance->m_EpollEvent.events = EPOLLOUT | EPOLLIN;
+				// s_Instance->m_EpollEvent.events = EPOLLOUT;
+
+				// s_Instance->m_EpollEvent.events = EPOLLIN | EPOLLET;
+				// s_Instance->m_EpollEvent.data.fd = client_socket;
+				// if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, client_socket, &s_Instance->m_EpollEvent) == -1)
+				// {
+				// 	LOG_ERROR("epoll_ctl: {}", strerror(errno));
+				// 	close(client_socket);
+				// }
+
+				epoll_event ev;
+				ev.events = EPOLLIN | EPOLLET;
+				ev.data.fd = client_socket;
+
+				if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_ADD, client_socket, &ev) == -1)
 				{
 					LOG_ERROR("epoll_ctl: {}", strerror(errno));
 					close(client_socket);
@@ -282,12 +308,15 @@ void Server::Run()
 				LOG_DEBUG("Handling input event...");
 				// Handle I/O events on client socket
 				char buffer[BUFFER_SIZE];
-				ssize_t n = read(events[i].data.fd, buffer, sizeof(buffer));
+
+				//TODO: MSG_DONTWAIT or 0?
+				ssize_t n = recv(events[i].data.fd, buffer, sizeof(buffer) - 1, 0);
 				if (n > 0)
 				{
 					// LOG_DEBUG("Received data:\n{}", buffer);
 					const std::string bufferStr(buffer);
 					s_Instance->bufferStr = bufferStr;
+					LOG_INFO("Received data:\n{}", bufferStr);
 
 					std::string bufferFirstLine = bufferStr.substr(0, bufferStr.find("\n"));
 
@@ -296,7 +325,8 @@ void Server::Run()
 
 					// Prepare to send a response, add EPOLLOUT event
 					struct epoll_event event;
-					event.events = EPOLLIN | EPOLLOUT;  // Monitor both read and write events
+					// event.events = EPOLLIN | EPOLLOUT;  // Monitor both read and write events
+					event.events = EPOLLOUT;
 					event.data.fd = events[i].data.fd;
 
 					if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_MOD, events[i].data.fd, &event) == -1)
@@ -309,7 +339,16 @@ void Server::Run()
 				}
 				else if (n == 0)
 				{
+					// close(events[i].data.fd);
+					LOG_DEBUG("Client closed connection.");
+
+					//TODO: do we need this?
+					if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_DEL, events[i].data.fd, nullptr) == -1) {
+						LOG_ERROR("epoll_ctl: {}", strerror(errno));
+					}
 					close(events[i].data.fd);
+					s_Instance->m_Connections--;
+					LOG_DEBUG("Client disconnected. Connected clients: {}", s_Instance->m_Connections);
 				}
 				else
 				{

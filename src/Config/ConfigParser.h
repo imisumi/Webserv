@@ -16,6 +16,18 @@
 class Config
 {
 public:
+	struct LocationSettings
+	{
+		std::filesystem::path path;
+		std::filesystem::path root;
+		std::string index;
+		bool autoindex;
+		std::string cgi;
+		std::string returnCode;
+	};
+
+
+
 	uint16_t getPort() const { return m_Port; }
 	const std::string& getServerName() const { return m_ServerName; }
 
@@ -38,15 +50,6 @@ private:
 
 
 private:
-	struct LocationSettings
-	{
-		std::filesystem::path path;
-		std::filesystem::path root;
-		std::string index;
-		bool autoindex;
-		std::string cgi;
-		std::string returnCode;
-	};
 
 private:
 	const std::filesystem::path m_Path;

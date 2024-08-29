@@ -48,7 +48,7 @@ std::shared_ptr<Config> Config::CreateDefaultConfig()
 	return std::shared_ptr<Config>(new Config(std::filesystem::path{}));
 }
 
-std::shared_ptr<Config> Config::CreateConfigFromFile(const std::filesystem::path& path)
+std::shared_ptr<Config> Config::CreateConfigFromFile(const std::filesystem::path& path)    
 {
 	//? Can't use make_shared because constructor is private
 	return std::shared_ptr<Config>(new Config(path));
@@ -61,4 +61,6 @@ Config::Config(const std::filesystem::path& path)
 	//TODO: validate path
 	//TODO: parse config
 	//TODO: validate config
+
+	// LocationSettings locationSettings = Config["/"];
 }
