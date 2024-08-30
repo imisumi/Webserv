@@ -2,62 +2,54 @@
 
 #include <string>
 #include <cstdint>
-
-// #include 
-
 #include <filesystem>
 #include <vector>
 #include <map>
-
 #include <bitset>
-
 #include <memory>
 
 class Config
 {
-public:
-	struct LocationSettings
-	{
-		std::filesystem::path path;
-		std::filesystem::path root;
-		std::string index;
-		bool autoindex;
-		std::string cgi;
-		std::string returnCode;
-	};
+	public:
+		struct LocationSettings
+		{
+			std::filesystem::path path;
+			std::filesystem::path root;
+			std::string index;
+			bool autoindex;
+			std::string cgi;
+			std::string returnCode;
+		};
+
+		uint16_t getPort() const { return m_Port; }
+		const std::string& getServerName() const { return m_ServerName; }
 
 
-
-	uint16_t getPort() const { return m_Port; }
-	const std::string& getServerName() const { return m_ServerName; }
-
-
-	//? Maybe just stack allocate this
-	static std::shared_ptr<Config> CreateDefaultConfig();
-	static std::shared_ptr<Config> CreateConfigFromFile(const std::filesystem::path& path);
+		//? Maybe just stack allocate this
+		static std::shared_ptr<Config> CreateDefaultConfig();
+		static std::shared_ptr<Config> CreateConfigFromFile(const std::filesystem::path& path);
 
 
-	//TODO: add overload for operator[] to get location settings
+		//TODO: add overload for operator[] to get location settings
+		LocationSettings&		operator[](unsigned int index);
+		const LocationSettings&	operator[](unsigned int index) const;
 
-private:
-	Config(const std::filesystem::path& path);
+	private:
+		Config(const std::filesystem::path& path);
 
-	// Deleted copy constructor and assignment operator and move constructor and assignment operator
-	Config(const Config&) = delete;
-	Config& operator=(const Config&) = delete;
-	Config(Config&&) = delete;
-	Config& operator=(Config&&) = delete;
+		// Deleted copy constructor and assignment operator and move constructor and assignment operator
+		Config(const Config&) = delete;
+		Config& operator=(const Config&) = delete;
+		Config(Config&&) = delete;
+		Config& operator=(Config&&) = delete;
 
+	private:
+		const std::filesystem::path m_Path;
 
-private:
+		uint16_t m_Port;
+		std::string m_ServerName;
 
-private:
-	const std::filesystem::path m_Path;
-
-	uint16_t m_Port;
-	std::string m_ServerName;
-
-	std::map<std::filesystem::path, LocationSettings> m_Locations;
+		std::map<std::filesystem::path, LocationSettings> m_Locations;
 };
 
 // class ConfigProccessor

@@ -172,7 +172,7 @@ void SendFavIcon(int client_socket)
 	}
 }
 
-static std::string readFileContents(const std::filesystem::path& path) {
+static std::string readFileIntoBuffer(const std::filesystem::path& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file: " + path.string());
