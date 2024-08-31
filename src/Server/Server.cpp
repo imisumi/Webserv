@@ -289,6 +289,11 @@ void Server::Run()
 				{
 					buffer[n] = '\0';
 					LOG_INFO("Received input: {}", buffer);
+					if (strcmp(buffer, "exit\n") == 0)
+					{
+						LOG_INFO("Received exit command. Shutting down server...");
+						s_Instance->m_Running = false;
+					}
 				}
 				else if (n == 0)
 				{
@@ -380,19 +385,16 @@ void Server::HandleInputEvent(int fd)
 	ssize_t n = recv(fd, buffer, sizeof(buffer) - 1, 0);
 	if (n > 0)
 	{
-		// LOG_DEBUG("Received data:\n{}", buffer);
-		const std::string bufferStr(buffer);
-		s_Instance->bufferStr = bufferStr;
-		LOG_INFO("Received data:\n{}", bufferStr);
+		buffer[n] = '\0';
+		const std::string bufferStr = std::string(buffer, n);
+		// LOG_INFO("Received data:\n{}", bufferStr);
 
-		std::string bufferFirstLine = bufferStr.substr(0, bufferStr.find("\n"));
+		const std::string response = s_Instance->m_RequestHandler->handleRequest(bufferStr, fd);
 
-		// LOG_INFO("webserv     |  {} - - {} \"{}\"", clientIP[i], getFormattedUTCTime(), bufferFirstLine);
-
+		m_ClientResponses[fd] = response;
 
 		// Prepare to send a response, add EPOLLOUT event
 		struct epoll_event event;
-		// event.events = EPOLLIN | EPOLLOUT;  // Monitor both read and write events
 		event.events = EPOLLOUT;
 		event.data.fd = fd;
 
@@ -407,7 +409,8 @@ void Server::HandleInputEvent(int fd)
 		LOG_DEBUG("Client closed connection.");
 
 		//TODO: do we need this?
-		if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_DEL, fd, nullptr) == -1) {
+		if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_DEL, fd, nullptr) == -1)
+		{
 			LOG_ERROR("epoll_ctl: {}", strerror(errno));
 		}
 		close(fd);
@@ -421,29 +424,39 @@ void Server::HandleInputEvent(int fd)
 
 void Server::HandleOutputEvent(int fd)
 {
-	ssize_t sentBytes = s_Instance->m_RequestHandler->handleRequest(s_Instance->bufferStr, fd);
-	if (sentBytes == -1)
+	auto it = m_ClientResponses.find(fd);
+	if (it != m_ClientResponses.end())
 	{
-		LOG_ERROR("send: {}", strerror(errno));
-		close(fd);
-		s_Instance->m_Connections--;
-		LOG_DEBUG("Client disconnected due to send error. Connected clients: {}", s_Instance->m_Connections);
+		const std::string& response = it->second;
+		ssize_t sentBytes = send(fd, response.c_str(), response.size(), 0);
+
+		if (sentBytes == -1)
+		{
+			LOG_ERROR("send: {}", strerror(errno));
+			close(fd);
+		}
+		else
+		{
+			LOG_DEBUG("Sent response to client.");
+
+			// Remove the entry from the map
+			m_ClientResponses.erase(it);
+
+			// Modify the event mask to stop monitoring EPOLLOUT
+			struct epoll_event event;
+			event.events = EPOLLIN;  // Now only monitor for input (read) events
+			event.data.fd = fd;
+
+			if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_MOD, fd, &event) == -1)
+			{
+				LOG_ERROR("epoll_ctl: {}", strerror(errno));
+				close(fd);
+			}
+		}
 	}
 	else
 	{
-		LOG_DEBUG("Sent response to client.");
-
-		// Modify the event mask to stop monitoring EPOLLOUT
-		struct epoll_event event;
-		event.events = EPOLLIN;  // Now only monitor for input (read) events
-		event.data.fd = fd;
-
-		if (epoll_ctl(s_Instance->m_EpollFD, EPOLL_CTL_MOD, fd, &event) == -1)
-		{
-			LOG_ERROR("epoll_ctl: {}", strerror(errno));
-			close(fd);
-			s_Instance->m_Connections--;
-			LOG_DEBUG("Client disconnected due to epoll_ctl error. Connected clients: {}", s_Instance->m_Connections);
-		}
+		LOG_ERROR("No response found for client socket {}.", fd);
+		close(fd);
 	}
 }

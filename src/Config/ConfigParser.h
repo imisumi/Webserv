@@ -13,6 +13,7 @@
 
 #include <memory>
 
+
 class Config
 {
 public:
@@ -29,18 +30,22 @@ public:
 
 
 	uint16_t getPort() const { return m_Port; }
+	const std::filesystem::path& getRoot() const { return m_Root; }
 	const std::string& getServerName() const { return m_ServerName; }
 
 
 	//? Maybe just stack allocate this
-	static std::shared_ptr<Config> CreateDefaultConfig();
-	static std::shared_ptr<Config> CreateConfigFromFile(const std::filesystem::path& path);
+	static Config CreateDefaultConfig();
+	static Config CreateConfigFromFile(const std::filesystem::path& path);
 
 
 	//TODO: add overload for operator[] to get location settings
 
 private:
 	Config(const std::filesystem::path& path);
+
+	//temp
+	Config();
 
 	// Deleted copy constructor and assignment operator and move constructor and assignment operator
 	Config(const Config&) = delete;
@@ -53,6 +58,7 @@ private:
 
 private:
 	const std::filesystem::path m_Path;
+	std::filesystem::path m_Root;
 
 	uint16_t m_Port;
 	std::string m_ServerName;

@@ -1,24 +1,25 @@
 #pragma once
 
 #include "ResponseSender.h"
+#include "HttpRequestParser.h"
 
 #include <memory>
 #include <string>
 
-#define BIT(n) (1 << (n))
+// #define BIT(n) (1 << (n))
 
-enum class RequestType
-{
-	GET      = BIT(0),
-	POST     = BIT(1),
-	PUT      = BIT(2),
-	PATCH    = BIT(3),
-	DELETE   = BIT(4),
-	HEAD     = BIT(5),
-	OPTIONS  = BIT(6),
+// enum class RequestMethod
+// {
+// 	GET      = BIT(0),
+// 	POST     = BIT(1),
+// 	PUT      = BIT(2),
+// 	PATCH    = BIT(3),
+// 	DELETE   = BIT(4),
+// 	HEAD     = BIT(5),
+// 	OPTIONS  = BIT(6),
 
-	UNKNOWN = -1
-};
+// 	UNKNOWN = -1
+// };
 
 class RequestHandler
 {
@@ -30,11 +31,11 @@ public:
 
 
 	// void handleRequest(const std::string& request);
-	int handleRequest(const std::string& request, int epollFd);
+	const std::string handleRequest(const std::string& request, int epollFd);
 
 private:
 	void parseRequest(const std::string& request);
-	int handleGetRequest();
+	const std::string handleGetRequest();
 	void handlePostRequest();
 	void handlePutRequest();
 	void handleDeleteRequest();
@@ -46,9 +47,12 @@ private:
 
 	int m_EpollFd = -1;
 
-	RequestType m_RequestType = RequestType::UNKNOWN;
+	RequestMethod m_RequestMethod = RequestMethod::UNKNOWN;
 
 	std::string m_RequestPath;
 	std::string m_ProtocalVersion;
 	std::string m_RequestBody;
+
+
+	HttpRequestParser m_RequestParser;
 };

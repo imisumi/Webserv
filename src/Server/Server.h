@@ -58,5 +58,5 @@ private:
 	std::shared_ptr<RequestHandler> m_RequestHandler;
 	// std::shared_ptr<ResponseSender> m_ResponseSender;
 
-	std::unordered_map<int, const std::string> m_ClientResponses; // Maps client socket to response data
+	std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
 };

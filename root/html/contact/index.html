@@ -3,35 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Go Back Button</title>
+    <title>Contact Us</title>
     <style>
-        button {
-            background-color: #0400ff;
-            border: none;
-            color: white;
-            padding: 15px 32px;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
             text-align: center;
-            text-decoration: none;
-            display: inline-block;
+        }
+        .container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            margin: 20px;
+        }
+        .container h1 {
+            font-size: 36px;
+            color: #3498db;
+            margin: 0;
+        }
+        .container p {
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .contact-form input, .contact-form textarea {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
             font-size: 16px;
-            margin: 4px 2px;
+            width: 100%;
+        }
+        .contact-form textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+        .contact-form button {
+            background-color: #3498db;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            padding: 10px 20px;
+            border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .contact-form button:hover {
+            background-color: #2980b9;
+        }
+        .footer {
+            font-size: 14px;
+            color: #777;
+            margin-top: 20px;
+        }
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <p>
-        paragraph of text
-    </p>
-
-    <button id="goBackButton">
-        Go Back
-    </button>
-
-    <script>
-        document.getElementById('goBackButton').addEventListener('click', function() {
-            window.history.back();
-        });
-    </script>
-</body>
-</html>
+    <div class="container">
+        <h1>Contact Us</h1>
+        <p>If you have any questions, feel free to reach out to us using the form below. We’ll get back to you as soon as possible!</p>
+        
+        <form class="contact-form" action="/submit-form" method="POST">
+            <input type="text" name="name" placeholder="Your Name" required>
+            <input type="email"

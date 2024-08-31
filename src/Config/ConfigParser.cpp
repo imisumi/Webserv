@@ -41,19 +41,31 @@
 
 
 
-std::shared_ptr<Config> Config::CreateDefaultConfig()
+Config Config::CreateDefaultConfig()
 {
 	//TODO: have defualt config
 	//? Can't use make_shared because constructor is private
-	return std::shared_ptr<Config>(new Config(std::filesystem::path{}));
+	// return Config(std::filesystem::path{});
+
+
+	//temp
+	// Config conf(std::filesystem::path{});
+	// conf.m_Root = std::filesystem::path("/home/imisumi-wsl/dev/Webserv/root/html");
+	return Config();
 }
 
-std::shared_ptr<Config> Config::CreateConfigFromFile(const std::filesystem::path& path)    
+Config Config::CreateConfigFromFile(const std::filesystem::path& path)
 {
 	//? Can't use make_shared because constructor is private
-	return std::shared_ptr<Config>(new Config(path));
+	return Config(path);
 }
 
+
+Config::Config()
+	: m_Path("")
+{
+	m_Root = std::filesystem::path("/home/imisumi-wsl/dev/Webserv/root/html");
+}
 
 Config::Config(const std::filesystem::path& path)
 	: m_Path(path)

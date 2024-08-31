@@ -32,6 +32,7 @@ private:
 	#define LOG_DEBUG(...)	        ::Log::GetServerLogger()->debug(__VA_ARGS__)
 	#define LOG_WARN(...)	        ::Log::GetServerLogger()->warn(__VA_ARGS__)
 	#define LOG_ERROR(...)	        ::Log::GetServerLogger()->error(__VA_ARGS__)
+	#define LOG_CRITICAL(...)	    ::Log::GetServerLogger()->critical(__VA_ARGS__)
 #else
 	#define LOG_TRACE(...)      { std::ostringstream oss; oss << "TRACE: " << __VA_ARGS__; std::cout << oss.str() << std::endl; }
 	#define LOG_INFO(...)       { std::ostringstream oss; oss << "INFO: " << __VA_ARGS__; std::cout << oss.str() << std::endl; }
