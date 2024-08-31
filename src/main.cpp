@@ -6,6 +6,8 @@
 #include <csignal>
 #include <cstdlib>  // For setenv
 
+#include "Utils/Utils.h"
+
 
 static void SignalHandler(int signal)
 {
@@ -21,13 +23,17 @@ int main()
 	// std::signal(SIGINT, SignalHandler);
 
 	//TODOl: get root for config
+
+	// WEB_ASSERT(false, "make sure correct path is set");
 	if (setenv("HTML_ROOT_DIR", "/home/imisumi-wsl/dev/Webserv/root/html", 1) != 0)
 	{
 		std::cerr << "Error setting environment variable" << std::endl;
 		return 1;
 	}
 
+	Utils::Timer timer;
 	Server::Init();
+	std::cout << "Server init time: " << timer.elapsed() << "ms" << std::endl;
 	Server::Run();
 	Server::Shutdown();
 }
