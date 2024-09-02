@@ -97,6 +97,7 @@ std::vector<std::string>	tokenizeString(const std::string& s, const std::string&
 	std::vector<std::string>	tokens;
 	std::string					parsedToken;
 	std::istringstream			tokenStream(s);
+	bool						isComment = false;
 	char						c;
 
 	if (delimiters.empty())
@@ -105,7 +106,9 @@ std::vector<std::string>	tokenizeString(const std::string& s, const std::string&
 	}
 	while (tokenStream.get(c))
 	{
-		if (isDelimiter(c, delimiters))
+		if (c == '#')
+			isComment = true;
+		else if (isDelimiter(c, delimiters))
 		{
 			if (!parsedToken.empty())
 			{
@@ -113,83 +116,16 @@ std::vector<std::string>	tokenizeString(const std::string& s, const std::string&
 				parsedToken.clear();
 			}
 		}
-		else
+		else if (!isComment)
 			parsedToken += c;
+		if (c == '\n')
+			isComment = false;
 	}
 	if (!parsedToken.empty())
 		tokens.push_back(parsedToken);
 	return tokens;
 }
 
-static std::string escapeString(const std::string& input) {
-	std::string output;
-	for (char c : input) {
-		switch (c) {
-			case '\n': output += "\\n"; break;
-			case '\t': output += "\\t"; break;
-			case '\r': output += "\\r"; break;
-			case '\b': output += "\\b"; break;
-			case '\f': output += "\\f"; break;
-			case '\v': output += "\\v"; break;
-			case '\\': output += "\\\\"; break;
-			case '\"': output += "\\\""; break;
-			case '\'': output += "\\\'"; break;
-			default: output += c; break;
-		}
-	}
-	return output;
-}
-
-static inline bool containsSetExclusively(const std::string& s, const std::string& set)
-{
-	for (const char& c : s)
-	{
-		if (set.find(c) == std::string::npos)
-			return false;
-	}
-	return true;
-}
-
-static void	removeEmptyTokensSet(std::vector<std::string>& tokens, const std::string& set)
-{
-	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-	{
-		if (containsSetExclusively(*it, set))
-			tokens.erase(it);
-	}
-}
-
-static void	removeCommentBodies(std::vector<std::string>& tokens)
-{
-	std::size_t	commentStart = std::string::npos;
-	std::size_t	commentEnd = std::string::npos;
-	bool		isComment = false;
-
-	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-	{
-		std::string& currentToken = *it;
-		std::cout << escapeString(currentToken) << '\n';
-		commentStart = currentToken.find('#');
-		if (commentStart != std::string::npos)
-			isComment = true;
-		else
-			commentStart = 0; // if it is still a comment from previous iteration it will erase from start
-		while (isComment)
-		{
-			commentEnd = currentToken.find('\n', commentStart);
-			if (commentEnd != std::string::npos)
-				isComment = false;
-			currentToken.erase(commentStart, commentEnd - commentStart);
-			commentStart = currentToken.find('#');
-			if (commentStart != std::string::npos)
-				isComment = true;
-			else
-				break ;
-		}
-		if (currentToken.empty())
-			tokens.erase(it);
-	}
-}
 
 Config::Config(const std::filesystem::path& path)
 	: m_Path(path)
@@ -197,19 +133,22 @@ Config::Config(const std::filesystem::path& path)
 	std::string	buffer;
 
 	if (!stringEndsWith(path, ".conf"))
-		throw std::runtime_error("invalid extension");
+		throw std::runtime_error(path.string() + ": invalid extension");
 
 	buffer = readFileIntoBuffer(path);
 	if (buffer.empty())
 		throw std::runtime_error("file content is empty");
-	std::vector<std::string>	tokens = tokenizeString(buffer, " \t\r\v\f");
 
-	// std::cout << buffer;
-	removeCommentBodies(tokens);
-	// removeEmptyTokensSet(tokens, "\n");
-	// removeEmptyTokensSet(tokens, "#");
+	std::vector<std::string>	tokens = tokenizeString(buffer, " \t\r\v\f\n");
+
+	std::cout << buffer << "\n";
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-		std::cout << escapeString(*it) << '\n';
+		std::cout << *it << '\n';
 	
+	std::cout << '\n';
+	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
+	{
+		std::cout << getIdentifier(*it) << " :" + *it << '\n';
+	}
 	// LocationSettings locationSettings = Config["/"];
 }
