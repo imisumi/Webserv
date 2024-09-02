@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <unordered_map>
 
 std::shared_ptr<Config> Config::CreateDefaultConfig()
 {
@@ -48,51 +49,62 @@ enum ConfigIdentifier
 	AUTOINDEX,
 	REDIRECT,
 	LOCATION,
-	INVALID,
+	BRACKET_OPEN,
+	BRACKET_CLOSE,
+	ARGUMENTS,
 };
 
-enum ConfigIdentifier	getIdentifier(const std::string& input)
+static enum ConfigIdentifier	getIdentifier(const std::string& input)
 {
-	const std::string stringIdTable[] = {
-		"server",
-		"listen",
-		"server_name",
-		"root",
-		"index",
-		"autoindex",
-		"return",
-		"location",
+	const std::unordered_map<std::string, ConfigIdentifier> idMap = {
+		{"server", SERVER},
+		{"listen", PORT},
+		{"server_name", SERVER_NAME},
+		{"root", ROOT},
+		{"index", INDEX},
+		{"autoindex", AUTOINDEX},
+		{"return", REDIRECT},
+		{"location", LOCATION},
+		{"{", BRACKET_OPEN},
+		{"}", BRACKET_CLOSE},
 	};
+	std::unordered_map<std::string, ConfigIdentifier>::const_iterator it;
 
-	enum ConfigIdentifier	idTable[] = {
-		SERVER,
-		PORT,
-		SERVER_NAME,
-		ROOT,
-		INDEX,
-		AUTOINDEX,
-		REDIRECT,
-		LOCATION,
-		INVALID,
-	};
-
-	int	i = 0;
-
-	for (const std::string& stringId : stringIdTable)
-	{
-		if (input == stringId)
-			break ;
-		i++;
-	}
-	return idTable[i];
+	it = idMap.find(input);
+	if (it != idMap.end())
+		return it->second;
+	return ARGUMENTS;
 }
+
+static std::string	escapeIdentifier(ConfigIdentifier id)
+{
+	const std::unordered_map<ConfigIdentifier, std::string> idMap = {
+		{SERVER, "server"},
+		{PORT, "port"},
+		{SERVER_NAME, "server name"},
+		{ROOT, "root"},
+		{INDEX, "index"},
+		{AUTOINDEX, "autoindex"},
+		{REDIRECT, "redirect"},
+		{LOCATION, "location"},
+		{BRACKET_OPEN, "bracket open"},
+		{BRACKET_CLOSE, "bracket close"},
+	};
+	std::unordered_map<ConfigIdentifier, std::string>::const_iterator it;
+
+	it = idMap.find(id);
+	if (it != idMap.end())
+		return it->second;
+	return "arguments";
+}
+
 
 static inline bool	isDelimiter(char c, const std::string& delimiters)
 {
 	return delimiters.find(c) != std::string::npos;
 }
 
-std::vector<std::string>	tokenizeString(const std::string& s, const std::string& delimiters)
+static std::vector<std::string>	tokenizeString(const std::string& s, const std::string& delimiters)
 {
 	std::vector<std::string>	tokens;
 	std::string					parsedToken;
@@ -126,6 +138,22 @@ std::vector<std::string>	tokenizeString(const std::string& s, const std::string&
 	return tokens;
 }
 
+static bool	validBracketCount(std::vector<std::string>& tokens)
+{
+	size_t	openCount = 0;
+	size_t	closedCount = 0;
+	ConfigIdentifier	id;
+
+	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
+	{
+		id = getIdentifier(*it);
+		if (id == BRACKET_OPEN)
+			openCount++;
+		else if (id == BRACKET_CLOSE)
+			closedCount++;
+	}
+	return openCount == closedCount;
+}
 
 Config::Config(const std::filesystem::path& path)
 	: m_Path(path)
@@ -141,14 +169,19 @@ Config::Config(const std::filesystem::path& path)
 
 	std::vector<std::string>	tokens = tokenizeString(buffer, " \t\r\v\f\n");
 
+	std::cout << "================================\n";
 	std::cout << buffer << "\n";
+	std::cout << "================================\n";
+
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 		std::cout << *it << '\n';
+	std::cout << "================================\n";
 	
+	if (!validBracketCount(tokens))
+		throw std::runtime_error("error with bracket format");
 	std::cout << '\n';
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
-		std::cout << getIdentifier(*it) << " :" + *it << '\n';
+		std::cout << std::setw(15) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << "\t: " + *it << '\n';
 	}
-	// LocationSettings locationSettings = Config["/"];
 }
