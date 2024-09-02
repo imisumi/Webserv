@@ -116,6 +116,8 @@ std::vector<std::string>	tokenizeString(const std::string& s, const std::string&
 		else
 			parsedToken += c;
 	}
+	if (!parsedToken.empty())
+		tokens.push_back(parsedToken);
 	return tokens;
 }
 
@@ -165,8 +167,27 @@ static void	removeCommentBodies(std::vector<std::string>& tokens)
 
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
-		std::cout << escapeString(*it) << '\n';
-		
+		std::string& currentToken = *it;
+		std::cout << escapeString(currentToken) << '\n';
+		commentStart = currentToken.find('#');
+		if (commentStart != std::string::npos)
+			isComment = true;
+		else
+			commentStart = 0; // if it is still a comment from previous iteration it will erase from start
+		while (isComment)
+		{
+			commentEnd = currentToken.find('\n', commentStart);
+			if (commentEnd != std::string::npos)
+				isComment = false;
+			currentToken.erase(commentStart, commentEnd - commentStart);
+			commentStart = currentToken.find('#');
+			if (commentStart != std::string::npos)
+				isComment = true;
+			else
+				break ;
+		}
+		if (currentToken.empty())
+			tokens.erase(it);
 	}
 }
 
@@ -185,10 +206,10 @@ Config::Config(const std::filesystem::path& path)
 
 	// std::cout << buffer;
 	removeCommentBodies(tokens);
-	removeEmptyTokensSet(tokens, "\n");
-	removeEmptyTokensSet(tokens, "#");
-	// for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-	// 	std::cout << escapeString(*it) << '\n';
+	// removeEmptyTokensSet(tokens, "\n");
+	// removeEmptyTokensSet(tokens, "#");
+	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
+		std::cout << escapeString(*it) << '\n';
 	
 	// LocationSettings locationSettings = Config["/"];
 }
