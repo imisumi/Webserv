@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/08/30 13:57:51 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/02 15:10:07 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/02 16:26:17 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,13 @@ int main(int argc, char **argv)
 	}
 
 	std::filesystem::path	infile(argv[1]);
-	Config::CreateConfigFromFile(infile);
+	try
+	{
+		Config::CreateConfigFromFile(infile);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "caught exception: " << e.what() << std::endl;
+	}
 	return 0;
 }

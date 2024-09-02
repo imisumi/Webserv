@@ -49,6 +49,7 @@ enum ConfigIdentifier
 	AUTOINDEX,
 	REDIRECT,
 	LOCATION,
+	HTTP_METHOD,
 	BRACKET_OPEN,
 	BRACKET_CLOSE,
 	ARGUMENTS,
@@ -65,6 +66,7 @@ static enum ConfigIdentifier	getIdentifier(const std::string& input)
 		{"autoindex", AUTOINDEX},
 		{"return", REDIRECT},
 		{"location", LOCATION},
+		{"limit_except", HTTP_METHOD},
 		{"{", BRACKET_OPEN},
 		{"}", BRACKET_CLOSE},
 	};
@@ -87,6 +89,7 @@ static std::string	escapeIdentifier(ConfigIdentifier id)
 		{AUTOINDEX, "autoindex"},
 		{REDIRECT, "redirect"},
 		{LOCATION, "location"},
+		{HTTP_METHOD, "http_method"},
 		{BRACKET_OPEN, "bracket open"},
 		{BRACKET_CLOSE, "bracket close"},
 	};
@@ -155,20 +158,40 @@ static bool	validBracketCount(std::vector<std::string>& tokens)
 	return openCount == closedCount;
 }
 
+void	parseDirective(
+	ConfigIdentifier directive,
+	const std::vector<std::string>& tokens,
+	std::vector<std::string>::iterator& it)
+{
+
+}
+
+void	parseContext(
+	ConfigIdentifier context,
+	const std::vector<std::string>& tokens,
+	std::vector<std::string>::iterator& it)
+{
+	if (context == SERVER)
+	for (;it != tokens.end(); it++)
+	{
+
+	}
+}
+
 Config::Config(const std::filesystem::path& path)
 	: m_Path(path)
 {
-	std::string	buffer;
-
 	if (!stringEndsWith(path, ".conf"))
 		throw std::runtime_error(path.string() + ": invalid extension");
 
-	buffer = readFileIntoBuffer(path);
+	const std::string buffer = readFileIntoBuffer(path);
 	if (buffer.empty())
 		throw std::runtime_error("file content is empty");
 
 	std::vector<std::string>	tokens = tokenizeString(buffer, " \t\r\v\f\n");
 
+	if (tokens.empty())
+		throw std::runtime_error("no tokens found");
 	std::cout << "================================\n";
 	std::cout << buffer << "\n";
 	std::cout << "================================\n";
@@ -179,9 +202,21 @@ Config::Config(const std::filesystem::path& path)
 	
 	if (!validBracketCount(tokens))
 		throw std::runtime_error("error with bracket format");
-	std::cout << '\n';
+	
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
 		std::cout << std::setw(15) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << "\t: " + *it << '\n';
 	}
+
+	if (getIdentifier(*(tokens.begin())) != SERVER)
+		throw std::runtime_error("no server found");
+	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
+	{
+		ConfigIdentifier	id = getIdentifier(*it);
+		if (id == SERVER || id == LOCATION || id == HTTP_METHOD)
+			parseContext(id, tokens, it);
+		else
+			parseDirective(id, tokens, it);
+	}
+	std::cout << "================================\n";
 }
