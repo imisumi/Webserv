@@ -6,6 +6,7 @@
 #include <sstream>
 #include <algorithm>
 #include <unordered_map>
+#include <iomanip>
 
 std::shared_ptr<Config> Config::CreateDefaultConfig()
 {
@@ -50,9 +51,10 @@ enum ConfigIdentifier
 	REDIRECT,
 	LOCATION,
 	HTTP_METHOD,
+	HTTP_METHOD_DENY,
 	BRACKET_OPEN,
 	BRACKET_CLOSE,
-	ARGUMENTS,
+	ARGUMENT,
 };
 
 static enum ConfigIdentifier	getIdentifier(const std::string& input)
@@ -67,6 +69,7 @@ static enum ConfigIdentifier	getIdentifier(const std::string& input)
 		{"return", REDIRECT},
 		{"location", LOCATION},
 		{"limit_except", HTTP_METHOD},
+		{"deny", HTTP_METHOD_DENY},
 		{"{", BRACKET_OPEN},
 		{"}", BRACKET_CLOSE},
 	};
@@ -75,7 +78,7 @@ static enum ConfigIdentifier	getIdentifier(const std::string& input)
 	it = idMap.find(input);
 	if (it != idMap.end())
 		return it->second;
-	return ARGUMENTS;
+	return ARGUMENT;
 }
 
 static std::string	escapeIdentifier(ConfigIdentifier id)
@@ -90,6 +93,7 @@ static std::string	escapeIdentifier(ConfigIdentifier id)
 		{REDIRECT, "redirect"},
 		{LOCATION, "location"},
 		{HTTP_METHOD, "http_method"},
+		{HTTP_METHOD_DENY, "http_method_deny"},
 		{BRACKET_OPEN, "bracket open"},
 		{BRACKET_CLOSE, "bracket close"},
 	};
@@ -98,7 +102,7 @@ static std::string	escapeIdentifier(ConfigIdentifier id)
 	it = idMap.find(id);
 	if (it != idMap.end())
 		return it->second;
-	return "arguments";
+	return "argument";
 }
 
 
@@ -158,24 +162,25 @@ static bool	validBracketCount(std::vector<std::string>& tokens)
 	return openCount == closedCount;
 }
 
-void	parseDirective(
+bool	parseDirective(
 	ConfigIdentifier directive,
 	const std::vector<std::string>& tokens,
 	std::vector<std::string>::iterator& it)
 {
-
+	return true;
 }
 
-void	parseContext(
-	ConfigIdentifier context,
+bool	parseContext(
 	const std::vector<std::string>& tokens,
-	std::vector<std::string>::iterator& it)
+	std::vector<std::string>::iterator& it,
+	const ConfigIdentifier allowed[])
 {
-	if (context == SERVER)
 	for (;it != tokens.end(); it++)
 	{
 
 	}
+	it--;
+	return true;
 }
 
 Config::Config(const std::filesystem::path& path)
@@ -205,16 +210,17 @@ Config::Config(const std::filesystem::path& path)
 	
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
-		std::cout << std::setw(15) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << "\t: " + *it << '\n';
+		std::cout << std::setw(16) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << " : " + *it << '\n';
 	}
 
 	if (getIdentifier(*(tokens.begin())) != SERVER)
 		throw std::runtime_error("no server found");
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
-		ConfigIdentifier	id = getIdentifier(*it);
-		if (id == SERVER || id == LOCATION || id == HTTP_METHOD)
-			parseContext(id, tokens, it);
+		const ConfigIdentifier	id = getIdentifier(*it);
+		const ConfigIdentifier	serverAllowed[] = {ROOT, PORT, SERVER_NAME};
+		if (id == SERVER)
+			parseContext(tokens, it, serverAllowed);
 		else
 			parseDirective(id, tokens, it);
 	}
