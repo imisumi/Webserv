@@ -8,17 +8,17 @@
 #include <unordered_map>
 #include <iomanip>
 
-std::shared_ptr<Config> Config::CreateDefaultConfig()
+Config	Config::CreateDefaultConfig()
 {
 	//TODO: have defualt config
 	//? Can't use make_shared because constructor is private
-	return std::shared_ptr<Config>(new Config(std::filesystem::path{}));
+	return Config("");
 }
 
-std::shared_ptr<Config> Config::CreateConfigFromFile(const std::filesystem::path& path)    
+Config	Config::CreateConfigFromFile(const std::filesystem::path& path)    
 {
 	//? Can't use make_shared because constructor is private
-	return std::shared_ptr<Config>(new Config(path));
+	return Config(path);
 }
 
 static std::string readFileIntoBuffer(const std::filesystem::path& path) {
@@ -54,6 +54,7 @@ enum ConfigIdentifier
 	HTTP_METHOD_DENY,
 	BRACKET_OPEN,
 	BRACKET_CLOSE,
+	DIRECTIVE_END,
 	ARGUMENT,
 };
 
@@ -72,6 +73,7 @@ static enum ConfigIdentifier	getIdentifier(const std::string& input)
 		{"deny", HTTP_METHOD_DENY},
 		{"{", BRACKET_OPEN},
 		{"}", BRACKET_CLOSE},
+		{";", DIRECTIVE_END},
 	};
 	std::unordered_map<std::string, ConfigIdentifier>::const_iterator it;
 
@@ -96,6 +98,7 @@ static std::string	escapeIdentifier(ConfigIdentifier id)
 		{HTTP_METHOD_DENY, "http_method_deny"},
 		{BRACKET_OPEN, "bracket open"},
 		{BRACKET_CLOSE, "bracket close"},
+		{DIRECTIVE_END, "directive end"},
 	};
 	std::unordered_map<ConfigIdentifier, std::string>::const_iterator it;
 
@@ -106,15 +109,29 @@ static std::string	escapeIdentifier(ConfigIdentifier id)
 }
 
 
-static inline bool	isDelimiter(char c, const std::string& delimiters)
+static inline bool	isDelimiter(char& c, const std::string& delimiters)
 {
 	return delimiters.find(c) != std::string::npos;
+}
+
+static inline bool	isSpecialCharacter(char& c)
+{
+	return c == '{' || c == '}' || c == ';';
+}
+
+static inline void	addToken(std::vector<std::string>& tokens, std::string& tokenBuffer)
+{
+	if (!tokenBuffer.empty())
+	{
+		tokens.push_back(tokenBuffer);
+		tokenBuffer.clear();
+	}
 }
 
 static std::vector<std::string>	tokenizeString(const std::string& s, const std::string& delimiters)
 {
 	std::vector<std::string>	tokens;
-	std::string					parsedToken;
+	std::string					tokenBuffer;
 	std::istringstream			tokenStream(s);
 	bool						isComment = false;
 	char						c;
@@ -128,20 +145,22 @@ static std::vector<std::string>	tokenizeString(const std::string& s, const std::
 		if (c == '#')
 			isComment = true;
 		else if (isDelimiter(c, delimiters))
-		{
-			if (!parsedToken.empty())
-			{
-				tokens.push_back(parsedToken);
-				parsedToken.clear();
-			}
-		}
+			addToken(tokens, tokenBuffer);
 		else if (!isComment)
-			parsedToken += c;
+		{
+			if (isSpecialCharacter(c))
+			{
+				addToken(tokens, tokenBuffer);
+				tokenBuffer += c;
+				addToken(tokens, tokenBuffer);
+			}
+			else
+				tokenBuffer += c;
+		}
 		if (c == '\n')
 			isComment = false;
 	}
-	if (!parsedToken.empty())
-		tokens.push_back(parsedToken);
+	addToken(tokens, tokenBuffer);
 	return tokens;
 }
 
@@ -184,10 +203,11 @@ bool	parseContext(
 }
 
 Config::Config(const std::filesystem::path& path)
-	: m_Path(path)
 {
-	if (!stringEndsWith(path, ".conf"))
-		throw std::runtime_error(path.string() + ": invalid extension");
+	// if (path.extension() != ".conf")
+	// 	throw std::runtime_error(path.string() + ": invalid extension");
+	// if (!stringEndsWith(path, ".conf"))
+	// 	throw std::runtime_error(path.string() + ": invalid extension");
 
 	const std::string buffer = readFileIntoBuffer(path);
 	if (buffer.empty())
@@ -212,17 +232,18 @@ Config::Config(const std::filesystem::path& path)
 	{
 		std::cout << std::setw(16) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << " : " + *it << '\n';
 	}
+	std::cout << "================================\n";
 
 	if (getIdentifier(*(tokens.begin())) != SERVER)
 		throw std::runtime_error("no server found");
-	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-	{
-		const ConfigIdentifier	id = getIdentifier(*it);
-		const ConfigIdentifier	serverAllowed[] = {ROOT, PORT, SERVER_NAME};
-		if (id == SERVER)
-			parseContext(tokens, it, serverAllowed);
-		else
-			parseDirective(id, tokens, it);
-	}
-	std::cout << "================================\n";
+	this->tokens = tokens;
+	// for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
+	// {
+	// 	const ConfigIdentifier	id = getIdentifier(*it);
+	// 	const ConfigIdentifier	serverAllowed[] = {ROOT, PORT, SERVER_NAME};
+	// 	if (id == SERVER)
+	// 		parseContext(tokens, it, serverAllowed);
+	// 	else
+	// 		parseDirective(id, tokens, it);
+	// }
 }

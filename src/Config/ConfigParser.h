@@ -11,6 +11,7 @@
 class Config
 {
 	public:
+		std::vector<std::string>	tokens;
 		struct LocationSettings
 		{
 			std::filesystem::path path;
@@ -21,18 +22,42 @@ class Config
 			std::string returnCode;
 		};
 
-		uint16_t getPort() const { return m_Port; }
-		const std::string& getServerName() const { return m_ServerName; }
+		class ServerSettings
+		{
+			private:
+				uint16_t m_Port;
+				std::string m_ServerName;
 
+				std::map<std::filesystem::path, LocationSettings> m_Locations;
+
+			public:
+				LocationSettings&		operator[](std::filesystem::path path)
+				{
+					std::map<std::filesystem::path, LocationSettings>::iterator	it = this->m_Locations.find(path);
+
+					if (it != this->m_Locations.end())
+						return it->second;
+					throw std::runtime_error("location not found");
+				};
+				const LocationSettings&	operator[](std::filesystem::path path) const
+				{
+					std::map<std::filesystem::path, LocationSettings>::const_iterator	it = this->m_Locations.find(path);
+
+					if (it != this->m_Locations.end())
+						return it->second;
+					throw std::runtime_error("location not found");
+				};
+				uint16_t getPort() const { return m_Port; };
+				const std::string& getServerName() const { return m_ServerName; };
+		};
 
 		//? Maybe just stack allocate this
-		static std::shared_ptr<Config> CreateDefaultConfig();
-		static std::shared_ptr<Config> CreateConfigFromFile(const std::filesystem::path& path);
+		static Config CreateDefaultConfig();
+		static Config CreateConfigFromFile(const std::filesystem::path& path);
 
 
 		//TODO: add overload for operator[] to get location settings
-		LocationSettings&		operator[](unsigned int index);
-		const LocationSettings&	operator[](unsigned int index) const;
+
 
 	private:
 		Config(const std::filesystem::path& path);
@@ -44,12 +69,7 @@ class Config
 		Config& operator=(Config&&) = delete;
 
 	private:
-		const std::filesystem::path m_Path;
-
-		uint16_t m_Port;
-		std::string m_ServerName;
-
-		std::map<std::filesystem::path, LocationSettings> m_Locations;
+		std::vector<ServerSettings>	serverSettings;
 };
 
 // class ConfigProccessor
