@@ -7,11 +7,13 @@
 #include <sys/epoll.h>
 
 #include <memory>
+#include <vector>
 
 #include <unordered_map>
 
 #include "RequestHandler.h"
 #include "ResponseSender.h"
+#include "Config/ConfigParser.h"
 
 #define MAX_EVENTS 4096
 #define BUFFER_SIZE 4096 * 2
@@ -43,7 +45,7 @@ public:
 
 public:
 	static Server& Get();
-	static void Init();
+	static void Init(const Config& config);
 	static void Shutdown();
 	static void Run();
 	static void Stop();
@@ -52,13 +54,15 @@ public:
 	Server(const Server&) = delete;
 	Server& operator=(const Server&) = delete;
 private:
-	Server();
+	Server(const Config& config);
 	~Server();
+
+	int isServerSocket(int fd);
 
 	// int CreateServerSocket();
 	// void BindServerSocket();
 	// void ListenServerSocket();
-	int AcceptConnection();
+	int AcceptConnection(int socket_fd);
 	void HandleInputEvent(int fd);
 	void HandleOutputEvent(int fd);
 
@@ -73,11 +77,16 @@ private:
 	int ListenOnSocket(int socket_fd, int backlog);
 
 private:
+	const Config& m_Config;
 	// Config m_Config;
 	std::string bufferStr;
 	bool m_Running = true;
 
-	int m_ServerSocket = -1;
+	// int m_ServerSocket = -1;
+	std::vector<int> m_ServerPorts;
+
+	// int port, int socket fd
+	std::unordered_map<int, int> m_ServerSockets;
 	int m_EpollFD = -1;
 
 	int m_Connections = 0;

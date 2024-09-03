@@ -3,6 +3,7 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 
 #include "Core/Log.h"
 
@@ -46,8 +47,7 @@ public:
 	static const std::string generateResponse(const Config& config, const HttpRequest& request);
 
 private:
-	static std::string readFileContents(const std::filesystem::path& path);
-
+	static std::optional<std::string> readFileContents(const std::filesystem::path& path);
 
 	static std::string determineContentType(const std::filesystem::path& file);
 
@@ -57,18 +57,21 @@ private:
 	
 	static std::string getCurrentDateAndTime();
 
-	static std::string buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code);
+	static std::string buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code, const HttpRequest& request);
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
 	static const std::string handleGetRequest(const Config& config, const HttpRequest& request);
 
-	static std::string generateOKResponse(const std::filesystem::path& path);
+	static std::string generateOKResponse(const std::filesystem::path& path, const HttpRequest& request);
 
-	static std::string generateFileResponse(const std::filesystem::path& path);
+	static std::string generateFileResponse(const std::filesystem::path& path, const HttpRequest& request);
 
 	// static std::string generateForbiddenResponse(const std::filesystem::path& path);
 	static std::string generateForbiddenResponse();
 
 	static std::string generateNotFoundResponse();
+
+
+	static std::string generateNotModifiedResponse();
 };

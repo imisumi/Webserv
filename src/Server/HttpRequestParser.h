@@ -35,8 +35,20 @@ enum class RequestMethod
 	UNKNOWN = -1
 };
 
-struct HttpRequest
+class HttpRequest
 {
+public:
+	std::string getHeader(const std::string& name) const
+	{
+		auto it = headers.find(name);
+		if (it != headers.end())
+		{
+			return it->second;
+		}
+		return "";
+	}
+
+public:
 	//TODO: use enum class for method instead of string
 	// std::string method;
 	RequestMethod method = RequestMethod::UNKNOWN;

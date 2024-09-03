@@ -43,14 +43,8 @@
 
 Config Config::CreateDefaultConfig()
 {
-	//TODO: have defualt config
-	//? Can't use make_shared because constructor is private
-	// return Config(std::filesystem::path{});
+	//TODO: call CreateConfigFromFile with a default path
 
-
-	//temp
-	// Config conf(std::filesystem::path{});
-	// conf.m_Root = std::filesystem::path("/home/imisumi-wsl/dev/Webserv/root/html");
 	return Config();
 }
 

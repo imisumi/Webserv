@@ -1,89 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact Us</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
-        }
-        .container {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            max-width: 600px;
-            width: 100%;
-            margin: 20px;
-        }
-        .container h1 {
-            font-size: 36px;
-            color: #3498db;
-            margin: 0;
-        }
-        .container p {
-            font-size: 18px;
-            margin: 20px 0;
-        }
-        .contact-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .contact-form input, .contact-form textarea {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
-            font-size: 16px;
-            width: 100%;
-        }
-        .contact-form textarea {
-            resize: vertical;
-            min-height: 150px;
-        }
-        .contact-form button {
-            background-color: #3498db;
-            border: none;
-            color: #fff;
-            font-size: 16px;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .contact-form button:hover {
-            background-color: #2980b9;
-        }
-        .footer {
-            font-size: 14px;
-            color: #777;
-            margin-top: 20px;
-        }
-        .footer a {
-            color: #3498db;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {font-family: Arial, Helvetica, sans-serif;}
+* {box-sizing: border-box;}
+
+input[type=text], select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  margin-top: 6px;
+  margin-bottom: 16px;
+  resize: vertical;
+}
+
+input[type=submit] {
+  background-color: #04AA6D;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+input[type=submit]:hover {
+  background-color: #45a049;
+}
+
+.container {
+  border-radius: 5px;
+  background-color: #f2f2f2;
+  padding: 20px;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Contact Us</h1>
-        <p>If you have any questions, feel free to reach out to us using the form below. We’ll get back to you as soon as possible!</p>
-        
-        <form class="contact-form" action="/submit-form" method="POST">
-            <input type="text" name="name" placeholder="Your Name" required>
-            <input type="email"
+
+<h3>Contact Form</h3>
+
+<div class="container">
+  <form action="/action_page.php">
+    <label for="fname">First Name</label>
+    <input type="text" id="fname" name="firstname" placeholder="Your name..">
+
+    <label for="lname">Last Name</label>
+    <input type="text" id="lname" name="lastname" placeholder="Your last name..">
+
+    <label for="country">Country</label>
+    <select id="country" name="country">
+      <option value="australia">Australia</option>
+      <option value="canada">Canada</option>
+      <option value="usa">USA</option>
+    </select>
+
+    <label for="subject">Subject</label>
+    <textarea id="subject" name="subject" placeholder="Write something.." style="height:200px"></textarea>
+
+    <input type="submit" value="Submit">
+  </form>
+</div>
+
+</body>
+</html>

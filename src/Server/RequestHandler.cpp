@@ -28,6 +28,24 @@
 // }
 
 
+
+/*
+	GET
+	- parameters in the URL
+	- used for fetching documents/files
+	- maximum length of the URL is 2048 characters
+	- okay to cache
+	- should not change the server
+
+	POST
+	- parameters in the body
+	- used for updating data
+	- no maximum length
+	- not okay to cache
+	- can change the server
+*/
+
+
 const std::string RequestHandler::handleRequest(const std::string& request, int epollFd)
 {
 	m_EpollFd = epollFd;
@@ -109,27 +127,6 @@ const char* RequestMethodToCString(RequestMethod type)
 
 void RequestHandler::parseRequest(const std::string& request)
 {
-	//TODO: fix
-	// size_t methodEnd = request.find(' ');
-	// if (methodEnd != std::string::npos)
-	// {
-	// 	m_RequestMethod = GetRequestMethod(request.substr(0, methodEnd));
-	// 	LOG_TRACE("Request type: {}", RequestMethodToString(m_RequestMethod));
-	// 	size_t pathEnd = request.find(' ', methodEnd + 1);
-	// 	if (pathEnd != std::string::npos)
-	// 	{
-	// 		m_RequestPath = request.substr(methodEnd + 1, pathEnd - methodEnd - 1);
-	// 		LOG_TRACE("Request path: {}", m_RequestPath);
-
-	// 		size_t protocalEnd = request.find('\r', pathEnd + 1);
-	// 		if (protocalEnd != std::string::npos)
-	// 		{
-	// 			m_ProtocalVersion = request.substr(pathEnd + 1, protocalEnd - pathEnd - 1);
-	// 			LOG_TRACE("Protocal version: {}", m_ProtocalVersion);
-	// 		}
-	// 	}
-	// }
-	// HttpRequestParser m_RequestParser;
 	m_RequestParser.reset();
 	if (m_RequestParser.parse(request))
 	{
@@ -184,38 +181,39 @@ std::string getCurrentDateAndTime()
 	return oss.str();
 }
 
-std::string getFileModificationTime(const std::filesystem::path& filePath)
-{
-	//? Since this is the body of the response, we assume the file exists
-	// Get the last write time of the file
-	auto ftime = std::filesystem::last_write_time(filePath);
 
-	// Convert file time to system clock time
-	auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-		ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
-	);
+// std::string generateETag(const std::string& content)
+// {
+// 	// Use std::hash to create a hash value for the content
+// 	std::hash<std::string> hasher;
+// 	size_t hash = hasher(content);
 
-	// Convert to time_t for easy formatting
-	std::time_t time = std::chrono::system_clock::to_time_t(sctp);
+// 	// Convert the hash to a hexadecimal string
+// 	std::ostringstream ss;
+// 	ss << std::hex << hash;
+// 	return ss.str();
+// }
 
-		// Format the time as a string
-	std::ostringstream oss;
-	oss << std::put_time(std::localtime(&time), "%a, %d %b %Y %H:%M:%S GMT");
+// static std::string getFileModificationTime(const std::filesystem::path& filePath)
+// {
+// 	//? Since this is the body of the response, we assume the file exists
+// 	// Get the last write time of the file
+// 	auto ftime = std::filesystem::last_write_time(filePath);
 
-	return oss.str();
-}
+// 	// Convert file time to system clock time
+// 	auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+// 		ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
+// 	);
 
-std::string generateETag(const std::string& content)
-{
-	// Use std::hash to create a hash value for the content
-	std::hash<std::string> hasher;
-	size_t hash = hasher(content);
+// 	// Convert to time_t for easy formatting
+// 	std::time_t time = std::chrono::system_clock::to_time_t(sctp);
 
-	// Convert the hash to a hexadecimal string
-	std::ostringstream ss;
-	ss << std::hex << hash;
-	return ss.str();
-}
+// 		// Format the time as a string
+// 	std::ostringstream oss;
+// 	oss << std::put_time(std::localtime(&time), "%a, %d %b %Y %H:%M:%S GMT");
+
+// 	return oss.str();
+// }
 
 std::string buildHttpResponse(const std::filesystem::path& path, const std::string& body)
 {
@@ -226,10 +224,10 @@ std::string buildHttpResponse(const std::filesystem::path& path, const std::stri
 			 << "Date: " << getCurrentDateAndTime() << "\r\n"
 			 << "Content-Type: text/html\r\n"
 			 << "Content-Length: " << body.size() << "\r\n"
-			 << "Last-Modified: " << getFileModificationTime(path) << "\r\n"
+			//  << "Last-Modified: " << getFileModificationTime(path) << "\r\n"
 			 //TODO: hard coded values should check this
 			 << "Connection: keep-alive\r\n"
-			 << "ETag: \"" << generateETag(body) << "\"\r\n"
+			//  << "ETag: \"" << generateETag(body) << "\"\r\n"
 			 << "Accept-Ranges: bytes\r\n"
 			 // Disable caching
 			 << "Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0\r\n"

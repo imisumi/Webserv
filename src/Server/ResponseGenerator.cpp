@@ -3,6 +3,8 @@
 #include "Core/Core.h"
 
 
+#include <sys/stat.h> 
+
 
 static const char s_ForbiddenResponse[] = 
 		"HTTP/1.1 403 Forbidden\r\n"
@@ -24,6 +26,7 @@ static const char s_NotFoundResponse[] =
 //? Multipurpose Internet Mail Extensions (MIME) type
 static const std::unordered_map<std::string, std::string> s_SupportedMineTypes = {
 			{ ".html", "text/html" },
+			{ ".css", "text/css" },
 			{ ".ico", "image/x-icon" },
 			{ ".jpg", "image/jpeg" },
 			{ ".jpeg", "image/jpeg" },
@@ -35,12 +38,6 @@ const std::string ResponseGenerator::generateResponse(const Config& config, cons
 	//TODO: validate request
 	//? fo now only GET is supported
 
-	
-	//TODO: use switch statement once method is changed from string to enum class
-	// if (request.method == "GET")
-	// {
-	// 	return handleGetRequest(config, request);
-	// }
 
 	switch (request.method)
 	{
@@ -58,22 +55,16 @@ const std::string ResponseGenerator::generateResponse(const Config& config, cons
 }
 
 
-
-
-
-
-
-
 //? assume that the file exists
-//? return the contents of the file or nullptr if the file cannot be opened due to permissions
-std::string ResponseGenerator::readFileContents(const std::filesystem::path& path)
+//? return the contents of the file or nullopt if the file cannot be opened due to permissions
+std::optional<std::string> ResponseGenerator::readFileContents(const std::filesystem::path& path)
 {
 	LOG_DEBUG("Reading file contents: {}", path.string());
 	std::ifstream file(path);
 	if (!file.is_open())
 	{
 		LOG_ERROR("Failed to open file: {}", path.string());
-		return std::string();
+		return std::nullopt;
 	}
 
 	std::stringstream buffer;
@@ -140,7 +131,62 @@ std::string ResponseGenerator::getCurrentDateAndTime()
 	return oss.str();
 }
 
-std::string ResponseGenerator::buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code)
+static std::string getFileModificationTime(const std::filesystem::path& filePath)
+{
+	//? Since this is the body of the response, we assume the file exists
+	// Get the last write time of the file
+	auto ftime = std::filesystem::last_write_time(filePath);
+
+	// Convert file time to system clock time
+	auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+		ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
+	);
+
+	// Convert to time_t for easy formatting
+	std::time_t time = std::chrono::system_clock::to_time_t(sctp);
+
+	// Format the time as a string
+	std::ostringstream oss;
+	oss << std::put_time(std::localtime(&time), "%a, %d %b %Y %H:%M:%S GMT");
+
+	return oss.str();
+}
+
+static std::string generateETag(const std::string& content)
+{
+	// Use std::hash to create a hash value for the content
+	std::hash<std::string> hasher;
+	size_t hash = hasher(content);
+
+	// Convert the hash to a hexadecimal string
+	std::ostringstream ss;
+	ss << std::hex << hash;
+	return ss.str();
+}
+
+static std::string generateETagv2(const std::filesystem::path& path)
+{
+	struct stat fileStat;
+
+	if (stat(path.c_str(), &fileStat) != 0)
+	{
+		LOG_ERROR("Failed to get file stats: {}", path.string());
+		return std::string();
+	}
+
+	auto inode = fileStat.st_ino;
+	auto fileSize = fileStat.st_size;
+	auto fileTime = fileStat.st_mtime;
+	auto permissions = fileStat.st_mode; //? unconventional but prevents a check for has read permissions before returning 304
+
+	// Combine these into the ETag
+	std::ostringstream ss;
+	ss << std::hex << inode << "-" << fileSize << "-" << fileTime << "-" << permissions;
+	// return ss.str();
+	return "\"" + ss.str() + "\"";
+}
+
+std::string ResponseGenerator::buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code, const HttpRequest& request)
 {
 	std::ostringstream response;
 
@@ -155,28 +201,28 @@ std::string ResponseGenerator::buildHttpResponse(const std::filesystem::path& pa
 
 	WEB_ASSERT(!statusCode.empty(), "Invalid HTTP status code! (add a custom code or use a valid one)");
 
+	std::string connection = request.getHeader("Connection");
+	if (connection.empty())
+	{
+		connection = "keep-alive";
+	}
+
+
 	// response << "HTTP/1.1 200 OK\r\n"
 	response << "HTTP/1.1 " << statusCode << "\r\n"
 			<< "Server: Webserv/1.0\r\n"
-			// << "Date: " << getCurrentDateAndTime() << "\r\n"
-
-
-
+			<< "Date: " << getCurrentDateAndTime() << "\r\n"
 			<< "Content-Type: " << contentType << "\r\n"
-			// << "Content-Type: text/html\r\n"
-			// << "Content-Type: image/x-icon\r\n"
-
-
 			<< "Content-Length: " << body.size() << "\r\n"
-			// << "Last-Modified: " << getFileModificationTime(path) << "\r\n"
+			<< "Last-Modified: " << getFileModificationTime(path) << "\r\n"
 			//TODO: hard coded values should check this
 			// << "Connection: keep-alive\r\n"
+			<< "Connection: " << connection << "\r\n"
+			// << "Connection: close\r\n"
 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
+			<< "ETag: " << generateETagv2(path) << "\r\n"
 			<< "Accept-Ranges: bytes\r\n"
-			// Disable caching
-			// << "Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0\r\n"
-			// << "Pragma: no-cache\r\n"
-			// << "Expires: 0\r\n"
+			// << "Cache-Control: max-age=3600\r\n"  // Cache for 1 hour
 			<< "\r\n";  // End of headers
 
 	if (!body.empty())
@@ -240,6 +286,7 @@ std::string ReadImageFile(const std::filesystem::path& path)
 const std::string ResponseGenerator::handleGetRequest(const Config& config, const HttpRequest& request)
 {
 	LOG_INFO("Handling GET request");
+
 	const std::filesystem::path root = config.getRoot();
 	const std::filesystem::path uri = root / std::filesystem::relative(request.uri, "/");
 		LOG_DEBUG("Requested path: {}", uri.string());
@@ -253,21 +300,22 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 			LOG_DEBUG("Requested path is a directory");
 
 			//TODO: see if config maps to the given uri, if so see if index is overwriten esle use default
-
 			const std::filesystem::path indexPath = uri / "index.html";
 			if (std::filesystem::exists(indexPath))
 			{
 				LOG_DEBUG("index.html exists");
-
-				// const std::string fileContents = readFileContents(indexPath);
-				std::string fileContents = readFileContents(indexPath);
-				if (fileContents.empty())
+				//? Check source has been modified
+				if (request.getHeader("If-None-Match") == generateETagv2(indexPath) && request.getHeader("If-Modified-Since") == getFileModificationTime(indexPath))
+				{
+					return generateNotModifiedResponse();
+				}
+				auto fileContents = readFileContents(indexPath);
+				if (fileContents == std::nullopt)
 				{
 					LOG_CRITICAL("Failed to read file contents: {}", indexPath.string());
 					return generateForbiddenResponse();
 				}
-				std::string response = buildHttpResponse(indexPath, fileContents, HTTPStatusCode::OK);
-				return response;
+				return generateOKResponse(indexPath, request);
 			}
 			else
 			{
@@ -281,7 +329,7 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 		{
 			LOG_DEBUG("Requested path is a file");
 
-			return generateFileResponse(uri);
+			return generateFileResponse(uri, request);
 		}
 		else
 		{
@@ -295,8 +343,20 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 	return generateNotFoundResponse();
 }
 
-std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path)
+
+//TODO: instead of sending path maybe update the path in the HrrpRequest
+std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
 {
+	LOG_INFO("Generating 200 OK response");
+
+	auto fileContents = readFileContents(path);
+	if (fileContents == std::nullopt)
+	{
+		LOG_CRITICAL("Failed to read file contents: {}", path.string());
+		return generateForbiddenResponse();
+	}
+	return buildHttpResponse(path, *fileContents, HTTPStatusCode::OK, request);
+
 	return "";
 }
 
@@ -313,16 +373,16 @@ std::string ResponseGenerator::generateForbiddenResponse()
 
 	std::filesystem::path value(root);
 
-	std::string fileContents = readFileContents(std::filesystem::path(value / "403-Forbidden.html"));
-	if (fileContents.empty())
+	auto fileContents = readFileContents(std::filesystem::path(value / "403-Forbidden.html"));
+	if (fileContents == std::nullopt)
 	{
 		LOG_CRITICAL("Failed to read file contents: {}",  "403-Forbidden.html");
 		return std::string(s_ForbiddenResponse);
 	}
-	return buildHttpResponse(ContentType::HTML, fileContents, HTTPStatusCode::Forbidden);
+	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::Forbidden);
 }
 
-std::string ResponseGenerator::generateFileResponse(const std::filesystem::path& path)
+std::string ResponseGenerator::generateFileResponse(const std::filesystem::path& path, const HttpRequest& request)
 {
 	std::string fileContents = ReadImageFile(path);
 	if (fileContents.empty())
@@ -331,20 +391,8 @@ std::string ResponseGenerator::generateFileResponse(const std::filesystem::path&
 		// return generateForbiddenResponse(path);
 		return generateForbiddenResponse();
 	}
-	std::string response = buildHttpResponse(path, fileContents, HTTPStatusCode::OK);
-
-	// std::string response = buildHttpResponse(path, "");
-	return response;
+	return buildHttpResponse(path, fileContents, HTTPStatusCode::OK, request);
 }
-
-
-
-
-
-
-
-
-
 
 std::string ResponseGenerator::generateNotFoundResponse()
 {
@@ -359,11 +407,27 @@ std::string ResponseGenerator::generateNotFoundResponse()
 
 	std::filesystem::path value(root);
 
-	std::string fileContents = readFileContents(std::filesystem::path(value / "404-NotFound.html"));
-	if (fileContents.empty())
+	auto fileContents = readFileContents(std::filesystem::path(value / "404-NotFound.html"));
+	if (fileContents == std::nullopt)
 	{
 		LOG_CRITICAL("Failed to read file contents: {}",  "404-NotFound.html");
 		return std::string(s_NotFoundResponse);
 	}
-	return buildHttpResponse(ContentType::HTML, fileContents, HTTPStatusCode::NotFound);
+	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
+}
+
+
+std::string ResponseGenerator::generateNotModifiedResponse()
+{
+	LOG_INFO("Generating 304 Not Modified response");
+
+	std::ostringstream res;
+
+	res << "HTTP/1.1 304 Not Modified\r\n";
+	res << "Server: Webserv/1.0\r\n";
+	res << "Date: " << getCurrentDateAndTime() << "\r\n";
+	res << "Connection: keep-alive\r\n";
+	res << "\r\n";  // End of headers
+
+	return res.str();
 }

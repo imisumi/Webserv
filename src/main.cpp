@@ -7,6 +7,7 @@
 #include <cstdlib>  // For setenv
 
 #include "Utils/Utils.h"
+#include "Config/ConfigParser.h"
 
 
 static void SignalHandler(int signal)
@@ -31,8 +32,10 @@ int main()
 		return 1;
 	}
 
+	Config conf = Config::CreateDefaultConfig();
+
 	Utils::Timer timer;
-	Server::Init();
+	Server::Init(conf);
 	std::cout << "Server init time: " << timer.elapsed() << "ms" << std::endl;
 	Server::Run();
 	Server::Shutdown();

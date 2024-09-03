@@ -1,144 +1,14 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Button Redirect</title>
-    <style>
-        button {
-            background-color: #f11514;
-            border: none;
-            color: white;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-        }
-        #contactButton {
-            background-color: #0400ff; /* Different color for the contact button */
-        }
-        #datetime {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #333;
-        }
-    </style>
-</head>
-<body>
-    <p>
-        paragraph of text
-    </p>
-
-    <button id="homeButton">
-        Go to Home
-    </button>
-
-    <button id="contactButton">
-        Go to Contact
-    </button>
-
-    <div id="datetime"></div>
-
-    <script>
-        document.getElementById('homeButton').addEventListener('click', function() {
-            window.location.href = '/home/index.html';
-        });
-
-        document.getElementById('contactButton').addEventListener('click', function() {
-            window.location.href = '/contact';
-        });
-
-        function updateDateTime() {
-            const now = new Date();
-            const date = now.toLocaleDateString();
-            const time = now.toLocaleTimeString();
-            const milliseconds = now.getMilliseconds();
-            const datetimeString = `${date} ${time}.${milliseconds.toString().padStart(3, '0')}`;
-            
-            document.getElementById('datetime').textContent = `Current Date and Time: ${datetimeString}`;
-        }
-
-        // Update the datetime display every second
-        // setInterval(updateDateTime, 1000);
-        
-        // Initial call to display the date and time immediately on page load
-        updateDateTime();
-    </script>
-</body>
-</html> -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Our Website</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
-        }
-        .container {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            max-width: 600px;
-            width: 100%;
-        }
-        .container h1 {
-            font-size: 48px;
-            color: #3498db;
-            margin: 0;
-        }
-        .container p {
-            font-size: 18px;
-            margin: 20px 0;
-        }
-        .container a {
-            color: #3498db;
-            text-decoration: none;
-            font-weight: bold;
-            border-bottom: 2px solid #3498db;
-            transition: all 0.3s ease;
-        }
-        .container a:hover {
-            color: #2980b9;
-            border-bottom: 2px solid #2980b9;
-        }
-        .container .footer {
-            font-size: 14px;
-            color: #777;
-            margin-top: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to Our Website!</h1>
+        <h1>Welcome to Our Website!!</h1>
         <p>We are glad to have you here. Explore our content and discover more about what we have to offer.</p>
         <p><a href="/about">Learn more about us</a></p>
         <p><a href="/contact">Get in touch</a></p>

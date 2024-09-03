@@ -67,6 +67,7 @@ bool HttpRequestParser::parse(const std::string& data)
 			case ParserState::HeaderName:
 				if (ch == ':') {
 					state = ParserState::HeaderValue;
+					it += 1; // Skip the space after the colon
 				} else if (ch == '\r') {
 					// End of headers
 					state = ParserState::Body;
@@ -74,6 +75,17 @@ bool HttpRequestParser::parse(const std::string& data)
 					currentHeaderName += ch;
 				break;
 
+			// case ParserState::HeaderValue:
+			// 	if (ch == '\n')
+			// 	{
+			// 		state = ParserState::HeaderName;
+			// 		currentHeaderName.clear();
+			// 	} else if (ch == '\r') {
+			// 		// Ignore CR
+			// 	} else {
+			// 		request.headers[currentHeaderName] += ch;
+			// 	}
+			// 	break;
 			case ParserState::HeaderValue:
 				if (ch == '\n')
 				{

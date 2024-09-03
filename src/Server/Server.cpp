@@ -20,7 +20,8 @@
 
 static Server* s_Instance = nullptr;
 
-Server::Server()
+Server::Server(const Config& config)
+	: m_Config(config)
 {
 }
 
@@ -89,12 +90,12 @@ int Server::ListenOnSocket(int socket_fd, int backlog)
 	return listen(socket_fd, backlog);
 }
 
-void Server::Init()
+void Server::Init(const Config& config)
 {
 	WEB_ASSERT(!s_Instance, "Server already exists!");
 	LOG_INFO("Server is starting up!");
 
-	s_Instance = new Server();
+	s_Instance = new Server(config);
 
 	s_Instance->m_RequestHandler = std::make_shared<RequestHandler>();
 	// s_Instance->m_ResponseSender = std::make_shared<ResponseSender>();
@@ -109,67 +110,83 @@ void Server::Init()
 	}
 
 
-	// SOCK_STREAM for TCP && SOCK_NONBLOCK for non-blocking (alternative to fcntl)
-	const SocketSettings settings = {
-		.domain = AF_INET,
-		.type = SOCK_STREAM | SOCK_NONBLOCK,
-		.protocol = 0
-	};
+	//? assuming that the config parser properly deals with duplicates
+	s_Instance->m_ServerPorts.push_back(8080);
+	s_Instance->m_ServerPorts.push_back(8081);
+	// s_Instance->m_ServerPorts.push_back(8001);
+	// s_Instance->m_ServerPorts.push_back(8002);
 
-	if ((s_Instance->m_ServerSocket = s_Instance->CreateSocket(settings)) == -1)
+	for (int port : s_Instance->m_ServerPorts)
 	{
-		LOG_ERROR("Failed to create server socket!");
-		s_Instance->m_Running = false;
-		return;
+		LOG_INFO("Creating server socket on port: {}", port);
+
+		const SocketSettings settings = {
+			.domain = AF_INET,
+			.type = SOCK_STREAM | SOCK_NONBLOCK,
+			.protocol = 0
+		};
+
+		if ((s_Instance->m_ServerSockets[port] = s_Instance->CreateSocket(settings)) == -1)
+		{
+			LOG_ERROR("Failed to create server socket!");
+			s_Instance->m_Running = false;
+			return;
+		}
+
+
+
+		int reuse = 1;
+		const SocketOptions options = {
+			.level = SOL_SOCKET,
+			.optname = SO_REUSEADDR | SO_REUSEPORT,
+			// .optval = &s_Instance->m_ServerSockets[port],
+			.optval = &reuse,
+			// .optlen = sizeof(s_Instance->m_ServerSockets[port])
+			.optlen = sizeof(reuse)
+		};
+
+		if (s_Instance->SetSocketOptions(s_Instance->m_ServerSockets[port], options) == -1)
+		{
+			LOG_ERROR("Failed to set socket options!");
+			s_Instance->m_Running = false;
+			return;
+		}
+
+
+
+		const SocketAddressConfig config = {
+			.family = AF_INET, //? address type
+			//TODO: extract from config
+			.port = port, //? convert to network byte order
+			.address = INADDR_ANY
+		};
+
+		if (s_Instance->BindSocket(s_Instance->m_ServerSockets[port], config) == -1)
+		{
+			LOG_ERROR("Failed to bind server socket!");
+			s_Instance->m_Running = false;
+			return;
+		}
+
+
+
+		if (s_Instance->ListenOnSocket(s_Instance->m_ServerSockets[port], 3) == -1)
+		{
+			LOG_ERROR("Failed to listen on server socket!");
+			s_Instance->m_Running = false;
+			return;
+		}
+
+
+
+		if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, s_Instance->m_ServerSockets[port], EPOLLIN | EPOLLET))
+		{
+			LOG_ERROR("Failed to add server socket to epoll!");
+			s_Instance->m_Running = false;
+			return;
+		}
 	}
 
-	const SocketOptions options = {
-		.level = SOL_SOCKET,
-		.optname = SO_REUSEADDR | SO_REUSEPORT,
-		.optval = &s_Instance->m_ServerSocket,
-		.optlen = sizeof(s_Instance->m_ServerSocket)
-	};
-
-	if (s_Instance->SetSocketOptions(s_Instance->m_ServerSocket, options) == -1)
-	{
-		LOG_ERROR("Failed to set socket options!");
-		s_Instance->m_Running = false;
-		return;
-	}
-
-	const SocketAddressConfig config = {
-		.family = AF_INET, //? address type
-		//TODO: extract from config
-		.port = 8080, //? convert to network byte order
-		.address = INADDR_ANY
-	};
-
-	if (s_Instance->BindSocket(s_Instance->m_ServerSocket, config) == -1)
-	{
-		LOG_ERROR("Failed to bind server socket!");
-		s_Instance->m_Running = false;
-		return;
-	}
-
-	if (s_Instance->ListenOnSocket(s_Instance->m_ServerSocket, 3) == -1)
-	{
-		LOG_ERROR("Failed to listen on server socket!");
-		s_Instance->m_Running = false;
-		return;
-	}
-
-
-	// s_Instance->m_EpollEvent.events = EPOLLIN | EPOLLET; //? EPOLLIN for read events && EPOLLET for edge-triggered mode
-	// s_Instance->m_EpollEvent.data.fd = s_Instance->m_ServerSocket;
-
-	// //? EPOLL_CTL_ADD: add a file descriptor to the epoll instance
-
-	if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, s_Instance->m_ServerSocket, EPOLLIN | EPOLLET))
-	{
-		LOG_ERROR("Failed to add server socket to epoll!");
-		s_Instance->m_Running = false;
-		return;
-	}
 }
 
 void Server::Shutdown()
@@ -177,7 +194,12 @@ void Server::Shutdown()
 	WEB_ASSERT(s_Instance, "Server does not exist!");
 	LOG_INFO("Server is shutting down!");
 
-	close(s_Instance->m_ServerSocket);
+	// close(s_Instance->m_ServerSocket);
+
+	for (auto& [port, socket] : s_Instance->m_ServerSockets)
+	{
+		close(socket);
+	}
 
 	delete s_Instance;
 	s_Instance = nullptr;
@@ -228,6 +250,20 @@ std::string getFormattedUTCTime() {
     return oss.str();
 }
 
+
+int Server::isServerSocket(int fd)
+{
+	for (auto& [port, socket] : s_Instance->m_ServerSockets)
+	{
+		if (fd == socket)
+		{
+			return port;
+		}
+	}
+
+	return -1;
+}
+
 void Server::Run()
 {
 	WEB_ASSERT(s_Instance, "Server does not exist!");
@@ -267,9 +303,9 @@ void Server::Run()
 		LOG_DEBUG("Event count: {}", eventCount);
 		for (int i = 0; i < eventCount; i++)
 		{
-			if (events[i].data.fd == s_Instance->m_ServerSocket)
+			if (s_Instance->isServerSocket(events[i].data.fd) != -1)
 			{
-				if (s_Instance->AcceptConnection() == -1)
+				if (s_Instance->AcceptConnection(events[i].data.fd) == -1)
 				{
 					LOG_ERROR("Failed to accept connection!");
 				}
@@ -298,7 +334,7 @@ void Server::Run()
 				}
 				else
 				{
-					LOG_ERROR("read: {}", strerror(errno));
+					LOG_ERROR("Run read: {}", strerror(errno));
 					s_Instance->m_Running = false;
 				}
 			}
@@ -320,7 +356,13 @@ void Server::Run()
 			}
 		}
 	}
-	close(s_Instance->m_ServerSocket);
+	// close(s_Instance->m_ServerSocket);
+
+	for (auto& [port, socket] : s_Instance->m_ServerSockets)
+	{
+		close(socket);
+	}
+
 	close(s_Instance->m_EpollFD);
 }
 
@@ -340,13 +382,13 @@ bool Server::IsRunning()
 
 
 
-int Server::AcceptConnection()
+int Server::AcceptConnection(int socket_fd)
 {
 	struct sockaddr_in clientAddress;
 	socklen_t clientAddressLength = sizeof(clientAddress);
 
 	// Handle new incoming connection
-	int client_socket = accept(s_Instance->m_ServerSocket, (struct sockaddr*)&clientAddress, &clientAddressLength);
+	int client_socket = accept(socket_fd, (struct sockaddr*)&clientAddress, &clientAddressLength);
 	if (client_socket == -1)
 	{
 		LOG_ERROR("accept: {}", strerror(errno));
@@ -409,7 +451,7 @@ void Server::HandleInputEvent(int fd)
 	else
 	{
 		close(fd);
-		LOG_ERROR("read: {}", strerror(errno));
+		LOG_ERROR("HandleInputEvent read: {}", strerror(errno));
 	}
 }
 
