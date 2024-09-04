@@ -8,26 +8,29 @@
 #include <bitset>
 #include <memory>
 
+#define DEFAULT_PORT 8080
+
 class Config
 {
 	public:
 		std::vector<std::string>	tokens;
-		struct LocationSettings
-		{
-			std::filesystem::path path;
-			std::filesystem::path root;
-			std::string index;
-			bool autoindex;
-			std::string cgi;
-			std::string returnCode;
-		};
 
 		class ServerSettings
 		{
+			public:
+				struct LocationSettings
+				{
+					std::filesystem::path root;
+					std::string index;
+					bool autoindex;
+					std::string cgi;
+					std::string returnCode;
+				};
 			private:
-				uint16_t m_Port;
+				uint16_t m_Port = DEFAULT_PORT;
 				std::string m_ServerName;
 
+				LocationSettings globalSettings;
 				std::map<std::filesystem::path, LocationSettings> m_Locations;
 
 			public:
@@ -37,7 +40,7 @@ class Config
 
 					if (it != this->m_Locations.end())
 						return it->second;
-					throw std::runtime_error("location not found");
+					return this->globalSettings;
 				};
 				const LocationSettings&	operator[](std::filesystem::path path) const
 				{
@@ -45,7 +48,7 @@ class Config
 
 					if (it != this->m_Locations.end())
 						return it->second;
-					throw std::runtime_error("location not found");
+					return this->globalSettings;
 				};
 				uint16_t getPort() const { return m_Port; };
 				const std::string& getServerName() const { return m_ServerName; };
