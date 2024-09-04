@@ -1,8 +1,8 @@
 /* style.css */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
+    background-color: #121212; /* Dark background for the entire page */
+    color: #e0e0e0; /* Light gray text color for readability */
     margin: 0;
     padding: 0;
     display: flex;
@@ -13,9 +13,9 @@ body {
 }
 
 .container {
-    background: #fff;
+    background: #1e1e1e; /* Darker background for the container */
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Darker shadow for contrast */
     padding: 20px;
     max-width: 600px;
     width: 100%;
@@ -23,7 +23,7 @@ body {
 
 .container h1 {
     font-size: 48px;
-    color: #3498db;
+    color: #e74c3c; /* Bright color for headings to stand out */
     margin: 0;
 }
 
@@ -33,20 +33,20 @@ body {
 }
 
 .container a {
-    color: #3498db;
+    color: #3498db; /* Bright blue for links */
     text-decoration: none;
     font-weight: bold;
-    border-bottom: 2px solid #3498db;
+    border-bottom: 2px solid #3498db; /* Underline effect for links */
     transition: all 0.3s ease;
 }
 
 .container a:hover {
-    color: #2980b9;
-    border-bottom: 2px solid #2980b9;
+    color: #2980b9; /* Slightly darker blue on hover */
+    border-bottom: 2px solid #2980b9; /* Update underline color on hover */
 }
 
 .container .footer {
     font-size: 14px;
-    color: #777;
+    color: #bbbbbb; /* Lighter gray for footer text */
     margin-top: 20px;
 }
