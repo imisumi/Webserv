@@ -8,17 +8,17 @@
 #include <unordered_map>
 #include <iomanip>
 
-Config	Config::CreateDefaultConfig()
+ConfigParser	ConfigParser::CreateDefaultConfig()
 {
 	//TODO: have defualt config
 	//? Can't use make_shared because constructor is private
-	return Config("");
+	return ConfigParser("");
 }
 
-Config	Config::CreateConfigFromFile(const std::filesystem::path& path)    
+Config	ConfigParser::CreateConfigFromFile(const std::filesystem::path& path)    
 {
 	//? Can't use make_shared because constructor is private
-	return Config(path);
+	return ConfigParser(path);
 }
 
 static std::string readFileIntoBuffer(const std::filesystem::path& path) {
@@ -195,7 +195,7 @@ static TokenMap	createTokenIdMap(
 	return tokenIdMap;
 }
 
-Config::Config(const std::filesystem::path& path)
+ConfigParser::ConfigParser(const std::filesystem::path& path)
 {
 	if (path.extension() != ".conf")
 		throw std::runtime_error(path.string() + ": invalid extension");

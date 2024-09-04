@@ -10,70 +10,79 @@
 
 #define DEFAULT_PORT 8080
 
-class Config
+class ConfigParser
 {
 	public:
 		std::vector<std::string>	tokens;
 
-		class ServerSettings
-		{
-			public:
-				struct LocationSettings
-				{
-					std::filesystem::path root;
-					std::string index;
-					bool autoindex;
-					std::string cgi;
-					std::string returnCode;
-				};
-			private:
-				uint16_t m_Port = DEFAULT_PORT;
-				std::string m_ServerName;
-
-				LocationSettings globalSettings;
-				std::map<std::filesystem::path, LocationSettings> m_Locations;
-
-			public:
-				LocationSettings&		operator[](std::filesystem::path path)
-				{
-					std::map<std::filesystem::path, LocationSettings>::iterator	it = this->m_Locations.find(path);
-
-					if (it != this->m_Locations.end())
-						return it->second;
-					return this->globalSettings;
-				};
-				const LocationSettings&	operator[](std::filesystem::path path) const
-				{
-					std::map<std::filesystem::path, LocationSettings>::const_iterator	it = this->m_Locations.find(path);
-
-					if (it != this->m_Locations.end())
-						return it->second;
-					return this->globalSettings;
-				};
-				uint16_t getPort() const { return m_Port; };
-				const std::string& getServerName() const { return m_ServerName; };
-		};
-
 		//? Maybe just stack allocate this
-		static Config CreateDefaultConfig();
-		static Config CreateConfigFromFile(const std::filesystem::path& path);
-
-
-		//TODO: add overload for operator[] to get location settings
-
-
+		static ConfigParser CreateDefaultConfig();
+		static ConfigParser CreateConfigFromFile(const std::filesystem::path& path);
 	private:
-		Config(const std::filesystem::path& path);
+		ConfigParser(const std::filesystem::path& path);
 
 		// Deleted copy constructor and assignment operator and move constructor and assignment operator
-		Config(const Config&) = delete;
-		Config& operator=(const Config&) = delete;
-		Config(Config&&) = delete;
-		Config& operator=(Config&&) = delete;
+		ConfigParser(const ConfigParser&) = delete;
+		ConfigParser& operator=(const ConfigParser&) = delete;
+		ConfigParser(ConfigParser&&) = delete;
+		ConfigParser& operator=(ConfigParser&&) = delete;
 
 	private:
 		std::vector<ServerSettings>	serverSettings;
+		std::shared_ptr<ServerSettings> h = std::make_shared<ServerSettings>();
+		std::shared_ptr<ServerSettings> h = std::shared_ptr(new ServerSettings);
+		std::map<uint16_t, std::shared_ptr<ServerSettings>>	Servers;
+	public:
 };
+
+class ServerSettings
+{
+	public:
+		struct LocationSettings
+		{
+			std::filesystem::path root;
+			std::string index;
+			bool autoindex;
+			std::string cgi;
+			std::string returnCode;
+		};
+	private:
+		// std::vector<uint16_t> m_Ports;
+		std::string m_ServerName;
+
+		LocationSettings globalSettings;
+		std::map<std::filesystem::path, LocationSettings> m_Locations;
+
+	public:
+		LocationSettings&		operator[](std::filesystem::path path)
+		{
+			std::map<std::filesystem::path, LocationSettings>::iterator	it = this->m_Locations.find(path);
+
+			if (it != this->m_Locations.end())
+				return it->second;
+			return this->globalSettings;
+		};
+		const LocationSettings&	operator[](std::filesystem::path path) const
+		{
+			std::map<std::filesystem::path, LocationSettings>::const_iterator	it = this->m_Locations.find(path);
+
+			if (it != this->m_Locations.end())
+				return it->second;
+			return this->globalSettings;
+		};
+		const std::string& getServerName() const { return m_ServerName; };
+};
+
+class Config
+{
+	private:
+		std::map<uint16_t, ServerSettings>	Servers;
+		friend class ConfigParser;
+	public:
+		static Config createConfig() { return ConfigParser::CreateConfigFromFile(); };
+};
+
+Config a = Config::createConfig();
 
 // class ConfigProccessor
 // {
@@ -88,9 +97,9 @@ class Config
 // 		std::string returnCode;
 // 	};
 // public:
-// 	static Config ParseConfig(const std::filesystem::path& path)
+// 	static ConfigParser ParseConfig(const std::filesystem::path& path)
 // 	{
-// 		Config config;
+// 		ConfigParser config;
 // 		return config;
 // 	}
 

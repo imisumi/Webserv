@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/08/30 13:57:51 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/03 17:26:22 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/04 16:23:02 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,7 @@ void	runTests()
 			"}",
 		};
 
-		Config input = Config::CreateConfigFromFile(infile);
+		ConfigParser input = ConfigParser::CreateConfigFromFile(infile);
 		assertTokenOutput(input.tokens, expected);
 	}
 	catch (const std::exception& e)
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 	std::filesystem::path	infile(argv[1]);
 	try
 	{
-		Config::CreateConfigFromFile(infile);
+		ConfigParser::CreateConfigFromFile(infile);
 	}
 	catch (const std::exception& e)
 	{
