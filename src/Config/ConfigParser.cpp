@@ -58,7 +58,7 @@ Config Config::CreateConfigFromFile(const std::filesystem::path& path)
 Config::Config()
 	: m_Path("")
 {
-	m_Root = std::filesystem::path("/home/imisumi-wsl/dev/Webserv/root/html");
+	m_Root = std::filesystem::path("/home/imisumi/Desktop/Webserv/root/html/");
 }
 
 Config::Config(const std::filesystem::path& path)

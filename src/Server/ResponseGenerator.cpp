@@ -187,51 +187,6 @@ static std::string generateETagv2(const std::filesystem::path& path)
 	return "\"" + ss.str() + "\"";
 }
 
-// std::string ResponseGenerator::buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code, const HttpRequest& request)
-// {
-// 	std::ostringstream response;
-
-// 	std::string contentType = determineContentType(path);
-// 	if (contentType.empty())
-// 	{
-// 		// return generateForbiddenResponse(path);
-// 		return generateForbiddenResponse();
-// 	}
-
-// 	const std::string statusCode = HTTPStatusCodeToString(code);
-
-// 	WEB_ASSERT(!statusCode.empty(), "Invalid HTTP status code! (add a custom code or use a valid one)");
-
-// 	std::string connection = request.getHeader("Connection");
-// 	if (connection.empty())
-// 	{
-// 		connection = "keep-alive";
-// 	}
-
-
-// 	// response << "HTTP/1.1 200 OK\r\n"
-// 	response << "HTTP/1.1 " << statusCode << "\r\n"
-// 			<< "Server: Webserv/1.0\r\n"
-// 			<< "Date: " << getCurrentDateAndTime() << "\r\n"
-// 			<< "Content-Type: " << contentType << "\r\n"
-// 			<< "Content-Length: " << body.size() << "\r\n"
-// 			<< "Last-Modified: " << getFileModificationTime(path) << "\r\n"
-// 			//TODO: hard coded values should check this
-// 			// << "Connection: keep-alive\r\n"
-// 			<< "Connection: " << connection << "\r\n"
-// 			// << "Connection: close\r\n"
-// 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
-// 			<< "ETag: " << generateETagv2(path) << "\r\n"
-// 			<< "Accept-Ranges: bytes\r\n"
-// 			// << "Cache-Control: max-age=3600\r\n"  // Cache for 1 hour
-// 			<< "\r\n";  // End of headers
-
-// 	if (!body.empty())
-// 		response << body;
-
-// 	return response.str();
-// }
-
 std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPStatusCode code, const HttpRequest& request)
 {
 	std::ostringstream response;
@@ -328,66 +283,6 @@ std::string ReadImageFile(const std::filesystem::path& path)
 	file.close();
 	return favicon_content;
 }
-
-// const std::string ResponseGenerator::handleGetRequest(const Config& config, const HttpRequest& request)
-// {
-// 	LOG_INFO("Handling GET request");
-
-// 	const std::filesystem::path root = config.getRoot();
-// 	const std::filesystem::path uri = root / std::filesystem::relative(request.uri, "/");
-// 		LOG_DEBUG("Requested path: {}", uri.string());
-
-// 	//? Validate the requested path
-// 	if (std::filesystem::exists(uri))
-// 	{
-// 		//? Check if the requested path is a directory or a file
-// 		if (std::filesystem::is_directory(uri))
-// 		{
-// 			LOG_DEBUG("Requested path is a directory");
-
-// 			//TODO: see if config maps to the given uri, if so see if index is overwriten esle use default
-// 			const std::filesystem::path indexPath = uri / "index.html";
-// 			if (std::filesystem::exists(indexPath))
-// 			{
-// 				LOG_DEBUG("index.html exists");
-// 				//? Check source has been modified
-// 				if (request.getHeader("If-None-Match") == generateETagv2(indexPath) && request.getHeader("If-Modified-Since") == getFileModificationTime(indexPath))
-// 				{
-// 					return generateNotModifiedResponse();
-// 				}
-// 				auto fileContents = readFileContents(indexPath);
-// 				if (fileContents == std::nullopt)
-// 				{
-// 					LOG_CRITICAL("Failed to read file contents: {}", indexPath.string());
-// 					return generateForbiddenResponse();
-// 				}
-// 				return generateOKResponse(indexPath, request);
-// 			}
-// 			else
-// 			{
-// 				LOG_DEBUG("index.html does not exist");
-// 				//? send 404 response
-// 				return generateNotFoundResponse();
-// 			}
-
-// 		}
-// 		else if (std::filesystem::is_regular_file(uri))
-// 		{
-// 			LOG_DEBUG("Requested path is a file");
-
-// 			return generateFileResponse(uri, request);
-// 		}
-// 		else
-// 		{
-// 			//TODO: send 405 response???
-// 			LOG_ERROR("Requested path is not a file or directory");
-
-// 			return generateNotFoundResponse();
-// 		}
-// 	}
-// 	LOG_DEBUG("Requested path does not exist");
-// 	return generateNotFoundResponse();
-// }
 
 #include "Utils/Utils.h"
 

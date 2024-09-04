@@ -64,10 +64,7 @@ public:
 	}
 
 public:
-	//TODO: use enum class for method instead of string
-	// std::string method;
 	RequestMethod method = RequestMethod::UNKNOWN;
-	// mutable std::filesystem::path uri;
 	std::filesystem::path uri;
 	std::string version;
 	std::unordered_map<std::string, std::string> headers;
