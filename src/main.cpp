@@ -33,10 +33,10 @@ int main()
 	}
 
 	Config conf = Config::CreateDefaultConfig();
-
-	Utils::Timer timer;
-	Server::Init(conf);
-	std::cout << "Server init time: " << timer.elapsed() << "ms" << std::endl;
+	{
+		Utils::Timer timer;
+		Server::Init(conf);
+	}
 	Server::Run();
 	Server::Shutdown();
 }

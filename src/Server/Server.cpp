@@ -58,6 +58,7 @@ int Server::RemoveEpollEvent(int epollFD, int fd)
 
 int Server::ModifyEpollEvent(int epollFD, int fd, int event)
 {
+	// EPOLLRDHUP | EPOLLHUP | EPOLLERR;
 	epoll_event ev;
 	ev.events = event;
 	ev.data.fd = fd;
@@ -96,10 +97,6 @@ void Server::Init(const Config& config)
 	LOG_INFO("Server is starting up!");
 
 	s_Instance = new Server(config);
-
-	s_Instance->m_RequestHandler = std::make_shared<RequestHandler>();
-	// s_Instance->m_ResponseSender = std::make_shared<ResponseSender>();
-
 
 	//? EPOLL_CLOEXEC: automatically close the file descriptor when calling exec
 	if ((s_Instance->m_EpollFD = s_Instance->CreateEpoll()) == -1)
@@ -201,53 +198,10 @@ void Server::Shutdown()
 		close(socket);
 	}
 
+	close(s_Instance->m_EpollFD);
+
 	delete s_Instance;
 	s_Instance = nullptr;
-}
-
-
-// static std::string getFormattedTime() {
-//     // Get the current time
-//     std::time_t t = std::time(nullptr);
-//     std::tm* tm = std::gmtime(&t); // Use gmtime for UTC time
-
-//     // Create a string stream to format the date and time
-//     std::ostringstream oss;
-
-//     // Format the date and time as [DD/Mon/YYYY:HH:MM:SS +0000]
-//     oss << '[' 
-//         << std::setfill('0') << std::setw(2) << tm->tm_mday << '/'          // Day
-//         << std::put_time(tm, "%b") << '/'                                   // Month abbreviation
-//         << (tm->tm_year + 1900) << ':'                                      // Year
-//         << std::setw(2) << tm->tm_hour << ':'                               // Hours
-//         << std::setw(2) << tm->tm_min << ':'                                // Minutes
-//         << std::setw(2) << tm->tm_sec << " +0000"                           // Seconds and timezone
-//         << ']';
-
-//     return oss.str();
-// }
-
-std::string getFormattedUTCTime() {
-    // Get the current time
-    std::time_t t = std::time(nullptr);
-
-    // Convert to UTC time
-    std::tm* tm_utc = std::gmtime(&t);
-
-    // Create a string stream to format the date and time
-    std::ostringstream oss;
-
-    // Format the date and time as [DD/Mon/YYYY:HH:MM:SS +0000]
-    oss << '[' 
-        << std::setfill('0') << std::setw(2) << tm_utc->tm_mday << '/'     // Day
-        << std::put_time(tm_utc, "%b") << '/'                              // Month abbreviation
-        << (tm_utc->tm_year + 1900) << ':'                                 // Year
-        << std::setw(2) << tm_utc->tm_hour << ':'                          // Hours
-        << std::setw(2) << tm_utc->tm_min << ':'                           // Minutes
-        << std::setw(2) << tm_utc->tm_sec << " +0000"                      // Seconds and UTC offset
-        << ']';
-
-    return oss.str();
 }
 
 
@@ -287,10 +241,6 @@ void Server::Run()
 	std::string clientIP[MAX_EVENTS];
 	while (s_Instance->m_Running)
 	{
-		// LOG_TRACE("Server is running...");
-
-		// std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
 		LOG_INFO("Waiting for events...");
 
 		//? EPOLL_WAIT: wait for events on the epoll instance
@@ -356,14 +306,6 @@ void Server::Run()
 			}
 		}
 	}
-	// close(s_Instance->m_ServerSocket);
-
-	for (auto& [port, socket] : s_Instance->m_ServerSockets)
-	{
-		close(socket);
-	}
-
-	close(s_Instance->m_EpollFD);
 }
 
 void Server::Stop()
@@ -395,6 +337,9 @@ int Server::AcceptConnection(int socket_fd)
 		return -1;
 	}
 
+	char clientIP[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &clientAddress.sin_addr, clientIP, INET_ADDRSTRLEN);
+
 
 	int flags = fcntl(client_socket, F_GETFL, 0);
 	fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
@@ -424,7 +369,9 @@ void Server::HandleInputEvent(int fd)
 		const std::string bufferStr = std::string(buffer, n);
 		// LOG_INFO("Received data:\n{}", bufferStr);
 
-		const std::string response = s_Instance->m_RequestHandler->handleRequest(bufferStr, fd);
+		//TODO: get the correct sevrer config and pass it to the request handler
+		Config config = Config::CreateDefaultConfig();
+		const std::string response = s_Instance->m_RequestHandler.handleRequest(config, bufferStr);
 
 		m_ClientResponses[fd] = response;
 
@@ -446,6 +393,7 @@ void Server::HandleInputEvent(int fd)
 		}
 
 		//TODO: also when removing from epoll?
+
 		close(fd);
 	}
 	else
@@ -455,16 +403,47 @@ void Server::HandleInputEvent(int fd)
 	}
 }
 
+// void Server::HandleOutputEvent(int fd)
+// {
+// 	// Attempt to find the client response for the given file descriptor
+// 	if (auto it = m_ClientResponses.find(fd); it != m_ClientResponses.end())
+// 	{
+// 		const std::string& response = it->second;
+// 		//TODO: use response sender
+// 		if (send(fd, response.c_str(), response.size(), 0) == -1)
+// 		{
+// 			LOG_ERROR("send: {}", strerror(errno));
+// 			close(fd);
+// 		}
+// 		else
+// 		{
+// 			LOG_DEBUG("Sent response to client.");
+
+// 			// Remove the entry from the map
+// 			m_ClientResponses.erase(it);
+
+// 			if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, fd, EPOLLIN) == -1)
+// 			{
+// 				LOG_ERROR("Failed to modify client socket in epoll!");
+// 				s_Instance->m_Running = false;
+// 			}
+// 		}
+// 	}
+// 	else
+// 	{
+// 		LOG_ERROR("No response found for client socket {}.", fd);
+// 		close(fd);
+// 	}
+// }
+
 void Server::HandleOutputEvent(int fd)
 {
-	//TODO: use response sender
-	auto it = m_ClientResponses.find(fd);
-	if (it != m_ClientResponses.end())
+	// Attempt to find the client response for the given file descriptor
+	if (auto it = m_ClientResponses.find(fd); it != m_ClientResponses.end())
 	{
 		const std::string& response = it->second;
-		ssize_t sentBytes = send(fd, response.c_str(), response.size(), 0);
-
-		if (sentBytes == -1)
+		//TODO: use response sender
+		if (s_Instance->m_ResponseSender.sendResponse(response, fd) == -1)
 		{
 			LOG_ERROR("send: {}", strerror(errno));
 			close(fd);
@@ -480,7 +459,6 @@ void Server::HandleOutputEvent(int fd)
 			{
 				LOG_ERROR("Failed to modify client socket in epoll!");
 				s_Instance->m_Running = false;
-				return;
 			}
 		}
 	}

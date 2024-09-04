@@ -48,11 +48,26 @@ public:
 		return "";
 	}
 
+	// void setUri(const std::filesystem::path& path) const
+	// {
+	// 	uri = path;
+	// }
+
+	void setUri(const std::filesystem::path& path)
+	{
+		uri = path;
+	}
+
+	std::filesystem::path getUri() const
+	{
+		return uri;
+	}
+
 public:
 	//TODO: use enum class for method instead of string
 	// std::string method;
 	RequestMethod method = RequestMethod::UNKNOWN;
-	// std::string uri;
+	// mutable std::filesystem::path uri;
 	std::filesystem::path uri;
 	std::string version;
 	std::unordered_map<std::string, std::string> headers;
@@ -73,12 +88,14 @@ public:
 	}
 
 private:
-	bool setError() {
+	bool setError()
+	{
 		state = ParserState::Error;
 		return false;
 	}
 
-	bool finalize() {
+	bool finalize()
+	{
 		if (state == ParserState::Body || state == ParserState::HeaderName) {
 			state = ParserState::Done;
 			return true;

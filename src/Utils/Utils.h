@@ -4,7 +4,7 @@
 #pragma once
 
 #include <chrono>
-
+#include <iostream>
 
 
 namespace Utils
@@ -13,6 +13,10 @@ namespace Utils
 	{
 	public:
 		Timer() { reset(); }
+		~Timer()
+		{
+			std::cout << "Elapsed time: " << elapsedMillis() << "ms\n";
+		}
 		void reset() { start = std::chrono::high_resolution_clock::now(); }
 		
 		// elapsed time in microseconds

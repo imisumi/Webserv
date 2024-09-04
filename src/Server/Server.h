@@ -79,7 +79,7 @@ private:
 private:
 	const Config& m_Config;
 	// Config m_Config;
-	std::string bufferStr;
+
 	bool m_Running = true;
 
 	// int m_ServerSocket = -1;
@@ -89,15 +89,16 @@ private:
 	std::unordered_map<int, int> m_ServerSockets;
 	int m_EpollFD = -1;
 
-	int m_Connections = 0;
 
-	// struct epoll_event m_EpollEvent;
 
 	struct sockaddr_in m_SockAddress;
-
-	//TODO: maybe stack-allocate this?
-	std::shared_ptr<RequestHandler> m_RequestHandler;
-	// std::shared_ptr<ResponseSender> m_ResponseSender;
+	RequestHandler m_RequestHandler;
+	ResponseSender m_ResponseSender;
 
 	std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
+
+
+
+
+
 };

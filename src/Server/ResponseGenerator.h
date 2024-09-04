@@ -28,7 +28,8 @@ enum class HTTPStatusCode
 	Forbidden = 403,			// access denied
 	NotFound = 404,				// resource not found
 	MethodNotAllowed = 405,		// method not allowed
-	InternalServerError = 500	// server error
+	InternalServerError = 500,	// server error
+	NotImplemented = 501,		// not implemented
 };
 
 enum class ContentType
@@ -57,21 +58,25 @@ private:
 	
 	static std::string getCurrentDateAndTime();
 
-	static std::string buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code, const HttpRequest& request);
+	static std::string buildHttpResponse(const std::string& body, HTTPStatusCode code, const HttpRequest& request);
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
 	static const std::string handleGetRequest(const Config& config, const HttpRequest& request);
 
-	static std::string generateOKResponse(const std::filesystem::path& path, const HttpRequest& request);
+	static std::string generateOKResponse(const HttpRequest& request);
 
-	static std::string generateFileResponse(const std::filesystem::path& path, const HttpRequest& request);
+	static std::string generateFileResponse(const HttpRequest& request);
 
-	// static std::string generateForbiddenResponse(const std::filesystem::path& path);
 	static std::string generateForbiddenResponse();
 
 	static std::string generateNotFoundResponse();
 
 
 	static std::string generateNotModifiedResponse();
+
+	static std::string generateNotImplementedResponse();
+	static std::string generateBadRequestResponse();
+	static std::string generateInternalServerErrorResponse();
+
 };

@@ -44,14 +44,15 @@ const std::string ResponseGenerator::generateResponse(const Config& config, cons
 		case RequestMethod::GET:			return handleGetRequest(config, request);
 		case RequestMethod::POST:			break;
 		case RequestMethod::PUT:			break;
-		case RequestMethod::PATCH:			break;
+		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
 		case RequestMethod::DELETE:			break;
-		case RequestMethod::HEAD:			break;
-		case RequestMethod::OPTIONS:		break;
+		case RequestMethod::HEAD:			break ;
+		case RequestMethod::OPTIONS:		return generateBadRequestResponse(); //TODO: this is just for testing, bad request in incase of a invalid request
 		default:							break;
 	}
 
-	return generateNotFoundResponse();
+	// return generateNotFoundResponse();
+	return generateNotImplementedResponse();
 }
 
 
@@ -186,11 +187,56 @@ static std::string generateETagv2(const std::filesystem::path& path)
 	return "\"" + ss.str() + "\"";
 }
 
-std::string ResponseGenerator::buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code, const HttpRequest& request)
+// std::string ResponseGenerator::buildHttpResponse(const std::filesystem::path& path, const std::string& body, HTTPStatusCode code, const HttpRequest& request)
+// {
+// 	std::ostringstream response;
+
+// 	std::string contentType = determineContentType(path);
+// 	if (contentType.empty())
+// 	{
+// 		// return generateForbiddenResponse(path);
+// 		return generateForbiddenResponse();
+// 	}
+
+// 	const std::string statusCode = HTTPStatusCodeToString(code);
+
+// 	WEB_ASSERT(!statusCode.empty(), "Invalid HTTP status code! (add a custom code or use a valid one)");
+
+// 	std::string connection = request.getHeader("Connection");
+// 	if (connection.empty())
+// 	{
+// 		connection = "keep-alive";
+// 	}
+
+
+// 	// response << "HTTP/1.1 200 OK\r\n"
+// 	response << "HTTP/1.1 " << statusCode << "\r\n"
+// 			<< "Server: Webserv/1.0\r\n"
+// 			<< "Date: " << getCurrentDateAndTime() << "\r\n"
+// 			<< "Content-Type: " << contentType << "\r\n"
+// 			<< "Content-Length: " << body.size() << "\r\n"
+// 			<< "Last-Modified: " << getFileModificationTime(path) << "\r\n"
+// 			//TODO: hard coded values should check this
+// 			// << "Connection: keep-alive\r\n"
+// 			<< "Connection: " << connection << "\r\n"
+// 			// << "Connection: close\r\n"
+// 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
+// 			<< "ETag: " << generateETagv2(path) << "\r\n"
+// 			<< "Accept-Ranges: bytes\r\n"
+// 			// << "Cache-Control: max-age=3600\r\n"  // Cache for 1 hour
+// 			<< "\r\n";  // End of headers
+
+// 	if (!body.empty())
+// 		response << body;
+
+// 	return response.str();
+// }
+
+std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPStatusCode code, const HttpRequest& request)
 {
 	std::ostringstream response;
 
-	std::string contentType = determineContentType(path);
+	std::string contentType = determineContentType(request.getUri());
 	if (contentType.empty())
 	{
 		// return generateForbiddenResponse(path);
@@ -214,13 +260,13 @@ std::string ResponseGenerator::buildHttpResponse(const std::filesystem::path& pa
 			<< "Date: " << getCurrentDateAndTime() << "\r\n"
 			<< "Content-Type: " << contentType << "\r\n"
 			<< "Content-Length: " << body.size() << "\r\n"
-			<< "Last-Modified: " << getFileModificationTime(path) << "\r\n"
+			<< "Last-Modified: " << getFileModificationTime(request.getUri()) << "\r\n"
 			//TODO: hard coded values should check this
 			// << "Connection: keep-alive\r\n"
 			<< "Connection: " << connection << "\r\n"
 			// << "Connection: close\r\n"
 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
-			<< "ETag: " << generateETagv2(path) << "\r\n"
+			<< "ETag: " << generateETagv2(request.getUri()) << "\r\n"
 			<< "Accept-Ranges: bytes\r\n"
 			// << "Cache-Control: max-age=3600\r\n"  // Cache for 1 hour
 			<< "\r\n";  // End of headers
@@ -283,53 +329,117 @@ std::string ReadImageFile(const std::filesystem::path& path)
 	return favicon_content;
 }
 
+// const std::string ResponseGenerator::handleGetRequest(const Config& config, const HttpRequest& request)
+// {
+// 	LOG_INFO("Handling GET request");
+
+// 	const std::filesystem::path root = config.getRoot();
+// 	const std::filesystem::path uri = root / std::filesystem::relative(request.uri, "/");
+// 		LOG_DEBUG("Requested path: {}", uri.string());
+
+// 	//? Validate the requested path
+// 	if (std::filesystem::exists(uri))
+// 	{
+// 		//? Check if the requested path is a directory or a file
+// 		if (std::filesystem::is_directory(uri))
+// 		{
+// 			LOG_DEBUG("Requested path is a directory");
+
+// 			//TODO: see if config maps to the given uri, if so see if index is overwriten esle use default
+// 			const std::filesystem::path indexPath = uri / "index.html";
+// 			if (std::filesystem::exists(indexPath))
+// 			{
+// 				LOG_DEBUG("index.html exists");
+// 				//? Check source has been modified
+// 				if (request.getHeader("If-None-Match") == generateETagv2(indexPath) && request.getHeader("If-Modified-Since") == getFileModificationTime(indexPath))
+// 				{
+// 					return generateNotModifiedResponse();
+// 				}
+// 				auto fileContents = readFileContents(indexPath);
+// 				if (fileContents == std::nullopt)
+// 				{
+// 					LOG_CRITICAL("Failed to read file contents: {}", indexPath.string());
+// 					return generateForbiddenResponse();
+// 				}
+// 				return generateOKResponse(indexPath, request);
+// 			}
+// 			else
+// 			{
+// 				LOG_DEBUG("index.html does not exist");
+// 				//? send 404 response
+// 				return generateNotFoundResponse();
+// 			}
+
+// 		}
+// 		else if (std::filesystem::is_regular_file(uri))
+// 		{
+// 			LOG_DEBUG("Requested path is a file");
+
+// 			return generateFileResponse(uri, request);
+// 		}
+// 		else
+// 		{
+// 			//TODO: send 405 response???
+// 			LOG_ERROR("Requested path is not a file or directory");
+
+// 			return generateNotFoundResponse();
+// 		}
+// 	}
+// 	LOG_DEBUG("Requested path does not exist");
+// 	return generateNotFoundResponse();
+// }
+
+#include "Utils/Utils.h"
+
 const std::string ResponseGenerator::handleGetRequest(const Config& config, const HttpRequest& request)
 {
+	Utils::Timer timer;
 	LOG_INFO("Handling GET request");
 
-	const std::filesystem::path root = config.getRoot();
-	const std::filesystem::path uri = root / std::filesystem::relative(request.uri, "/");
-		LOG_DEBUG("Requested path: {}", uri.string());
-
 	//? Validate the requested path
-	if (std::filesystem::exists(uri))
+	if (std::filesystem::exists(request.getUri()))
 	{
 		//? Check if the requested path is a directory or a file
-		if (std::filesystem::is_directory(uri))
+		if (std::filesystem::is_directory(request.getUri()))
 		{
 			LOG_DEBUG("Requested path is a directory");
 
 			//TODO: see if config maps to the given uri, if so see if index is overwriten esle use default
-			const std::filesystem::path indexPath = uri / "index.html";
-			if (std::filesystem::exists(indexPath))
-			{
-				LOG_DEBUG("index.html exists");
-				//? Check source has been modified
-				if (request.getHeader("If-None-Match") == generateETagv2(indexPath) && request.getHeader("If-Modified-Since") == getFileModificationTime(indexPath))
-				{
-					return generateNotModifiedResponse();
-				}
-				auto fileContents = readFileContents(indexPath);
-				if (fileContents == std::nullopt)
-				{
-					LOG_CRITICAL("Failed to read file contents: {}", indexPath.string());
-					return generateForbiddenResponse();
-				}
-				return generateOKResponse(indexPath, request);
-			}
-			else
+			HttpRequest updatedRequest = request;
+			updatedRequest.setUri(updatedRequest.getUri() / "index.html");
+			if (!std::filesystem::exists(updatedRequest.getUri()))
 			{
 				LOG_DEBUG("index.html does not exist");
 				//? send 404 response
 				return generateNotFoundResponse();
 			}
 
+			LOG_DEBUG("index.html exists");
+			//? Check source has been modified
+			if (updatedRequest.getHeader("If-None-Match") == generateETagv2(updatedRequest.getUri()) && updatedRequest.getHeader("If-Modified-Since") == getFileModificationTime(updatedRequest.getUri()))
+			{
+				return generateNotModifiedResponse();
+			}
+			auto fileContents = readFileContents(updatedRequest.getUri());
+			if (fileContents == std::nullopt)
+			{
+				LOG_CRITICAL("Failed to read file contents: {}", updatedRequest.getUri().string());
+				return generateForbiddenResponse();
+			}
+			// return generateOKResponse(updatedRequest.getUri(), updatedRequest);
+			return generateOKResponse(updatedRequest);
 		}
-		else if (std::filesystem::is_regular_file(uri))
+		else if (std::filesystem::is_regular_file(request.getUri()))
 		{
+			//TODO: check if file is a CGI script
 			LOG_DEBUG("Requested path is a file");
 
-			return generateFileResponse(uri, request);
+			if (request.getHeader("If-None-Match") == generateETagv2(request.getUri()) && request.getHeader("If-Modified-Since") == getFileModificationTime(request.getUri()))
+			{
+				return generateNotModifiedResponse();
+			}
+
+			return generateFileResponse(request);
 		}
 		else
 		{
@@ -345,17 +455,19 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest
-std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
+// std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
+std::string ResponseGenerator::generateOKResponse(const HttpRequest& request)
 {
 	LOG_INFO("Generating 200 OK response");
 
-	auto fileContents = readFileContents(path);
+	auto fileContents = readFileContents(request.getUri());
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", path.string());
+		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());
 		return generateForbiddenResponse();
 	}
-	return buildHttpResponse(path, *fileContents, HTTPStatusCode::OK, request);
+	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
+	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request);
 
 	return "";
 }
@@ -382,16 +494,19 @@ std::string ResponseGenerator::generateForbiddenResponse()
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::Forbidden);
 }
 
-std::string ResponseGenerator::generateFileResponse(const std::filesystem::path& path, const HttpRequest& request)
+std::string ResponseGenerator::generateFileResponse(const HttpRequest& request)
 {
-	std::string fileContents = ReadImageFile(path);
+	LOG_TRACE("Generating file response");
+	LOG_TRACE("Request URI: {}", request.getUri().string());
+	std::string fileContents = ReadImageFile(request.getUri());
 	if (fileContents.empty())
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", path.string());
+		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());
 		// return generateForbiddenResponse(path);
 		return generateForbiddenResponse();
 	}
-	return buildHttpResponse(path, fileContents, HTTPStatusCode::OK, request);
+	// return buildHttpResponse(request.getUri(), fileContents, HTTPStatusCode::OK, request);
+	return buildHttpResponse(fileContents, HTTPStatusCode::OK, request);
 }
 
 std::string ResponseGenerator::generateNotFoundResponse()
@@ -430,4 +545,70 @@ std::string ResponseGenerator::generateNotModifiedResponse()
 	res << "\r\n";  // End of headers
 
 	return res.str();
+}
+
+std::string ResponseGenerator::generateNotImplementedResponse()
+{
+	LOG_INFO("Generating 404 Not Found response");
+
+	const char* root = std::getenv("HTML_ROOT_DIR");
+	if (root == nullptr)
+	{
+		WEB_ASSERT(false, "HTML_ROOT_DIR environment variable not set!");
+		return nullptr;
+	}
+
+	std::filesystem::path value(root);
+
+	auto fileContents = readFileContents(std::filesystem::path(value / "501-NotImplemented.html"));
+	if (fileContents == std::nullopt)
+	{
+		LOG_CRITICAL("Failed to read file contents: {}",  "501-NotImplemented.html");
+		return std::string(s_NotFoundResponse);
+	}
+	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
+}
+
+std::string ResponseGenerator::generateBadRequestResponse()
+{
+	LOG_INFO("Generating 400 Bad Request response");
+
+	const char* root = std::getenv("HTML_ROOT_DIR");
+	if (root == nullptr)
+	{
+		WEB_ASSERT(false, "HTML_ROOT_DIR environment variable not set!");
+		return nullptr;
+	}
+
+	std::filesystem::path value(root);
+
+	auto fileContents = readFileContents(std::filesystem::path(value / "400-BadRequest.html"));
+	if (fileContents == std::nullopt)
+	{
+		LOG_CRITICAL("Failed to read file contents: {}",  "400-BadRequest.html");
+		return std::string(s_NotFoundResponse);
+	}
+	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
+}
+
+std::string ResponseGenerator::generateInternalServerErrorResponse()
+{
+	LOG_INFO("Generating 500 Internal Server Error response");
+
+	const char* root = std::getenv("HTML_ROOT_DIR");
+	if (root == nullptr)
+	{
+		WEB_ASSERT(false, "HTML_ROOT_DIR environment variable not set!");
+		return nullptr;
+	}
+
+	std::filesystem::path value(root);
+
+	auto fileContents = readFileContents(std::filesystem::path(value / "500-InternalServerError.html"));
+	if (fileContents == std::nullopt)
+	{
+		LOG_CRITICAL("Failed to read file contents: {}",  "500-InternalServerError.html");
+		return std::string(s_NotFoundResponse);
+	}
+	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
 }

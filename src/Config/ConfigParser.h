@@ -28,6 +28,12 @@ public:
 	};
 
 
+	struct ServerConfig
+	{
+		LocationSettings location;
+	};
+
+
 
 	uint16_t getPort() const { return m_Port; }
 	const std::filesystem::path& getRoot() const { return m_Root; }
@@ -52,9 +58,6 @@ private:
 	Config& operator=(const Config&) = delete;
 	Config(Config&&) = delete;
 	Config& operator=(Config&&) = delete;
-
-
-private:
 
 private:
 	const std::filesystem::path m_Path;

@@ -1,9 +1,5 @@
 #include "HttpRequestParser.h"
 
-
-
-
-
 static RequestMethod GetRequestMethodFromString(std::string_view request)
 {
 	if (request == "GET")			return RequestMethod::GET;
@@ -16,6 +12,8 @@ static RequestMethod GetRequestMethodFromString(std::string_view request)
 	return RequestMethod::UNKNOWN;
 }
 
+
+//TODO: very basic parser, needs to be improved
 bool HttpRequestParser::parse(const std::string& data)
 {
 	auto it = data.begin();
@@ -29,7 +27,6 @@ bool HttpRequestParser::parse(const std::string& data)
 				if (std::isalpha(ch))
 				{
 					state = ParserState::Method;
-					// request.method += ch;
 					requestMethod += ch;
 				}
 				else
@@ -44,7 +41,6 @@ bool HttpRequestParser::parse(const std::string& data)
 				}
 				else
 					requestMethod += ch;
-					// request.method += ch;
 				break;
 
 			case ParserState::URI:
@@ -75,17 +71,6 @@ bool HttpRequestParser::parse(const std::string& data)
 					currentHeaderName += ch;
 				break;
 
-			// case ParserState::HeaderValue:
-			// 	if (ch == '\n')
-			// 	{
-			// 		state = ParserState::HeaderName;
-			// 		currentHeaderName.clear();
-			// 	} else if (ch == '\r') {
-			// 		// Ignore CR
-			// 	} else {
-			// 		request.headers[currentHeaderName] += ch;
-			// 	}
-			// 	break;
 			case ParserState::HeaderValue:
 				if (ch == '\n')
 				{
