@@ -40,7 +40,7 @@ static inline bool	stringEndsWith(const std::string& s, const std::string& end)
 	return false;
 }
 
-enum ConfigIdentifier
+enum TokenIdentifier
 {
 	SERVER,
 	PORT,
@@ -58,9 +58,9 @@ enum ConfigIdentifier
 	ARGUMENT,
 };
 
-static enum ConfigIdentifier	getIdentifier(const std::string& input)
+static enum TokenIdentifier	getIdentifier(const std::string& input)
 {
-	const std::unordered_map<std::string, ConfigIdentifier> idMap = {
+	const std::unordered_map<std::string, TokenIdentifier> idMap = {
 		{"server", SERVER},
 		{"listen", PORT},
 		{"server_name", SERVER_NAME},
@@ -75,7 +75,7 @@ static enum ConfigIdentifier	getIdentifier(const std::string& input)
 		{"}", BRACKET_CLOSE},
 		{";", DIRECTIVE_END},
 	};
-	std::unordered_map<std::string, ConfigIdentifier>::const_iterator it;
+	std::unordered_map<std::string, TokenIdentifier>::const_iterator it;
 
 	it = idMap.find(input);
 	if (it != idMap.end())
@@ -83,9 +83,9 @@ static enum ConfigIdentifier	getIdentifier(const std::string& input)
 	return ARGUMENT;
 }
 
-static std::string	escapeIdentifier(ConfigIdentifier id)
+static std::string	escapeIdentifier(TokenIdentifier id)
 {
-	const std::unordered_map<ConfigIdentifier, std::string> idMap = {
+	const std::unordered_map<TokenIdentifier, std::string> idMap = {
 		{SERVER, "server"},
 		{PORT, "port"},
 		{SERVER_NAME, "server name"},
@@ -100,7 +100,7 @@ static std::string	escapeIdentifier(ConfigIdentifier id)
 		{BRACKET_CLOSE, "bracket close"},
 		{DIRECTIVE_END, "directive end"},
 	};
-	std::unordered_map<ConfigIdentifier, std::string>::const_iterator it;
+	std::unordered_map<TokenIdentifier, std::string>::const_iterator it;
 
 	it = idMap.find(id);
 	if (it != idMap.end())
@@ -168,7 +168,7 @@ static bool	validBracketCount(std::vector<std::string>& tokens)
 {
 	size_t	openCount = 0;
 	size_t	closedCount = 0;
-	ConfigIdentifier	id;
+	TokenIdentifier	id;
 
 	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
@@ -181,33 +181,24 @@ static bool	validBracketCount(std::vector<std::string>& tokens)
 	return openCount == closedCount;
 }
 
-bool	parseDirective(
-	ConfigIdentifier directive,
-	const std::vector<std::string>& tokens,
-	std::vector<std::string>::iterator& it)
-{
-	return true;
-}
+typedef std::vector<std::pair<TokenIdentifier, std::string>> TokenMap;
 
-bool	parseContext(
-	const std::vector<std::string>& tokens,
-	std::vector<std::string>::iterator& it,
-	const ConfigIdentifier allowed[])
+static TokenMap	createTokenIdMap(
+	const std::vector<std::string>& tokens)
 {
-	for (;it != tokens.end(); it++)
+	std::vector<std::pair<TokenIdentifier, std::string>>	tokenIdMap;
+
+	for (std::vector<std::string>::const_iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
-
+		tokenIdMap.emplace_back(getIdentifier(*it), *it);
 	}
-	it--;
-	return true;
+	return tokenIdMap;
 }
 
 Config::Config(const std::filesystem::path& path)
 {
-	// if (path.extension() != ".conf")
-	// 	throw std::runtime_error(path.string() + ": invalid extension");
-	// if (!stringEndsWith(path, ".conf"))
-	// 	throw std::runtime_error(path.string() + ": invalid extension");
+	if (path.extension() != ".conf")
+		throw std::runtime_error(path.string() + ": invalid extension");
 
 	const std::string buffer = readFileIntoBuffer(path);
 	if (buffer.empty())
@@ -233,17 +224,8 @@ Config::Config(const std::filesystem::path& path)
 		std::cout << std::setw(16) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << " : " + *it << '\n';
 	}
 	std::cout << "================================\n";
+	TokenMap	tokenMap = createTokenIdMap(tokens);
 
-	if (getIdentifier(*(tokens.begin())) != SERVER)
-		throw std::runtime_error("no server found");
+	
 	this->tokens = tokens;
-	// for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-	// {
-	// 	const ConfigIdentifier	id = getIdentifier(*it);
-	// 	const ConfigIdentifier	serverAllowed[] = {ROOT, PORT, SERVER_NAME};
-	// 	if (id == SERVER)
-	// 		parseContext(tokens, it, serverAllowed);
-	// 	else
-	// 		parseDirective(id, tokens, it);
-	// }
 }
