@@ -8,17 +8,44 @@
 #include <unordered_map>
 #include <iomanip>
 
-ConfigParser	ConfigParser::CreateDefaultConfig()
+std::vector<ServerSettings>	ConfigParser::createDefaultConfig()
 {
-	//TODO: have defualt config
-	//? Can't use make_shared because constructor is private
-	return ConfigParser("");
+	std::vector<ServerSettings>	servers;
+
+	return servers;
 }
 
-Config	ConfigParser::CreateConfigFromFile(const std::filesystem::path& path)    
+std::vector<ServerSettings>	ConfigParser::createConfigFromFile(const std::filesystem::path& path)    
 {
-	//? Can't use make_shared because constructor is private
-	return ConfigParser(path);
+	std::vector<ServerSettings>	servers;
+
+	if (path.extension() != ".conf")
+		throw std::runtime_error(path.string() + ": invalid extension");
+
+	const std::string buffer = readFileIntoBuffer(path);
+	if (buffer.empty())
+		throw std::runtime_error("file content is empty");
+
+	std::vector<std::string>	tokens = tokenize(buffer);
+
+	if (tokens.empty())
+		throw std::runtime_error("no tokens found");
+	std::cout << "================================\n";
+	std::cout << buffer << "\n";
+	std::cout << "================================\n";
+
+	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
+		std::cout << *it << '\n';
+	std::cout << "================================\n";
+	
+	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
+	{
+		std::cout << std::setw(16) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << " : " + *it << '\n';
+	}
+	std::cout << "================================\n";
+	TokenMap	tokenMap = assignTokenType(tokens);
+
+	return servers;
 }
 
 static std::string readFileIntoBuffer(const std::filesystem::path& path) {
@@ -33,32 +60,9 @@ static std::string readFileIntoBuffer(const std::filesystem::path& path) {
     return buffer.str();
 }
 
-static inline bool	stringEndsWith(const std::string& s, const std::string& end)
-{
-	if (s.length() >= end.length())
-		return s.compare(s.length() - end.length(), end.length(), end) == 0;
-	return false;
-}
 
-enum TokenIdentifier
-{
-	SERVER,
-	PORT,
-	SERVER_NAME,
-	ROOT,
-	INDEX,
-	AUTOINDEX,
-	REDIRECT,
-	LOCATION,
-	HTTP_METHOD,
-	HTTP_METHOD_DENY,
-	BRACKET_OPEN,
-	BRACKET_CLOSE,
-	DIRECTIVE_END,
-	ARGUMENT,
-};
-
-static enum TokenIdentifier	getIdentifier(const std::string& input)
+ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
+	const std::string& input)
 {
 	const std::unordered_map<std::string, TokenIdentifier> idMap = {
 		{"server", SERVER},
@@ -83,7 +87,7 @@ static enum TokenIdentifier	getIdentifier(const std::string& input)
 	return ARGUMENT;
 }
 
-static std::string	escapeIdentifier(TokenIdentifier id)
+std::string	ConfigParser:: escapeIdentifier(TokenIdentifier id)
 {
 	const std::unordered_map<TokenIdentifier, std::string> idMap = {
 		{SERVER, "server"},
@@ -128,13 +132,14 @@ static inline void	addToken(std::vector<std::string>& tokens, std::string& token
 	}
 }
 
-static std::vector<std::string>	tokenizeString(const std::string& s, const std::string& delimiters)
+ConfigParser::TokenVector	ConfigParser:: tokenize(const std::string& input)
 {
-	std::vector<std::string>	tokens;
+	ConfigParser::TokenVector	tokens;
 	std::string					tokenBuffer;
-	std::istringstream			tokenStream(s);
+	std::istringstream			tokenStream(input);
 	bool						isComment = false;
 	char						c;
+	const std::string			delimiters = " \t\r\v\f\n";
 
 	if (delimiters.empty())
 	{
@@ -164,68 +169,14 @@ static std::vector<std::string>	tokenizeString(const std::string& s, const std::
 	return tokens;
 }
 
-static bool	validBracketCount(std::vector<std::string>& tokens)
+ConfigParser::TokenMap	ConfigParser:: assignTokenType(
+	const ConfigParser::TokenVector& tokens)
 {
-	size_t	openCount = 0;
-	size_t	closedCount = 0;
-	TokenIdentifier	id;
-
-	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-	{
-		id = getIdentifier(*it);
-		if (id == BRACKET_OPEN)
-			openCount++;
-		else if (id == BRACKET_CLOSE)
-			closedCount++;
-	}
-	return openCount == closedCount;
-}
-
-typedef std::vector<std::pair<TokenIdentifier, std::string>> TokenMap;
-
-static TokenMap	createTokenIdMap(
-	const std::vector<std::string>& tokens)
-{
-	std::vector<std::pair<TokenIdentifier, std::string>>	tokenIdMap;
+	ConfigParser::TokenMap	tokenIdMap;
 
 	for (std::vector<std::string>::const_iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
 		tokenIdMap.emplace_back(getIdentifier(*it), *it);
 	}
 	return tokenIdMap;
-}
-
-ConfigParser::ConfigParser(const std::filesystem::path& path)
-{
-	if (path.extension() != ".conf")
-		throw std::runtime_error(path.string() + ": invalid extension");
-
-	const std::string buffer = readFileIntoBuffer(path);
-	if (buffer.empty())
-		throw std::runtime_error("file content is empty");
-
-	std::vector<std::string>	tokens = tokenizeString(buffer, " \t\r\v\f\n");
-
-	if (tokens.empty())
-		throw std::runtime_error("no tokens found");
-	std::cout << "================================\n";
-	std::cout << buffer << "\n";
-	std::cout << "================================\n";
-
-	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-		std::cout << *it << '\n';
-	std::cout << "================================\n";
-	
-	if (!validBracketCount(tokens))
-		throw std::runtime_error("error with bracket format");
-	
-	for (std::vector<std::string>::iterator it = tokens.begin(); it != tokens.end(); it++)
-	{
-		std::cout << std::setw(16) << escapeIdentifier(getIdentifier(*it)) << std::setw(0) << " : " + *it << '\n';
-	}
-	std::cout << "================================\n";
-	TokenMap	tokenMap = createTokenIdMap(tokens);
-
-	
-	this->tokens = tokens;
 }
