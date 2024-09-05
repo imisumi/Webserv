@@ -7,8 +7,10 @@
 #include <map>
 #include <bitset>
 #include <memory>
+#include "ServerSettings.h"
 
 #define DEFAULT_PORT 8080
+#define DEFAULT_PATH "conf/default.conf"
 
 class ConfigParser
 {
@@ -32,7 +34,6 @@ class ConfigParser
 			HTTP_METHOD_DENY,
 			BRACKET_OPEN,
 			BRACKET_CLOSE,
-			DIRECTIVE,
 			DIRECTIVE_END,
 			ARGUMENT,
 			UNRECOGNISED,
@@ -40,51 +41,19 @@ class ConfigParser
 
 		typedef std::vector<std::pair<TokenIdentifier, std::string>> TokenMap;
 		typedef std::vector<std::string> TokenVector;
-	public:
-		static std::vector<ServerSettings>	createDefaultConfig();
-		static std::vector<ServerSettings>	createConfigFromFile(const std::filesystem::path& path);
+		typedef std::vector<ServerSettings>	Servers;
 
 		static TokenVector		tokenize(const std::string& input);
 		static TokenMap			assignTokenType(const TokenVector& tokens);
-		static TokenIdentifier	getIdentifier(const std::string& token);
+		static TokenIdentifier	getIdentifier(const std::string& token, bool expectDirective);
 		static std::string		escapeIdentifier(TokenIdentifier id);
-};
 
-class ServerSettings
-{
+		static Servers							tokenMapToServerSettings(const TokenMap& tokenMap);
+		static ServerSettings					createServerSettings(const TokenMap& tokenMap, TokenMap::const_iterator it);
+		static ServerSettings::LocationSettings	createLocationSettings(const TokenMap& tokenMap, TokenMap::const_iterator it);
+		static std::string						readFileIntoBuffer(const std::filesystem::path& path);
 	public:
-		struct LocationSettings
-		{
-			std::filesystem::path root;
-			std::string index;
-			bool autoindex;
-			std::string cgi;
-			std::string returnCode;
-		};
+		static Servers	createDefaultConfig();
+		static Servers	createConfigFromFile(const std::filesystem::path& path);
 
-	private:
-		std::vector<uint16_t> m_Ports;
-		std::string m_ServerName;
-		LocationSettings m_GlobalSettings;
-		std::map<std::filesystem::path, LocationSettings> m_Locations;
-
-	public:
-		LocationSettings&		operator[](const std::filesystem::path& path)
-		{
-			std::map<std::filesystem::path, LocationSettings>::iterator	it = this->m_Locations.find(path);
-
-			if (it != this->m_Locations.end())
-				return it->second;
-			return this->m_GlobalSettings;
-		};
-		const LocationSettings&	operator[](const std::filesystem::path& path) const
-		{
-			std::map<std::filesystem::path, LocationSettings>::const_iterator	it = this->m_Locations.find(path);
-
-			if (it != this->m_Locations.end())
-				return it->second;
-			return this->m_GlobalSettings;
-		};
-		const std::string& getServerName() const { return m_ServerName; };
-		std::vector<uint16_t> getPorts() const { return m_Ports; };
 };

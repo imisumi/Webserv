@@ -6,13 +6,14 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/05 14:03:18 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/05 16:26:26 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
 #include "ConfigParser.h"
+#include "ServerSettings.h"
 #include <filesystem>
 #include <vector>
 
