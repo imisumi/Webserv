@@ -42,7 +42,7 @@ const std::string ResponseGenerator::generateResponse(const Config& config, cons
 	switch (request.method)
 	{
 		case RequestMethod::GET:			return handleGetRequest(config, request);
-		case RequestMethod::POST:			break;
+		case RequestMethod::POST:			return handlePostRequest(config, request);
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
 		case RequestMethod::DELETE:			break;
@@ -347,6 +347,188 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 	LOG_DEBUG("Requested path does not exist");
 	return generateNotFoundResponse();
 }
+
+
+
+// Save form data (firstname, lastname, email) to text.txt
+bool saveFormDataToFile(const std::string &firstName, const std::string &lastName, const std::string &email) {
+    std::ofstream dataFile("/home/kaltevog/Desktop/Webserv/database/text.txt", std::ios_base::app);
+    if (dataFile.is_open()) {
+        dataFile << "First Name: " << firstName << "\n";
+        dataFile << "Last Name: " << lastName << "\n";
+        dataFile << "Email: " << email << "\n\n";
+        dataFile.close();
+        return true;
+    } else {
+        std::cerr << "Failed to open text.txt for writing\n";
+        return false;
+    }
+}
+
+// Save uploaded file to the specified directory
+bool saveUploadedFile(const std::string &fileName, const std::string &fileContent) {
+    std::string filePath = "/home/kaltevog/Desktop/Webserv/database/" + fileName;
+    std::ofstream file(filePath, std::ios::binary);
+    if (file.is_open()) {
+        file << fileContent;
+        file.close();
+        return true;
+    } else {
+        std::cerr << "Failed to save uploaded file: " << filePath << "\n";
+        return false;
+    }
+}
+
+
+
+#include <string>
+#include <unordered_map>
+#include <fstream>
+#include <iostream>
+#include <regex>
+
+// Helper function to parse the `firstname` from form-urlencoded POST body
+std::string parseFormData(const std::string &body) {
+    std::regex firstnameRegex(R"(firstname=([^&]+))");
+    std::smatch match;
+    if (std::regex_search(body, match, firstnameRegex)) {
+        std::string firstname = match[1].str();
+        std::replace(firstname.begin(), firstname.end(), '+', ' ');  // Handle URL-encoded spaces
+        std::cout << "Parsed First Name: " << firstname << std::endl;  // Add this for debugging
+        return firstname;
+    }
+    std::cerr << "First name not found in body" << std::endl;
+    return "";
+}
+
+#include <regex>
+#include <string>
+#include <iostream>
+
+// Helper function to extract boundary from the Content-Type header
+std::string extractBoundary(const std::string &contentType) {
+    std::regex boundaryRegex("boundary=(.*)");
+    std::smatch match;
+    if (std::regex_search(contentType, match, boundaryRegex)) {
+        return "--" + match[1].str();  // Prepend -- as per multipart format
+    }
+    return "";
+}
+
+// Helper function to parse multipart form data using the boundary
+std::string parseMultipartData(const std::string &body, const std::string &boundary, const std::string &fieldName) {
+    // Create a regex to match the specific form field based on the boundary and its name
+    std::regex fieldRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName + R"(\"[\r\n]+[\r\n]+([^\r\n]+)[\r\n]+)", std::regex::ECMAScript);
+
+    std::smatch match;
+    if (std::regex_search(body, match, fieldRegex)) {
+        return match[1].str();  // Return the matched value (the field content)
+    }
+
+    return "";  // If no match, return empty string
+}
+
+
+
+bool appendFirstNameToFile(const std::string &firstname) {
+    std::cout << "[DEBUG] Attempting to append firstname to file..." << std::endl;
+
+    // Check if the firstname is empty
+    if (firstname.empty()) {
+        std::cerr << "[ERROR] First name is empty, nothing to append." << std::endl;
+        return false;
+    }
+
+    // Verify the content of the firstname before appending
+    std::cout << "[DEBUG] First name to append: " << firstname << std::endl;
+
+    // Try opening the file in append mode
+    std::ofstream file("/home/kaltevog/Desktop/Webserv/database/text.txt", std::ios_base::app);
+    if (!file.is_open()) {
+        std::cerr << "[ERROR] Failed to open file: /home/kaltevog/Desktop/Webserv/database/text.txt" << std::endl;
+        return false;
+    } else {
+        std::cout << "[DEBUG] File opened successfully for appending." << std::endl;
+    }
+
+    // Check if the file is ready for writing
+    if (file.good()) {
+        std::cout << "[DEBUG] File is good, writing data..." << std::endl;
+        file << "First Name: " << firstname << "\n";
+        std::cout << "[DEBUG] Successfully wrote first name to file." << std::endl;
+    } else {
+        std::cerr << "[ERROR] File stream is in a bad state, cannot write to file." << std::endl;
+        return false;
+    }
+
+    // Close the file after writing
+    file.close();
+    if (file.fail()) {
+        std::cerr << "[ERROR] Failed to close the file properly." << std::endl;
+        return false;
+    } else {
+        std::cout << "[DEBUG] File closed successfully." << std::endl;
+    }
+
+    // Final confirmation message
+    std::cout << "[DEBUG] Successfully appended firstname to file." << std::endl;
+    return true;
+}
+
+
+const std::string ResponseGenerator::handlePostRequest(const Config& config, const HttpRequest& request)
+{
+    Utils::Timer timer;
+    LOG_INFO("Handling POST request");
+
+    // Log the Content-Type header
+    std::string contentType = request.getHeader("Content-Type");
+    if (contentType.empty()) {
+        LOG_ERROR("Missing Content-Type header");
+        return generateBadRequestResponse();
+    }
+
+    LOG_DEBUG("Received Content-Type: " + contentType);
+
+    // Extract the boundary from the Content-Type header
+    std::string boundary = extractBoundary(contentType);
+    if (boundary.empty()) {
+        LOG_ERROR("Boundary missing in Content-Type header");
+        return generateBadRequestResponse();
+    }
+
+    LOG_DEBUG("Extracted boundary: " + boundary);
+
+    // Extract the request body
+    std::string body = request.getBody();
+    if (body.empty()) {
+        LOG_ERROR("Request body is empty");
+        return generateBadRequestResponse();
+    }
+
+    // Print the body for debugging purposes
+    std::cout << "[DEBUG] Full Request Body: \n" << body << std::endl;
+
+    // Parse the firstname from the multipart body
+    std::string firstname = parseMultipartData(body, boundary, "firstname");
+    if (firstname.empty()) {
+        LOG_ERROR("First name is missing in the form data");
+        return generateBadRequestResponse();
+    }
+
+    LOG_DEBUG("Parsed First Name: " + firstname);
+
+    // Append the firstname to the text.txt file
+    if (!appendFirstNameToFile(firstname)) {
+        LOG_ERROR("Failed to append the first name to the file");
+        return generateInternalServerErrorResponse();
+    }
+
+    // Return success response
+    LOG_INFO("Successfully handled POST request and saved first name");
+    return generateOKResponse(request);
+}
+
 
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest

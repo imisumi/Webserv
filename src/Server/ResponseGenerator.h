@@ -64,6 +64,8 @@ private:
 
 	static const std::string handleGetRequest(const Config& config, const HttpRequest& request);
 
+	static const std::string handlePostRequest(const Config& config, const HttpRequest& request);
+
 	static std::string generateOKResponse(const HttpRequest& request);
 
 	static std::string generateFileResponse(const HttpRequest& request);

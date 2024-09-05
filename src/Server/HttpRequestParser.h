@@ -38,31 +38,34 @@ enum class RequestMethod
 class HttpRequest
 {
 public:
-	std::string getHeader(const std::string& name) const
-	{
-		auto it = headers.find(name);
-		if (it != headers.end())
-		{
-			return it->second;
-		}
-		return "";
-	}
+    // Method to get a specific header value
+    std::string getHeader(const std::string& name) const
+    {
+        auto it = headers.find(name);
+        if (it != headers.end())
+        {
+            return it->second;
+        }
+        return "";
+    }
 
-	// void setUri(const std::filesystem::path& path) const
-	// {
-	// 	uri = path;
-	// }
+    // Method to set the URI
+    void setUri(const std::filesystem::path& path)
+    {
+        uri = path;
+    }
 
-	void setUri(const std::filesystem::path& path)
-	{
-		uri = path;
-	}
+    // Method to get the URI
+    std::filesystem::path getUri() const
+    {
+        return uri;
+    }
 
-	std::filesystem::path getUri() const
-	{
-		return uri;
-	}
-
+    // Method to get the body content
+    std::string getBody() const
+    {
+        return body;
+    }
 public:
 	RequestMethod method = RequestMethod::UNKNOWN;
 	std::filesystem::path uri;
