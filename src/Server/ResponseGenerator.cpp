@@ -3,7 +3,10 @@
 #include "Core/Core.h"
 
 
-#include <sys/stat.h> 
+#include <sys/stat.h>
+
+
+#include "Cgi/Cgi.h"
 
 
 static const char s_ForbiddenResponse[] = 
@@ -21,6 +24,14 @@ static const char s_NotFoundResponse[] =
 		"Content-Type: text/plain\r\n"
 		"\r\n"
 		"404 Not Found: Resource Not Found"; //? body of the response
+
+static const char s_InternalServerErrorResponse[] = 
+		"HTTP/1.1 500 Internal Server Error\r\n"
+		"Content-Length: 39\r\n" //? length has to match the length of the body
+		"Connection: close\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"500 Internal Server Error: Server Error"; //? body of the response
 
 
 //? Multipurpose Internet Mail Extensions (MIME) type
@@ -291,6 +302,21 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 	Utils::Timer timer;
 	LOG_INFO("Handling GET request");
 
+
+	// very temp
+	std::string uir = request.getUri().string();
+	if (uir.find("/cgi-bin/") != std::string::npos)
+	{
+		LOG_DEBUG("Requested path is a CGI script");
+
+		std::filesystem::path fileName = request.getUri().filename();
+		HttpRequest updatedRequest = request;
+		std::filesystem::path cgiPath = "/home/imisumi-wsl/dev/Webserv/root/webserv/cgi-bin";
+		updatedRequest.setUri(cgiPath / fileName);
+		LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
+		return Cgi::executeCGI(config, updatedRequest);
+	}
+
 	//? Validate the requested path
 	if (std::filesystem::exists(request.getUri()))
 	{
@@ -327,6 +353,8 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 		else if (std::filesystem::is_regular_file(request.getUri()))
 		{
 			//TODO: check if file is a CGI script
+
+
 			LOG_DEBUG("Requested path is a file");
 
 			if (request.getHeader("If-None-Match") == generateETagv2(request.getUri()) && request.getHeader("If-Modified-Since") == getFileModificationTime(request.getUri()))
@@ -506,4 +534,25 @@ std::string ResponseGenerator::generateInternalServerErrorResponse()
 		return std::string(s_NotFoundResponse);
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+const std::string ResponseGenerator::InternalServerError(const Config& config)
+{
+	//TODO: extract root
+
+	std::string response = s_InternalServerErrorResponse;
+
+	return response;
 }

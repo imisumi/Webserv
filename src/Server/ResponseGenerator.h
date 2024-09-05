@@ -47,6 +47,9 @@ public:
 
 	static const std::string generateResponse(const Config& config, const HttpRequest& request);
 
+
+	static const std::string InternalServerError(const Config& config);
+
 private:
 	static std::optional<std::string> readFileContents(const std::filesystem::path& path);
 
@@ -78,5 +81,11 @@ private:
 	static std::string generateNotImplementedResponse();
 	static std::string generateBadRequestResponse();
 	static std::string generateInternalServerErrorResponse();
+
+
+
+
+
+
 
 };

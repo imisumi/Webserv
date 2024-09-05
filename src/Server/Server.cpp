@@ -255,7 +255,8 @@ void Server::Run()
 		{
 			if (s_Instance->isServerSocket(events[i].data.fd) != -1)
 			{
-				if (s_Instance->AcceptConnection(events[i].data.fd) == -1)
+				int client_socket = s_Instance->AcceptConnection(events[i].data.fd);
+				if (client_socket == -1)
 				{
 					LOG_ERROR("Failed to accept connection!");
 				}
@@ -344,7 +345,7 @@ int Server::AcceptConnection(int socket_fd)
 	int flags = fcntl(client_socket, F_GETFL, 0);
 	fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
 
-	if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, client_socket, EPOLLIN | EPOLLET))
+	if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, client_socket, EPOLLIN | EPOLLET) == -1)
 	{
 		LOG_ERROR("Failed to add client socket to epoll!");
 		close(client_socket);
@@ -402,39 +403,6 @@ void Server::HandleInputEvent(int fd)
 		LOG_ERROR("HandleInputEvent read: {}", strerror(errno));
 	}
 }
-
-// void Server::HandleOutputEvent(int fd)
-// {
-// 	// Attempt to find the client response for the given file descriptor
-// 	if (auto it = m_ClientResponses.find(fd); it != m_ClientResponses.end())
-// 	{
-// 		const std::string& response = it->second;
-// 		//TODO: use response sender
-// 		if (send(fd, response.c_str(), response.size(), 0) == -1)
-// 		{
-// 			LOG_ERROR("send: {}", strerror(errno));
-// 			close(fd);
-// 		}
-// 		else
-// 		{
-// 			LOG_DEBUG("Sent response to client.");
-
-// 			// Remove the entry from the map
-// 			m_ClientResponses.erase(it);
-
-// 			if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, fd, EPOLLIN) == -1)
-// 			{
-// 				LOG_ERROR("Failed to modify client socket in epoll!");
-// 				s_Instance->m_Running = false;
-// 			}
-// 		}
-// 	}
-// 	else
-// 	{
-// 		LOG_ERROR("No response found for client socket {}.", fd);
-// 		close(fd);
-// 	}
-// }
 
 void Server::HandleOutputEvent(int fd)
 {
