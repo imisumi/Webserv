@@ -311,7 +311,7 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 
 		std::filesystem::path fileName = request.getUri().filename();
 		HttpRequest updatedRequest = request;
-		std::filesystem::path cgiPath = "/home/imisumi-wsl/dev/Webserv/root/webserv/cgi-bin";
+		std::filesystem::path cgiPath = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin";
 		updatedRequest.setUri(cgiPath / fileName);
 		LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
 		return Cgi::executeCGI(config, updatedRequest);

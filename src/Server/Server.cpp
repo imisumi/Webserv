@@ -17,6 +17,18 @@
 
 #include <cerrno>
 
+// Macros to pack and unpack the u64 field
+#define PACK_U64(fd, metadata)   (((uint64_t)(fd) << 32) | (metadata))
+#define UNPACK_FD(u64)           ((int)((u64) >> 32))          // Extracts the upper 32 bits (fd)
+#define UNPACK_METADATA(u64)     ((uint32_t)((u64) & 0xFFFFFFFF)) // Extracts the lower 32 bits (metadata)
+
+// Define BIT(n) macro to get the value with the nth bit set
+#define BIT(n) (1U << (n))
+#define EPOLL_TYPE_SOCKET   BIT(0)
+#define EPOLL_TYPE_CGI      BIT(1)
+#define EPOLL_TYPE_STDIN    BIT(2)
+#define EPOLL_TYPE_STDOUT   BIT(3)
+
 
 static Server* s_Instance = nullptr;
 
@@ -73,7 +85,8 @@ int Server::ModifyEpollEvent(int epollFD, int fd, int event)
 
 
 	//TODO: use this do differentiate between event data type
-	ev.data.u32 = 0;
+	// ev.data.u32 = 0;
+	// ev.data.u32 = 10;
 
 	return epoll_ctl(epollFD, EPOLL_CTL_MOD, fd, &ev);
 }
@@ -120,11 +133,12 @@ void Server::Init(const Config& config)
 
 
 	//? assuming that the config parser properly deals with duplicates
-	s_Instance->m_ServerPorts.push_back(8080);
-	s_Instance->m_ServerPorts.push_back(8081);
-	// s_Instance->m_ServerPorts.push_back(8001);
+	s_Instance->m_ServerPorts.push_back(80);
+	// s_Instance->m_ServerPorts.push_back(8080);
+	// s_Instance->m_ServerPorts.push_back(8080);
 	// s_Instance->m_ServerPorts.push_back(8002);
 
+	int i = 0;
 	for (int port : s_Instance->m_ServerPorts)
 	{
 		LOG_INFO("Creating server socket on port: {}", port);
@@ -135,6 +149,13 @@ void Server::Init(const Config& config)
 			.protocol = 0
 		};
 
+		auto it = s_Instance->m_ServerSockets.find(port);
+		if (it != s_Instance->m_ServerSockets.end())
+		{
+			LOG_ERROR("Server socket already exists!");
+			s_Instance->m_Running = false;
+			return;
+		}
 		if ((s_Instance->m_ServerSockets[port] = s_Instance->CreateSocket(settings)) == -1)
 		{
 			LOG_ERROR("Failed to create server socket!");
@@ -143,6 +164,8 @@ void Server::Init(const Config& config)
 		}
 
 
+		// frist 32 bits ip, 32-48 port
+		// std::unordered_map<uint64_t, ServerSettings> m_ServerSockets;
 
 		int reuse = 1;
 		const SocketOptions options = {
@@ -162,11 +185,14 @@ void Server::Init(const Config& config)
 		}
 
 
-
+		// int addr = INADDR_ANY;
+		// if (i == 1)
+		int	addr = 127 << 24 | 0 << 16 | 0 << 8 | 2;
 		const SocketAddressConfig config = {
 			.family = AF_INET, //? address type
 			//TODO: extract from config
 			.port = port, //? convert to network byte order
+			// .address = addr
 			.address = INADDR_ANY
 		};
 
@@ -176,7 +202,6 @@ void Server::Init(const Config& config)
 			s_Instance->m_Running = false;
 			return;
 		}
-
 
 
 		if (s_Instance->ListenOnSocket(s_Instance->m_ServerSockets[port], 3) == -1)
@@ -194,6 +219,7 @@ void Server::Init(const Config& config)
 			s_Instance->m_Running = false;
 			return;
 		}
+		i++;
 	}
 
 }
@@ -284,6 +310,9 @@ void Server::Run()
 			{
 				LOG_DEBUG("Handling output event...");
 
+				int fd = UNPACK_FD(events[i].data.u64);
+				int metadata = UNPACK_METADATA(events[i].data.u64);
+
 				s_Instance->HandleOutputEvent(events[i].data.fd);
 			}
 			else
@@ -353,12 +382,14 @@ void Server::HandleInputEvent(int epoll_fd)
 	{
 		buffer[n] = '\0';
 		const std::string bufferStr = std::string(buffer, n);
-		// LOG_INFO("Received data:\n{}", bufferStr);
+		LOG_INFO("Received data:\n{}", bufferStr);
 
 		//TODO: get the correct sevrer config and pass it to the request handler
 		Config config = Config::CreateDefaultConfig();
 		const std::string response = s_Instance->m_RequestHandler.handleRequest(config, bufferStr);
 
+
+		// LOG_DEBUG("Response:\n{}", response);
 		m_ClientResponses[epoll_fd] = response;
 
 		if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, epoll_fd, EPOLLOUT) == -1)
@@ -423,6 +454,7 @@ void Server::HandleOutputEvent(int epoll_fd)
 	else
 	{
 		LOG_ERROR("No response found for client socket {}.", epoll_fd);
-		close(epoll_fd);
+		exit(1);
+		// close(epoll_fd);
 	}
 }
