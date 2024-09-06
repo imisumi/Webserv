@@ -57,15 +57,14 @@ ConfigParser::Servers	ConfigParser::tokenMapToServerSettings(
 {
 	for (TokenMap::const_iterator it = tokenMap.begin(); it != tokenMap.end(); it++)
 	{
-		if (it->first == SERVER)
-		{
-			servers.emplace_back(createServerSettings(tokenMap.end(), it));
-		}
+		if (it->first != SERVER)
+			throw std::runtime_error("expected server directive: found \"" + it->second + '\"');
+		servers.emplace_back(createServerSettings(tokenMap.end(), it));
 	}
 	return servers;
 }
 
-inline bool	ConfigParser:: expectNextToken(
+inline void	ConfigParser:: expectNextToken(
 	const TokenMap::const_iterator& end, 
 	TokenMap::const_iterator& it, 
 	TokenIdentifier expected)
@@ -77,33 +76,79 @@ inline bool	ConfigParser:: expectNextToken(
 		throw std::invalid_argument("expected " + escapeIdentifier(expected) + ": found \"" + it->second + '\"');
 }
 
-uint32_t	stouint32(const std::string& s, std::size_t *pos)
+inline bool	containsDigitsExclusively(const std::string& s)
 {
-	std::istringstream isstream(s);
-
-
+	if (s.empty())
+		return false;
+	for (const char& c : s)
+	{
+		if (!isdigit(c))
+			return false;
+	}
+	return true;
 }
 
+static uint32_t	ipv4LiteralToUint32(const std::string& s)
+{
+	std::istringstream	isstream(s);
+	std::string			segment;
+	int					shift = 24;
+	uint32_t			result = 0;
+
+	while (std::getline(isstream, segment, '.'))
+	{
+		if (!containsDigitsExclusively(segment) || segment.length() > 3)
+			throw std::invalid_argument("error in ip formatting");
+		uint32_t	segmentValue = static_cast<uint32_t>(std::stoul(segment));
+		if (segmentValue > 255)
+			throw std::invalid_argument("error in ip formatting");
+		result |= (segmentValue << shift);
+		shift = shift - 8;
+	}
+	if (shift != 0)
+		throw std::invalid_argument("invalid ip literal: " + s);
+	return result;
+}
+
+static uint16_t	portLiteralToUint16(const std::string& s)
+{
+	std::size_t	pos;
+	int			port;
+	
+	port = std::stoi(s, &pos);
+	if (pos != s.length())
+		throw std::invalid_argument("invalid port format: " + s);
+	if (port < 1 || port > std::numeric_limits<uint16_t>::max())
+		throw std::out_of_range("port out of range: " + s);
+	return static_cast<uint16_t>(port);
+}
 
 void	ConfigParser:: handlePort(
-	std::map<uint32_t, std::vector<uint16_t>> ports,
+	std::vector<uint64_t> ports,
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
 	TokenVector	hostPort = tokenize(it->second, ":");
-	std::size_t	pos;
 	uint32_t	host;
-	int 		port;
+	uint16_t 	port;
+	uint64_t	result = 0;
 
 	if (hostPort.size() > 2)
 		throw std::invalid_argument("invalid host:port format: " + it->second);
 	if (hostPort.size() == 1)
-		
-	port = std::stoi(it->second, &pos);
-	if (pos != it->second.length())
-		throw std::invalid_argument("invalid port format: " + it->second);
-	if (port < 0 || port > std::numeric_limits<uint16_t>::max())
-		throw std::out_of_range("port out of range: " + it->second);
+	{
+		host = 0;
+		port = portLiteralToUint16(hostPort[0]);
+	}
+	else
+	{
+		host = ipv4LiteralToUint32(hostPort[0]);
+		port = portLiteralToUint16(hostPort[1]);
+	}
+	result += host;
+	result = result << 48;
+	result += port;
+	ports.emplace_back(result);
 }
 
 void	ConfigParser:: handleAutoIndex(
@@ -152,7 +197,6 @@ ServerSettings	ConfigParser:: createServerSettings(
 	TokenMap::const_iterator& it)
 {
 	ServerSettings			server;
-	std::vector<uint16_t>	ports;
 	bool					expectDirective = true;
 
 	expectNextToken(end, it, BRACKET_OPEN);
@@ -163,6 +207,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 	{
 		if (it->first == LOCATION)
 		{
+			expectNextToken(end, it, ARGUMENT);
 			server.m_Locations.emplace(createLocationSettings(end, it));
 		}
 		else if (it->first == LIMIT_EXCEPT)
@@ -224,7 +269,61 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 	TokenMap::const_iterator& it)
 {
 	ServerSettings::LocationSettings location;
+	bool							expectDirective = true;
 
+	expectNextToken(end, it, BRACKET_OPEN);
+	it++;
+	if (it == end)
+		throw std::runtime_error("invalid format");
+	for (; it != end; it++)
+	{
+		if (it->first == LOCATION)
+		{
+			throw std::runtime_error("nested locations not allowed");
+		}
+		else if (it->first == LIMIT_EXCEPT)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleLimitExcept(location.httpMethods, end, it);
+			expectNextToken(end, it, BRACKET_CLOSE);
+		}
+
+		if (expectDirective && it->first == ARGUMENT)
+			throw std::invalid_argument("expected directive: found \"" + it->second + '\"');
+		expectDirective = false;
+
+		if (it->first == SERVER_NAME)
+		{
+			throw std::runtime_error("server name not allowed in location context");
+		}
+		else if (it->first == PORT)
+		{
+			throw std::runtime_error("port not allowed in location context");
+		}
+		else if (it->first == ROOT)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			location.root = it->second;
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == INDEX)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			location.index = it->second;
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == AUTOINDEX)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleAutoIndex(location.autoindex, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == BRACKET_CLOSE)
+			break ;
+
+		if (it->first == DIRECTIVE_END)
+			expectDirective = true;
+	}
 	return location;
 }
 

@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/05 16:26:26 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/07 00:46:29 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@
 class Config
 {
 	private:
-		std::vector<ServerSettings>	m_Servers;
+		std::map<uint64_t, ServerSettings>	m_Servers;
 		friend class ConfigParser;
 
 		Config(const Config&) = delete;

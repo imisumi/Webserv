@@ -115,5 +115,6 @@
 		"semaphore": "cpp",
 		"cinttypes": "cpp",
 		"ConfigParser.h": "cpp",
+		"shared_mutex": "cpp"
 	}
 }
