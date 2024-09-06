@@ -9,6 +9,9 @@
 #include <iomanip>
 #include "Config.h"
 #include "colours.hpp"
+#include <cstdint>
+#include <string>
+#include <limits>
 
 ConfigParser::Servers ConfigParser::createDefaultConfig()
 {
@@ -32,7 +35,7 @@ ConfigParser::Servers ConfigParser::createConfigFromFile(
 	if (buffer.empty())
 		throw std::runtime_error("file content is empty");
 
-	tokens = tokenize(buffer);
+	tokens = tokenize(buffer, " \t\r\v\f\n");
 	if (tokens.empty())
 		throw std::runtime_error("no tokens found");
 
@@ -43,45 +46,182 @@ ConfigParser::Servers ConfigParser::createConfigFromFile(
 		std::cout << std::setw(16) << escapeIdentifier(it->first) << std::setw(0) << " : " + it->second << '\n';
 	}
 	std::cout << "================================\n";
-
+	tokenMapToServerSettings(tokenMap, servers);
 	return servers;
 }
 
-ConfigParser::Servers	ConfigParser::tokenMapToServerSettings(
-	const TokenMap& tokenMap)
-{
-	Servers	servers;
 
+ConfigParser::Servers	ConfigParser::tokenMapToServerSettings(
+	const TokenMap& tokenMap,
+	Servers& servers)
+{
 	for (TokenMap::const_iterator it = tokenMap.begin(); it != tokenMap.end(); it++)
 	{
 		if (it->first == SERVER)
-		{	
-			ServerSettings	server = createServerSettings(tokenMap, it++);
-			servers.emplace_back(server);
+		{
+			servers.emplace_back(createServerSettings(tokenMap.end(), it));
 		}
 	}
 	return servers;
 }
 
-ServerSettings	ConfigParser:: createServerSettings(
-	const TokenMap& tokenMap,
-	TokenMap::const_iterator it)
+inline bool	ConfigParser:: expectNextToken(
+	const TokenMap::const_iterator& end, 
+	TokenMap::const_iterator& it, 
+	TokenIdentifier expected)
 {
-	ServerSettings	server;
-
-	if (it->first != BRACKET_OPEN)
-		throw std::runtime_error("no bracket opening found");
 	it++;
-	for (; it != tokenMap.end(); it++)
-	{
+	if (it == end)
+		throw std::runtime_error("error with format");
+	if (it->first != expected)
+		throw std::invalid_argument("expected " + escapeIdentifier(expected) + ": found \"" + it->second + '\"');
+}
 
+uint32_t	stouint32(const std::string& s, std::size_t *pos)
+{
+	std::istringstream isstream(s);
+
+
+}
+
+
+void	ConfigParser:: handlePort(
+	std::map<uint32_t, std::vector<uint16_t>> ports,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	TokenVector	hostPort = tokenize(it->second, ":");
+	std::size_t	pos;
+	uint32_t	host;
+	int 		port;
+
+	if (hostPort.size() > 2)
+		throw std::invalid_argument("invalid host:port format: " + it->second);
+	if (hostPort.size() == 1)
+		
+	port = std::stoi(it->second, &pos);
+	if (pos != it->second.length())
+		throw std::invalid_argument("invalid port format: " + it->second);
+	if (port < 0 || port > std::numeric_limits<uint16_t>::max())
+		throw std::out_of_range("port out of range: " + it->second);
+}
+
+void	ConfigParser:: handleAutoIndex(
+	bool& autoIndex,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	if (it->second == "on")
+		autoIndex = true;
+	else if (it->second == "off")
+		autoIndex = false;
+	else
+		throw std::invalid_argument("invalid autoindex argument: " + it->second);
+}
+
+void	ConfigParser:: handleLimitExcept(
+	uint8_t& httpMethods,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	for (; it != end; it++)
+	{
+		if (it->first == BRACKET_OPEN)
+			break ;
+		if (it->second == "GET")
+			httpMethods ^= 1;
+		else if (it->second == "POST")
+			httpMethods ^= (1 << 1);
+		else if (it->second == "DELETE")
+			httpMethods ^= (1 << 2);
+		else if (it->second == "PATCH")
+			httpMethods ^= (1 << 3);
+		else if (it->second == "PUT")
+			httpMethods ^= (1 << 4);
+		else
+			throw std::invalid_argument("invalid http method: " + it->second);
 	}
+	expectNextToken(end, it, HTTP_METHOD_DENY);
+	expectNextToken(end, it, ARGUMENT);
+	if (it->second != "all")
+		throw std::invalid_argument("invalid deny argument: " + it->second);
+}
+
+ServerSettings	ConfigParser:: createServerSettings(
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	ServerSettings			server;
+	std::vector<uint16_t>	ports;
+	bool					expectDirective = true;
+
+	expectNextToken(end, it, BRACKET_OPEN);
+	it++;
+	if (it == end)
+		throw std::runtime_error("invalid format");
+	for (; it != end; it++)
+	{
+		if (it->first == LOCATION)
+		{
+			server.m_Locations.emplace(createLocationSettings(end, it));
+		}
+		else if (it->first == LIMIT_EXCEPT)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleLimitExcept(server.m_GlobalSettings.httpMethods, end, it);
+			expectNextToken(end, it, BRACKET_CLOSE);
+		}
+
+		if (expectDirective && it->first == ARGUMENT)
+			throw std::invalid_argument("expected directive: found \"" + it->second + '\"');
+		expectDirective = false;
+
+		if (it->first == SERVER_NAME)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			server.m_ServerName = it->second;
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == PORT)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handlePort(server.m_Ports, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == ROOT)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			server.m_GlobalSettings.root = it->second;
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == INDEX)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			server.m_GlobalSettings.index = it->second;
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == AUTOINDEX)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleAutoIndex(server.m_GlobalSettings.autoindex, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == BRACKET_CLOSE)
+			break ;
+
+		if (it->first == DIRECTIVE_END)
+			expectDirective = true;
+	}
+	if (server.m_GlobalSettings.root.empty())
+		throw std::runtime_error("no root specified");
+	if (server.m_Ports.empty())
+		throw std::runtime_error("no port(s) specified");
 	return server;
 }
 
 ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
-	const TokenMap& tokenMap,
-	TokenMap::const_iterator it)
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
 {
 	ServerSettings::LocationSettings location;
 
@@ -104,9 +244,9 @@ std::string ConfigParser:: readFileIntoBuffer(const std::filesystem::path& path)
 
 
 ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
-	const std::string& input, bool isDirective)
+	const std::string& input, bool expectDirective)
 {
-	const std::unordered_map<std::string, TokenIdentifier> DirectiveMap = {
+	const std::unordered_map<std::string, TokenIdentifier> TokenIdentifierMap = {
 		{"server", SERVER},
 		{"listen", PORT},
 		{"server_name", SERVER_NAME},
@@ -115,33 +255,18 @@ ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
 		{"autoindex", AUTOINDEX},
 		{"return", REDIRECT},
 		{"location", LOCATION},
-		{"limit_except", HTTP_METHOD},
+		{"limit_except", LIMIT_EXCEPT},
 		{"deny", HTTP_METHOD_DENY},
-	};
-	const std::unordered_map<std::string, TokenIdentifier> OthersMap = {
 		{"{", BRACKET_OPEN},
 		{"}", BRACKET_CLOSE},
 		{";", DIRECTIVE_END},
 	};
 	std::unordered_map<std::string, TokenIdentifier>::const_iterator it;
 
-	if (isDirective)
-	{
-		it = DirectiveMap.find(input);
-		if (it != DirectiveMap.end())
-			return it->second;
-		else
-			return UNRECOGNISED;
-	}
-	else
-	{
-		it = OthersMap.find(input);
-		if (it != OthersMap.end())
-			return it->second;
-		else
-			return ARGUMENT;
-	}
-	return UNRECOGNISED;
+	it = TokenIdentifierMap.find(input);
+	if (expectDirective && it != TokenIdentifierMap.end())
+		return it->second;
+	return ARGUMENT;
 }
 
 std::string	ConfigParser:: escapeIdentifier(TokenIdentifier id)
@@ -155,7 +280,7 @@ std::string	ConfigParser:: escapeIdentifier(TokenIdentifier id)
 		{AUTOINDEX, "autoindex"},
 		{REDIRECT, "redirect"},
 		{LOCATION, "location"},
-		{HTTP_METHOD, "http_method"},
+		{LIMIT_EXCEPT, "http_method"},
 		{HTTP_METHOD_DENY, "http_method_deny"},
 		{BRACKET_OPEN, "bracket open"},
 		{BRACKET_CLOSE, "bracket close"},
@@ -191,14 +316,13 @@ static inline void	addToken(
 	}
 }
 
-ConfigParser::TokenVector	ConfigParser:: tokenize(const std::string& input)
+ConfigParser::TokenVector	ConfigParser:: tokenize(const std::string& input, const std::string& delimiters)
 {
 	ConfigParser::TokenVector	tokens;
 	std::string					tokenBuffer;
 	std::istringstream			tokenStream(input);
 	bool						isComment = false;
 	char						c;
-	const std::string			delimiters = " \t\r\v\f\n";
 
 	if (delimiters.empty())
 	{
@@ -232,24 +356,19 @@ ConfigParser::TokenMap	ConfigParser:: assignTokenType(
 	const ConfigParser::TokenVector& tokens)
 {
 	ConfigParser::TokenMap	tokenIdMap;
-	bool	expectDirective = true;
+	bool					expectDirective = true;
 
 	for (std::vector<std::string>::const_iterator it = tokens.begin(); it != tokens.end(); it++)
 	{
 		TokenIdentifier	id = getIdentifier(*it, expectDirective);
 
-		if (id == UNRECOGNISED)
-			throw std::runtime_error("unrecognised directive");
-		else if (id == BRACKET_OPEN
+		tokenIdMap.emplace_back(id, *it);
+		if (id == BRACKET_OPEN
 			|| id == BRACKET_CLOSE
 			|| id == DIRECTIVE_END)
 			expectDirective = true;
 		else
 			expectDirective = false;
-		std::cout << (expectDirective == true ? "true" : "false") << '\n';
-		std::cout << *it << '\n';
-		std::cout << GREEN << escapeIdentifier(id) << '\n' << RESET;
-		tokenIdMap.emplace_back(id, *it);
 	}
 	return tokenIdMap;
 }

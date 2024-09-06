@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/05 16:26:04 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/06 17:32:46 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,11 +27,12 @@ class ServerSettings
 			bool autoindex;
 			std::string cgi;
 			std::string returnCode;
+			uint8_t	httpMethods;
 		};
 
 	private:
 		friend class ConfigParser;
-		std::vector<uint16_t> m_Ports;
+		std::map<uint32_t, std::vector<uint16_t>> m_Ports;
 		std::string m_ServerName;
 		LocationSettings m_GlobalSettings;
 		std::map<std::filesystem::path, LocationSettings> m_Locations;
@@ -54,5 +55,5 @@ class ServerSettings
 			return this->m_GlobalSettings;
 		};
 		const std::string& getServerName() const { return m_ServerName; };
-		std::vector<uint16_t> getPorts() const { return m_Ports; };
+		std::map<uint32_t, std::vector<uint16_t>> getPorts() const { return m_Ports; };
 };

@@ -30,7 +30,7 @@ class ConfigParser
 			AUTOINDEX,
 			REDIRECT,
 			LOCATION,
-			HTTP_METHOD,
+			LIMIT_EXCEPT,
 			HTTP_METHOD_DENY,
 			BRACKET_OPEN,
 			BRACKET_CLOSE,
@@ -43,14 +43,20 @@ class ConfigParser
 		typedef std::vector<std::string> TokenVector;
 		typedef std::vector<ServerSettings>	Servers;
 
-		static TokenVector		tokenize(const std::string& input);
+		static TokenVector		tokenize(const std::string& input, const std::string& delimiters);
 		static TokenMap			assignTokenType(const TokenVector& tokens);
 		static TokenIdentifier	getIdentifier(const std::string& token, bool expectDirective);
 		static std::string		escapeIdentifier(TokenIdentifier id);
 
-		static Servers							tokenMapToServerSettings(const TokenMap& tokenMap);
-		static ServerSettings					createServerSettings(const TokenMap& tokenMap, TokenMap::const_iterator it);
-		static ServerSettings::LocationSettings	createLocationSettings(const TokenMap& tokenMap, TokenMap::const_iterator it);
+		static Servers							tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers);
+		static ServerSettings					createServerSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static ServerSettings::LocationSettings	createLocationSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+
+		static bool	expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it, TokenIdentifier expected);
+		static void	handlePort(std::map<uint32_t, std::vector<uint16_t>> ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleAutoIndex(bool& autoIndex, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleLimitExcept(uint8_t& httpMethods, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+
 		static std::string						readFileIntoBuffer(const std::filesystem::path& path);
 	public:
 		static Servers	createDefaultConfig();
