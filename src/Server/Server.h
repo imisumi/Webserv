@@ -14,6 +14,7 @@
 #include "RequestHandler.h"
 #include "ResponseSender.h"
 #include "Config/ConfigParser.h"
+#include "Client.h"
 
 #define MAX_EVENTS 4096
 #define BUFFER_SIZE 4096 * 2
@@ -53,6 +54,11 @@ public:
 
 	Server(const Server&) = delete;
 	Server& operator=(const Server&) = delete;
+
+
+
+	static int AddEpollEventStatic(int fd, int event);
+
 private:
 	Server(const Config& config);
 	~Server();
@@ -62,7 +68,7 @@ private:
 	// int CreateServerSocket();
 	// void BindServerSocket();
 	// void ListenServerSocket();
-	int AcceptConnection(int socket_fd);
+	Client AcceptConnection(int socket_fd);
 	void HandleInputEvent(int fd);
 	void HandleOutputEvent(int fd);
 
@@ -75,6 +81,21 @@ private:
 	int SetSocketOptions(int fd, const SocketOptions& options);
 	int BindSocket(int fd, const SocketAddressConfig& config);
 	int ListenOnSocket(int socket_fd, int backlog);
+
+
+	void RemoveClient(int socket_fd)
+	{
+		auto it = m_Clients.find(socket_fd);
+		if (it != m_Clients.end())
+		{
+			m_Clients.erase(it);
+		}
+	}
+
+	uint32_t GetClientCount() const
+	{
+		return m_Clients.size();
+	}
 
 private:
 	const Config& m_Config;
@@ -100,5 +121,5 @@ private:
 
 
 
-
+	std::unordered_map<int, Client> m_Clients;
 };

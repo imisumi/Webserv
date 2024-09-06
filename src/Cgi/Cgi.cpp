@@ -28,12 +28,41 @@ bool Cgi::isValidCGI(const Config& config, const std::filesystem::path& path)
 #define WRITE_END 1
 
 
-// 	//TODO: 404 if file does not exist, 403 if no permission, 500 if execve fails or cgi script is invalid
+// // 	//TODO: 404 if file does not exist, 403 if no permission, 500 if execve fails or cgi script is invalid
 
 #include <chrono>
 
 void handle_alarm(int signal) {
 	// This signal handler does nothing but allows us to handle timeouts
+}
+
+void sigalarm_handler(int signo) {
+	// (void) signo; // Unused parameter
+	// int status;
+	// while (waitpid(-1, &status, WNOHANG) > 0) {
+	// 	if (WIFEXITED(status)) {
+	// 		printf("Child process exited with status %d\n", WEXITSTATUS(status));
+	// 	} else if (WIFSIGNALED(status)) {
+	// 		printf("Child process killed by signal %d\n", WTERMSIG(status));
+	// 	}
+	// }
+
+	// printf("Child process (PID: %d) timed out and will terminate.\n", getpid());
+	std::cerr << "Child process (PID: " << getpid() << ") timed out and will terminate." << std::endl;
+	// exit(EXIT_FAILURE); // Terminate the child process
+	// exit(EXIT_SUCCESS); // Terminate the child process
+}
+
+void sigchld_handler(int signo) {
+    (void) signo; // Unused parameter
+    int status;
+    while (waitpid(-1, &status, WNOHANG) > 0) {
+        if (WIFEXITED(status)) {
+            std::cerr << "Child process exited with status " << WEXITSTATUS(status) << std::endl;
+        } else if (WIFSIGNALED(status)) {
+            std::cerr << "Child process killed by signal " << WTERMSIG(status) << std::endl;
+        }
+    }
 }
 
 std::string Cgi::executeCGI(const Config& config, const HttpRequest& request) {
@@ -45,6 +74,22 @@ std::string Cgi::executeCGI(const Config& config, const HttpRequest& request) {
 		perror("pipe");
 		return ResponseGenerator::InternalServerError(config);
 	}
+
+	// int flags = fcntl(pipefd[READ_END], F_GETFL);
+	// fcntl(pipefd[READ_END], F_SETFL, flags | O_NONBLOCK);
+
+
+	// struct sigaction sa;
+	// 	sa.sa_handler = sigchld_handler;
+	// 	sigemptyset(&sa.sa_mask);
+	// 	sa.sa_flags = 0;
+	// 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+	// 		perror("sigaction");
+	// 		close(pipefd[READ_END]);
+	// 		close(pipefd[WRITE_END]);
+	// 		return ResponseGenerator::InternalServerError(config);
+	// 	}
+
 
 	pid_t pid = fork();
 	if (pid == -1)
@@ -67,19 +112,19 @@ void Cgi::handleChildProcess(const Config& config, const HttpRequest& request, i
 {
 	std::string path = request.getUri().string();
 
-	struct sigaction sa;
-	sa.sa_handler = handle_alarm;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	if (sigaction(SIGALRM, &sa, NULL) == -1)
-	{
-		perror("sigaction");
-		close(pipefd[READ_END]);
-		close(pipefd[WRITE_END]);
-		exit(EXIT_FAILURE);
-	}
+	// struct sigaction sa;
+	// sa.sa_handler = sigalarm_handler;
+	// sigemptyset(&sa.sa_mask);
+	// sa.sa_flags = 0;
+	// if (sigaction(SIGALRM, &sa, NULL) == -1)
+	// {
+	// 	perror("sigaction");
+	// 	close(pipefd[READ_END]);
+	// 	close(pipefd[WRITE_END]);
+	// 	exit(EXIT_FAILURE);
+	// }
 
-	alarm(5); // Set the alarm for CGI timeout
+	alarm(3); // Set the alarm for CGI timeout
 
 
 	close(pipefd[READ_END]); // Close the read end of the pipe
@@ -111,17 +156,24 @@ const std::string Cgi::handleParentProcess(const Config& config, int pipefd[], p
 		close(pipefd[READ_END]);
 		return ResponseGenerator::InternalServerError(config);
 	}
+	// if (waitpid(pid, &status, WNOHANG) == -1)
+	// {
+	// 	perror("waitpid");
+	// 	close(pipefd[READ_END]);
+	// 	return ResponseGenerator::InternalServerError(config);
+	// }
+	// if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM)
+	// {
+	// 	LOG_ERROR("CGI script timed out");
+	// 	close(pipefd[READ_END]);
+	// 	kill(pid, SIGKILL); // Ensure the child process is terminated
+	// 	return ResponseGenerator::InternalServerError(config);
+	// }
 
-	if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM)
-	{
-		LOG_ERROR("CGI script timed out");
-		close(pipefd[READ_END]);
-		kill(pid, SIGKILL); // Ensure the child process is terminated
-		return ResponseGenerator::InternalServerError(config);
-	}
 
 	if (WIFEXITED(status) && WEXITSTATUS(status) == EXIT_SUCCESS)
 	{
+		LOG_INFO("Successfully executed CGI script");
 		char buffer[1024];
 		std::string output;
 		ssize_t count;

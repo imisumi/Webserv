@@ -20,6 +20,14 @@
 
 static Server* s_Instance = nullptr;
 
+
+//? temp
+
+int Server::AddEpollEventStatic(int fd, int event)
+{
+	return s_Instance->AddEpollEvent(s_Instance->m_EpollFD, fd, event);
+}
+
 Server::Server(const Config& config)
 	: m_Config(config)
 {
@@ -62,6 +70,10 @@ int Server::ModifyEpollEvent(int epollFD, int fd, int event)
 	epoll_event ev;
 	ev.events = event;
 	ev.data.fd = fd;
+
+
+	//TODO: use this do differentiate between event data type
+	ev.data.u32 = 0;
 
 	return epoll_ctl(epollFD, EPOLL_CTL_MOD, fd, &ev);
 }
@@ -253,40 +265,13 @@ void Server::Run()
 		LOG_DEBUG("Event count: {}", eventCount);
 		for (int i = 0; i < eventCount; i++)
 		{
-			if (s_Instance->isServerSocket(events[i].data.fd) != -1)
+			int incomingPort = s_Instance->isServerSocket(events[i].data.fd);
+			if (incomingPort != -1)
 			{
-				int client_socket = s_Instance->AcceptConnection(events[i].data.fd);
-				if (client_socket == -1)
+				Client client = s_Instance->AcceptConnection(events[i].data.fd);
+				if (client == -1)
 				{
 					LOG_ERROR("Failed to accept connection!");
-				}
-			}
-			else if (events[i].data.fd == STDIN_FILENO)
-			{
-				//TODO: maybe add some handy console commands?
-				LOG_DEBUG("Handling stdin event...");
-
-				char buffer[1024];
-				ssize_t n = read(STDIN_FILENO, buffer, sizeof(buffer));
-				if (n > 0)
-				{
-					buffer[n] = '\0';
-					LOG_INFO("Received input: {}", buffer);
-					if (strcmp(buffer, "exit\n") == 0)
-					{
-						LOG_INFO("Received exit command. Shutting down server...");
-						s_Instance->m_Running = false;
-					}
-				}
-				else if (n == 0)
-				{
-					LOG_DEBUG("EOF on stdin");
-					s_Instance->m_Running = false;
-				}
-				else
-				{
-					LOG_ERROR("Run read: {}", strerror(errno));
-					s_Instance->m_Running = false;
 				}
 			}
 			else if (events[i].events & EPOLLIN)
@@ -324,46 +309,46 @@ bool Server::IsRunning()
 }
 
 
-
-int Server::AcceptConnection(int socket_fd)
+Client Server::AcceptConnection(int socket_fd)
 {
 	struct sockaddr_in clientAddress;
 	socklen_t clientAddressLength = sizeof(clientAddress);
 
 	// Handle new incoming connection
-	int client_socket = accept(socket_fd, (struct sockaddr*)&clientAddress, &clientAddressLength);
-	if (client_socket == -1)
+	Client client = accept(socket_fd, (struct sockaddr*)&clientAddress, &clientAddressLength);
+	if (client == -1)
 	{
 		LOG_ERROR("accept: {}", strerror(errno));
 		return -1;
 	}
 
-	char clientIP[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &clientAddress.sin_addr, clientIP, INET_ADDRSTRLEN);
+	client.Initialize(clientAddress);
+	m_Clients[client] = client;
+
+	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}", 
+		client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort());
 
 
-	int flags = fcntl(client_socket, F_GETFL, 0);
-	fcntl(client_socket, F_SETFL, flags | O_NONBLOCK);
-
-	if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, client_socket, EPOLLIN | EPOLLET) == -1)
+	if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, client, EPOLLIN | EPOLLET) == -1)
 	{
 		LOG_ERROR("Failed to add client socket to epoll!");
-		close(client_socket);
+		m_Clients.erase(client);
+		close(client);
 		return -1;
 	}
 
-	LOG_DEBUG("New connection from: {}, client socket: {}", inet_ntoa(clientAddress.sin_addr), client_socket);
+	// LOG_DEBUG("New connection from: {}, client socket: {}", inet_ntoa(clientAddress.sin_addr), client);
 
-	return client_socket;
+	return client;
 }
 
-void Server::HandleInputEvent(int fd)
+void Server::HandleInputEvent(int epoll_fd)
 {
 	//TODO: what if the buffer is too small?
 	char buffer[BUFFER_SIZE];
 
 	//TODO: MSG_DONTWAIT or 0?
-	ssize_t n = recv(fd, buffer, sizeof(buffer) - 1, 0);
+	ssize_t n = recv(epoll_fd, buffer, sizeof(buffer) - 1, 0);
 	if (n > 0)
 	{
 		buffer[n] = '\0';
@@ -374,9 +359,9 @@ void Server::HandleInputEvent(int fd)
 		Config config = Config::CreateDefaultConfig();
 		const std::string response = s_Instance->m_RequestHandler.handleRequest(config, bufferStr);
 
-		m_ClientResponses[fd] = response;
+		m_ClientResponses[epoll_fd] = response;
 
-		if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, fd, EPOLLOUT) == -1)
+		if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, epoll_fd, EPOLLOUT) == -1)
 		{
 			LOG_ERROR("Failed to modify client socket in epoll!");
 			s_Instance->m_Running = false;
@@ -387,7 +372,7 @@ void Server::HandleInputEvent(int fd)
 	{
 		LOG_DEBUG("Client closed connection.");
 
-		if (s_Instance->RemoveEpollEvent(s_Instance->m_EpollFD, fd) == -1)
+		if (s_Instance->RemoveEpollEvent(s_Instance->m_EpollFD, epoll_fd) == -1)
 		{
 			LOG_ERROR("Failed to remove client socket from epoll!");
 			s_Instance->m_Running = false;
@@ -395,26 +380,31 @@ void Server::HandleInputEvent(int fd)
 
 		//TODO: also when removing from epoll?
 
-		close(fd);
+		close(epoll_fd);
+		s_Instance->RemoveClient(epoll_fd);
+		LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
+		
 	}
 	else
 	{
-		close(fd);
+		close(epoll_fd);
 		LOG_ERROR("HandleInputEvent read: {}", strerror(errno));
+		s_Instance->RemoveClient(epoll_fd);
+		LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
 	}
 }
 
-void Server::HandleOutputEvent(int fd)
+void Server::HandleOutputEvent(int epoll_fd)
 {
 	// Attempt to find the client response for the given file descriptor
-	if (auto it = m_ClientResponses.find(fd); it != m_ClientResponses.end())
+	if (auto it = m_ClientResponses.find(epoll_fd); it != m_ClientResponses.end())
 	{
 		const std::string& response = it->second;
 		//TODO: use response sender
-		if (s_Instance->m_ResponseSender.sendResponse(response, fd) == -1)
+		if (s_Instance->m_ResponseSender.sendResponse(response, epoll_fd) == -1)
 		{
 			LOG_ERROR("send: {}", strerror(errno));
-			close(fd);
+			close(epoll_fd);
 		}
 		else
 		{
@@ -423,7 +413,7 @@ void Server::HandleOutputEvent(int fd)
 			// Remove the entry from the map
 			m_ClientResponses.erase(it);
 
-			if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, fd, EPOLLIN) == -1)
+			if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, epoll_fd, EPOLLIN) == -1)
 			{
 				LOG_ERROR("Failed to modify client socket in epoll!");
 				s_Instance->m_Running = false;
@@ -432,7 +422,7 @@ void Server::HandleOutputEvent(int fd)
 	}
 	else
 	{
-		LOG_ERROR("No response found for client socket {}.", fd);
-		close(fd);
+		LOG_ERROR("No response found for client socket {}.", epoll_fd);
+		close(epoll_fd);
 	}
 }
