@@ -57,7 +57,14 @@ input[type=submit]:hover {
     <br>
     <input type="submit" value="Submit">
   </form>
+  <br>
+  <button id="goBackButton" style="margin-top: 10px;">Go Back</button>
 </div>
-
+</div>
+<script>
+  document.getElementById('goBackButton').addEventListener('click', function() {
+      window.history.back();
+  });
+</script>
 </body>
 </html>

@@ -45,7 +45,7 @@ const std::string ResponseGenerator::generateResponse(const Config& config, cons
 		case RequestMethod::POST:			return handlePostRequest(config, request);
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
-		case RequestMethod::DELETE:			break;
+		case RequestMethod::DELETE:			return handleDeleteRequest(config, request);
 		case RequestMethod::HEAD:			break ;
 		case RequestMethod::OPTIONS:		return generateBadRequestResponse(); //TODO: this is just for testing, bad request in incase of a invalid request
 		default:							break;
@@ -347,6 +347,8 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 	LOG_DEBUG("Requested path does not exist");
 	return generateNotFoundResponse();
 }
+
+
 #include <regex>
 
 bool isBoundaryString(const std::string &value) {
@@ -457,6 +459,7 @@ const std::string ResponseGenerator::handlePostRequest(const Config& config, con
         return generateInternalServerErrorResponse();
     }
 
+	//hardcoded
     if (!saveUploadedFile(body, boundary, "file", "/home/kaltevog/Desktop/Webserv/database")) {
         LOG_ERROR("Failed to save uploaded file");
         return generateInternalServerErrorResponse();
@@ -465,6 +468,43 @@ const std::string ResponseGenerator::handlePostRequest(const Config& config, con
     LOG_INFO("Successfully handled POST request, saved form data, and saved file");
     return generateOKResponse(request);
 }
+
+const std::string ResponseGenerator::handleDeleteRequest(const Config& config, const HttpRequest& request) 
+{
+    Utils::Timer timer;
+    LOG_INFO("Handling DELETE request");
+
+    // Get the requested URI
+    std::filesystem::path uri = request.getUri();
+
+    // Build the full path to the /database directory
+    std::filesystem::path basePath = "/home/kaltevog/Desktop/Webserv/database";
+    std::filesystem::path fullPath = basePath / uri.filename(); // Only delete file in /database, using the filename part of the URI
+
+    LOG_INFO("Attempting to delete file: {}", fullPath.string());
+
+    // Check if the requested file exists
+    if (std::filesystem::exists(fullPath) && std::filesystem::is_regular_file(fullPath))
+    {
+        // Try deleting the file
+        try {
+            std::filesystem::remove(fullPath);
+            LOG_INFO("File deleted successfully: {}", fullPath.string());
+
+            // Return success response
+            return buildHttpResponse(ContentType::TEXT, "File deleted successfully", HTTPStatusCode::OK);
+        } catch (const std::filesystem::filesystem_error& e) {
+            LOG_ERROR("Failed to delete file: {}", e.what());
+            return generateInternalServerErrorResponse();
+        }
+    }
+    else
+    {
+        LOG_ERROR("Requested file does not exist or is not a regular file: {}", fullPath.string());
+        return generateNotFoundResponse();
+    }
+}
+
 
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest
