@@ -41,7 +41,7 @@ public:
 	{
 		int family = 0;
 		int port = 0;
-		int address = 0;
+		uint32_t address = 0;
 	};
 
 public:
@@ -107,7 +107,8 @@ private:
 	std::vector<int> m_ServerPorts;
 
 	// int port, int socket fd
-	std::unordered_map<int, int> m_ServerSockets;
+	// std::unordered_map<int, int> m_ServerSockets;
+	std::unordered_map<uint64_t, int> m_ServerSockets64;
 	int m_EpollFD = -1;
 
 

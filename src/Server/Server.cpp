@@ -23,7 +23,6 @@
 #define UNPACK_METADATA(u64)     ((uint32_t)((u64) & 0xFFFFFFFF)) // Extracts the lower 32 bits (metadata)
 
 // Define BIT(n) macro to get the value with the nth bit set
-#define BIT(n) (1U << (n))
 #define EPOLL_TYPE_SOCKET   BIT(0)
 #define EPOLL_TYPE_CGI      BIT(1)
 #define EPOLL_TYPE_STDIN    BIT(2)
@@ -116,6 +115,47 @@ int Server::ListenOnSocket(int socket_fd, int backlog)
 	return listen(socket_fd, backlog);
 }
 
+uint64_t packIpAndPort(const std::string& ipStr, uint16_t port)
+{
+	struct in_addr ipAddr;
+
+	// Convert the IP string to a 32-bit integer (network byte order)
+	if (inet_pton(AF_INET, ipStr.c_str(), &ipAddr) != 1) {
+		std::cerr << "Invalid IP address format" << std::endl;
+		return 0;
+	}
+
+	// Convert to host byte order (so we can work with it directly)
+	uint32_t ip = ntohl(ipAddr.s_addr);
+
+	// Combine IP (shifted by 32 bits) and the port into a uint64_t
+	uint64_t result = static_cast<uint64_t>(ip) << 32;  // Put IP in the upper 32 bits
+	result |= static_cast<uint64_t>(port);			  // Put port in the lower 16 bits
+
+	return result;
+}
+
+std::pair<std::string, uint16_t> unpackIpAndPort(uint64_t packedValue)
+{
+	// Extract the port (lower 16 bits)
+	uint16_t port = packedValue & 0xFFFF;
+
+	// Extract the IP address (upper 32 bits)
+	uint32_t ip = (packedValue >> 32) & 0xFFFFFFFF;
+
+	// Convert the 32-bit IP back to string format
+	struct in_addr ipAddr;
+	ipAddr.s_addr = htonl(ip);  // Convert back to network byte order
+
+	char ipStr[INET_ADDRSTRLEN];
+	if (inet_ntop(AF_INET, &ipAddr, ipStr, INET_ADDRSTRLEN) == NULL) {
+		std::cerr << "Failed to convert IP to string format" << std::endl;
+		return {"", 0};
+	}
+
+	return {std::string(ipStr), port};
+}
+
 void Server::Init(const Config& config)
 {
 	WEB_ASSERT(!s_Instance, "Server already exists!");
@@ -131,97 +171,91 @@ void Server::Init(const Config& config)
 		return;
 	}
 
-
+	//TODO: replace int with server settings, also this is handled in the config
+	std::unordered_map<uint64_t, int> serverHosts;
 	//? assuming that the config parser properly deals with duplicates
-	s_Instance->m_ServerPorts.push_back(80);
-	// s_Instance->m_ServerPorts.push_back(8080);
-	// s_Instance->m_ServerPorts.push_back(8080);
-	// s_Instance->m_ServerPorts.push_back(8002);
 
-	int i = 0;
-	for (int port : s_Instance->m_ServerPorts)
+	uint64_t newIP;
+	newIP = packIpAndPort("127.0.0.5", 8080);
+	serverHosts[newIP] = 0;
+	newIP = packIpAndPort("127.0.0.4", 8080);
+	serverHosts[newIP] = 0;
+	newIP = packIpAndPort("127.0.0.4", 8081);
+	serverHosts[newIP] = 0;
+	newIP = packIpAndPort("0.0.0.0", 8080);
+	serverHosts[newIP] = 0;
+
+	// loop through the server hosts
+	for (auto& [packedIPPort, serverID] : serverHosts)
 	{
-		LOG_INFO("Creating server socket on port: {}", port);
+		int ip = (packedIPPort >> 32) & 0xFFFFFFFF;
+		char ipStr[INET_ADDRSTRLEN];
+		struct in_addr ipAddr;
+		ipAddr.s_addr = htonl(ip);
+		if (inet_ntop(AF_INET, &ipAddr, ipStr, INET_ADDRSTRLEN) == NULL)
+		{
+			LOG_ERROR("Failed to convert IP to string format");
+			s_Instance->m_Running = false;
+			return;
+		}
+		int port = packedIPPort & 0xFFFF;
+		LOG_INFO("Creating server socket on IP: {}, port: {}", ipStr, port);
 
-		const SocketSettings settings = {
-			.domain = AF_INET,
-			.type = SOCK_STREAM | SOCK_NONBLOCK,
-			.protocol = 0
-		};
-
-		auto it = s_Instance->m_ServerSockets.find(port);
-		if (it != s_Instance->m_ServerSockets.end())
+		auto it = s_Instance->m_ServerSockets64.find(packedIPPort);
+		if (it != s_Instance->m_ServerSockets64.end())
 		{
 			LOG_ERROR("Server socket already exists!");
 			s_Instance->m_Running = false;
 			return;
 		}
-		if ((s_Instance->m_ServerSockets[port] = s_Instance->CreateSocket(settings)) == -1)
+
+		//? Logic
+		int socketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+		if (socketFD == -1)
 		{
 			LOG_ERROR("Failed to create server socket!");
 			s_Instance->m_Running = false;
 			return;
 		}
-
-
-		// frist 32 bits ip, 32-48 port
-		// std::unordered_map<uint64_t, ServerSettings> m_ServerSockets;
+		s_Instance->m_ServerSockets64[packedIPPort] = socketFD;
 
 		int reuse = 1;
-		const SocketOptions options = {
-			.level = SOL_SOCKET,
-			.optname = SO_REUSEADDR | SO_REUSEPORT,
-			// .optval = &s_Instance->m_ServerSockets[port],
-			.optval = &reuse,
-			// .optlen = sizeof(s_Instance->m_ServerSockets[port])
-			.optlen = sizeof(reuse)
-		};
-
-		if (s_Instance->SetSocketOptions(s_Instance->m_ServerSockets[port], options) == -1)
+		//? SO_REUSEADDR: allows other sockets to bind to an address even if it is already in use
+		//? SO_REUSEPORT: allows multiple sockets to bind to the same port and ip
+		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT , &reuse, sizeof(reuse)) == -1)
 		{
 			LOG_ERROR("Failed to set socket options!");
 			s_Instance->m_Running = false;
 			return;
 		}
 
+		struct sockaddr_in socketAddress = {};
+		socketAddress.sin_family = AF_INET;
+		socketAddress.sin_port = htons(port);
+		socketAddress.sin_addr.s_addr = htonl(ip);
+		// socketAddress.sin_addr.s_addr = inet_addr("127.0.0.5");
 
-		// int addr = INADDR_ANY;
-		// if (i == 1)
-		int	addr = 127 << 24 | 0 << 16 | 0 << 8 | 2;
-		const SocketAddressConfig config = {
-			.family = AF_INET, //? address type
-			//TODO: extract from config
-			.port = port, //? convert to network byte order
-			// .address = addr
-			.address = INADDR_ANY
-		};
-
-		if (s_Instance->BindSocket(s_Instance->m_ServerSockets[port], config) == -1)
+		if (bind(socketFD, (struct sockaddr*)&socketAddress, sizeof(socketAddress)) == -1)
 		{
 			LOG_ERROR("Failed to bind server socket!");
 			s_Instance->m_Running = false;
 			return;
 		}
 
-
-		if (s_Instance->ListenOnSocket(s_Instance->m_ServerSockets[port], 3) == -1)
+		if (listen(socketFD, 3) == -1)
 		{
 			LOG_ERROR("Failed to listen on server socket!");
 			s_Instance->m_Running = false;
 			return;
 		}
 
-
-
-		if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, s_Instance->m_ServerSockets[port], EPOLLIN | EPOLLET))
+		if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, socketFD, EPOLLIN | EPOLLET) == -1)
 		{
 			LOG_ERROR("Failed to add server socket to epoll!");
 			s_Instance->m_Running = false;
 			return;
 		}
-		i++;
 	}
-
 }
 
 void Server::Shutdown()
@@ -231,10 +265,10 @@ void Server::Shutdown()
 
 	// close(s_Instance->m_ServerSocket);
 
-	for (auto& [port, socket] : s_Instance->m_ServerSockets)
-	{
-		close(socket);
-	}
+	// for (auto& [port, socket] : s_Instance->m_ServerSockets)
+	// {
+	// 	close(socket);
+	// }
 
 	close(s_Instance->m_EpollFD);
 
@@ -245,11 +279,20 @@ void Server::Shutdown()
 
 int Server::isServerSocket(int fd)
 {
-	for (auto& [port, socket] : s_Instance->m_ServerSockets)
+	// for (auto& [port, socket] : s_Instance->m_ServerSockets)
+	// {
+	// 	if (fd == socket)
+	// 	{
+	// 		return port;
+	// 	}
+	// }
+
+	for (auto& [packedIpPort, socket] : s_Instance->m_ServerSockets64)
 	{
 		if (fd == socket)
 		{
-			return port;
+			// return ;
+			return static_cast<uint32_t>(packedIpPort >> 32);
 		}
 	}
 
@@ -288,9 +331,9 @@ void Server::Run()
 			LOG_ERROR("epoll_wait: {}", strerror(errno));
 			return;
 		}
-		LOG_DEBUG("Event count: {}", eventCount);
 		for (int i = 0; i < eventCount; i++)
 		{
+			LOG_DEBUG("Handling event...");
 			int incomingPort = s_Instance->isServerSocket(events[i].data.fd);
 			if (incomingPort != -1)
 			{
