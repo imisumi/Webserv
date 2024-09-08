@@ -22,6 +22,13 @@
 class Server
 {
 public:
+	struct EpollData
+	{
+		int fd = -1;
+		int cgi_fd = -1;
+		uint32_t type = 0;
+	};
+
 	struct SocketSettings
 	{
 		int domain = 0;
@@ -56,9 +63,18 @@ public:
 	Server& operator=(const Server&) = delete;
 
 
+	int GetEpollInstance() const
+	{
+		return m_EpollInstance;
+	}
 
-	static int AddEpollEventStatic(int fd, int event);
 
+
+	// static int AddEpollEventStatic(int fd, int event);
+
+	int AddEpollEvent(int epollFD, int fd, int event, uint32_t type);
+	int RemoveEpollEvent(int epollFD, int fd);
+	int ModifyEpollEvent(int epollFD, int fd, int event, uint32_t type);
 private:
 	Server(const Config& config);
 	~Server();
@@ -69,13 +85,11 @@ private:
 	// void BindServerSocket();
 	// void ListenServerSocket();
 	Client AcceptConnection(int socket_fd);
-	void HandleInputEvent(int fd);
+	// void HandleInputEvent(int fd);
+	void HandleInputEvent(const Client& client);
 	void HandleOutputEvent(int fd);
 
 	int CreateEpoll();
-	int AddEpollEvent(int epollFD, int fd, int event);
-	int RemoveEpollEvent(int epollFD, int fd);
-	int ModifyEpollEvent(int epollFD, int fd, int event);
 
 	int CreateSocket(const SocketSettings& settings);
 	int SetSocketOptions(int fd, const SocketOptions& options);
@@ -109,7 +123,7 @@ private:
 	// int port, int socket fd
 	// std::unordered_map<int, int> m_ServerSockets;
 	std::unordered_map<uint64_t, int> m_ServerSockets64;
-	int m_EpollFD = -1;
+	int m_EpollInstance = -1;
 
 
 

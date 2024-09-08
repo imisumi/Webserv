@@ -34,10 +34,10 @@ static Server* s_Instance = nullptr;
 
 //? temp
 
-int Server::AddEpollEventStatic(int fd, int event)
-{
-	return s_Instance->AddEpollEvent(s_Instance->m_EpollFD, fd, event);
-}
+// int Server::AddEpollEventStatic(int fd, int event)
+// {
+// 	return s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, fd, event);
+// }
 
 Server::Server(const Config& config)
 	: m_Config(config)
@@ -61,11 +61,12 @@ int Server::CreateEpoll()
 	return epoll_create1(EPOLL_CLOEXEC);
 }
 
-int Server::AddEpollEvent(int epollFD, int fd, int event)
+int Server::AddEpollEvent(int epollFD, int fd, int event, uint32_t type)
 {
 	epoll_event ev;
 	ev.events = event;
-	ev.data.fd = fd;
+	// ev.data.fd = fd;
+	ev.data.u64 = PACK_U64(fd, type);
 
 	return epoll_ctl(epollFD, EPOLL_CTL_ADD, fd, &ev);
 }
@@ -75,17 +76,17 @@ int Server::RemoveEpollEvent(int epollFD, int fd)
 	return epoll_ctl(epollFD, EPOLL_CTL_DEL, fd, nullptr);
 }
 
-int Server::ModifyEpollEvent(int epollFD, int fd, int event)
+int Server::ModifyEpollEvent(int epollFD, int fd, int event, uint32_t type)
 {
 	// EPOLLRDHUP | EPOLLHUP | EPOLLERR;
 	epoll_event ev;
 	ev.events = event;
-	ev.data.fd = fd;
+	// ev.data.fd = fd;
+	ev.data.u64 = PACK_U64(fd, type);
 
 
 	//TODO: use this do differentiate between event data type
-	// ev.data.u32 = 0;
-	// ev.data.u32 = 10;
+
 
 	return epoll_ctl(epollFD, EPOLL_CTL_MOD, fd, &ev);
 }
@@ -164,7 +165,7 @@ void Server::Init(const Config& config)
 	s_Instance = new Server(config);
 
 	//? EPOLL_CLOEXEC: automatically close the file descriptor when calling exec
-	if ((s_Instance->m_EpollFD = s_Instance->CreateEpoll()) == -1)
+	if ((s_Instance->m_EpollInstance = s_Instance->CreateEpoll()) == -1)
 	{
 		LOG_ERROR("Failed to create epoll file descriptor!");
 		s_Instance->m_Running = false;
@@ -249,12 +250,40 @@ void Server::Init(const Config& config)
 			return;
 		}
 
-		if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, socketFD, EPOLLIN | EPOLLET) == -1)
+		// if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, socketFD, EPOLLIN | EPOLLET) == -1)
+		// {
+		// 	LOG_ERROR("Failed to add server socket to epoll!");
+		// 	s_Instance->m_Running = false;
+		// 	return;
+		// }
+
+
+		// LOG_INFO("Socket fd: {}", socketFD);
+		epoll_event ev;
+		ev.events = EPOLLIN | EPOLLET;
+		ev.data.u64 = (static_cast<uint64_t>(socketFD) << 32) | EPOLL_TYPE_SOCKET;
+
+		// if (epoll_ctl(s_Instance->m_EpollInstance, EPOLL_CTL_ADD, socketFD, &ev) == -1)
+		// {
+		// 	LOG_ERROR("Failed to add server socket to epoll!");
+		// 	s_Instance->m_Running = false;
+		// 	return;
+		// }
+
+		if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, socketFD, EPOLLIN | EPOLLET, PACK_U64(socketFD, EPOLL_TYPE_SOCKET)) == -1)
 		{
 			LOG_ERROR("Failed to add server socket to epoll!");
 			s_Instance->m_Running = false;
 			return;
 		}
+
+		
+
+
+		// int sock = static_cast<uint32_t>(ev.data.u64 >> 32);
+		// uint32_t metadata = static_cast<uint32_t>(ev.data.u64 & 0xFFFFFFFF);
+		// LOG_INFO("Socket fd: {}, {}", sock, metadata);
+		// exit(1);
 	}
 }
 
@@ -270,7 +299,7 @@ void Server::Shutdown()
 	// 	close(socket);
 	// }
 
-	close(s_Instance->m_EpollFD);
+	close(s_Instance->m_EpollInstance);
 
 	delete s_Instance;
 	s_Instance = nullptr;
@@ -279,14 +308,6 @@ void Server::Shutdown()
 
 int Server::isServerSocket(int fd)
 {
-	// for (auto& [port, socket] : s_Instance->m_ServerSockets)
-	// {
-	// 	if (fd == socket)
-	// 	{
-	// 		return port;
-	// 	}
-	// }
-
 	for (auto& [packedIpPort, socket] : s_Instance->m_ServerSockets64)
 	{
 		if (fd == socket)
@@ -307,56 +328,127 @@ void Server::Run()
 
 	struct epoll_event events[MAX_EVENTS];
 
-
-	
-
-	if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, STDIN_FILENO, EPOLLIN))
-	{
-		LOG_ERROR("Failed to add stdin to epoll!");
-		s_Instance->m_Running = false;
-		return;
-	}
-	
-
-
 	std::string clientIP[MAX_EVENTS];
+	int tempClient = -1;
+
+	
 	while (s_Instance->m_Running)
 	{
 		LOG_INFO("Waiting for events...");
 
 		//? EPOLL_WAIT: wait for events on the epoll instance
-		int eventCount = epoll_wait(s_Instance->m_EpollFD, events, MAX_EVENTS, -1);
+		int eventCount = epoll_wait(s_Instance->m_EpollInstance, events, MAX_EVENTS, -1);
 		if (eventCount == -1)
 		{
+			if (errno == EINTR)
+			{
+				// Interrupted by a signal, such as SIGCHLD, retry epoll_wait
+				std::cout << "epoll_wait interrupted by signal, retrying..." << std::endl;
+				continue;
+			}
 			LOG_ERROR("epoll_wait: {}", strerror(errno));
 			return;
 		}
 		for (int i = 0; i < eventCount; i++)
 		{
+			uint32_t epoll_fd = static_cast<uint32_t>(events[i].data.u64 >> 32);
+			uint32_t epoll_type = static_cast<uint32_t>(events[i].data.u64 & 0xFFFFFFFF);
+
 			LOG_DEBUG("Handling event...");
-			int incomingPort = s_Instance->isServerSocket(events[i].data.fd);
+			int incomingPort = s_Instance->isServerSocket(epoll_fd);
 			if (incomingPort != -1)
 			{
-				Client client = s_Instance->AcceptConnection(events[i].data.fd);
-				if (client == -1)
+				Client newClient = s_Instance->AcceptConnection(epoll_fd);
+				if (newClient == -1)
 				{
 					LOG_ERROR("Failed to accept connection!");
 				}
+				s_Instance->m_Clients[newClient] = newClient;
+				tempClient = newClient;
+				continue;
 			}
-			else if (events[i].events & EPOLLIN)
+
+			Client client = s_Instance->m_Clients[epoll_fd];
+			LOG_INFO("epoll fd: {}, client socket: {}", epoll_fd, (int)client);
+
+			if (events[i].events & EPOLLIN)
 			{
 				LOG_DEBUG("Handling input event...");
+				if (epoll_type == EPOLL_TYPE_SOCKET)
+					s_Instance->HandleInputEvent(client);
+				else if (epoll_type == EPOLL_TYPE_CGI)
+				{
+					LOG_DEBUG("Handling CGI input event...");
+					char buffer[BUFFER_SIZE];
+					ssize_t n = read(epoll_fd, buffer, sizeof(buffer) - 1);
+					if (n > 0)
+					{
+						buffer[n] = '\0';
+						const std::string output = std::string(buffer, n);
 
-				s_Instance->HandleInputEvent(events[i].data.fd);
+
+						size_t header_end = output.find("\r\n\r\n");
+						if (header_end != std::string::npos)
+						{
+							size_t bodyLength = output.size() - header_end - 4;
+							std::string httpResponse = "HTTP/1.1 200 OK\r\n";
+							httpResponse += "Content-Length: " + std::to_string(bodyLength) + "\r\n";
+							httpResponse += "Connection: close\r\n";
+							httpResponse += "\r\n"; // End of headers
+							httpResponse += output.substr(header_end + 4); // Body
+
+
+							s_Instance->m_ClientResponses[tempClient] = httpResponse;
+						}
+						else
+						{
+							LOG_ERROR("CGI script did not produce valid headers");
+							// s_Instance->m_ClientResponses[tempClient] = ResponseGenerator::InternalServerError(s_Instance->m_Config);
+						}
+
+
+						// LOG_INFO("Received data:\n{}", bufferStr);
+
+						// s_Instance->m_ClientResponses[tempClient] = httpResponse;
+						// LOG_INFO("Temp client: {}", tempClient);
+						// send(tempClient, buffer, n, 0);
+
+						if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, tempClient, EPOLLOUT | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
+						{
+							LOG_ERROR("Failed to modify client socket in epoll!");
+							s_Instance->m_Running = false;
+						}
+
+
+						s_Instance->RemoveEpollEvent(s_Instance->m_EpollInstance, epoll_fd);
+						close(epoll_fd);
+					}
+					else if (n == 0)
+					{
+						LOG_DEBUG("Client closed connection.");
+
+						if (s_Instance->RemoveEpollEvent(s_Instance->m_EpollInstance, epoll_fd) == -1)
+						{
+							LOG_ERROR("Failed to remove client socket from epoll!");
+							s_Instance->m_Running = false;
+						}
+
+					}
+					else
+					{
+						close(epoll_fd);
+						LOG_ERROR("HandleInputEvent read: {}", strerror(errno));
+						s_Instance->RemoveClient(epoll_fd);
+						LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
+					}
+				}
 			}
 			else if (events[i].events & EPOLLOUT)
 			{
 				LOG_DEBUG("Handling output event...");
 
-				int fd = UNPACK_FD(events[i].data.u64);
-				int metadata = UNPACK_METADATA(events[i].data.u64);
-
-				s_Instance->HandleOutputEvent(events[i].data.fd);
+				if (epoll_type == EPOLL_TYPE_SOCKET)
+					s_Instance->HandleOutputEvent(epoll_fd);
 			}
 			else
 			{
@@ -395,16 +487,16 @@ Client Server::AcceptConnection(int socket_fd)
 	}
 
 	client.Initialize(clientAddress);
-	m_Clients[client] = client;
+	// m_Clients[client] = client;
 
 	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}", 
 		client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort());
 
 
-	if (s_Instance->AddEpollEvent(s_Instance->m_EpollFD, client, EPOLLIN | EPOLLET) == -1)
+	if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 	{
 		LOG_ERROR("Failed to add client socket to epoll!");
-		m_Clients.erase(client);
+		// m_Clients.erase(client);
 		close(client);
 		return -1;
 	}
@@ -414,13 +506,13 @@ Client Server::AcceptConnection(int socket_fd)
 	return client;
 }
 
-void Server::HandleInputEvent(int epoll_fd)
+void Server::HandleInputEvent(const Client& client)
 {
 	//TODO: what if the buffer is too small?
 	char buffer[BUFFER_SIZE];
 
 	//TODO: MSG_DONTWAIT or 0?
-	ssize_t n = recv(epoll_fd, buffer, sizeof(buffer) - 1, 0);
+	ssize_t n = recv(client, buffer, sizeof(buffer) - 1, 0);
 	if (n > 0)
 	{
 		buffer[n] = '\0';
@@ -429,13 +521,19 @@ void Server::HandleInputEvent(int epoll_fd)
 
 		//TODO: get the correct sevrer config and pass it to the request handler
 		Config config = Config::CreateDefaultConfig();
-		const std::string response = s_Instance->m_RequestHandler.handleRequest(config, bufferStr);
+		const std::string response = s_Instance->m_RequestHandler.handleRequest(client, config, bufferStr);
+
+		if (response.empty())
+		{
+			LOG_INFO("Request is a CGI request, forwarding to CGI handler...");
+			return;
+		}
 
 
 		// LOG_DEBUG("Response:\n{}", response);
-		m_ClientResponses[epoll_fd] = response;
+		m_ClientResponses[client] = response;
 
-		if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, epoll_fd, EPOLLOUT) == -1)
+		if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 		{
 			LOG_ERROR("Failed to modify client socket in epoll!");
 			s_Instance->m_Running = false;
@@ -446,7 +544,7 @@ void Server::HandleInputEvent(int epoll_fd)
 	{
 		LOG_DEBUG("Client closed connection.");
 
-		if (s_Instance->RemoveEpollEvent(s_Instance->m_EpollFD, epoll_fd) == -1)
+		if (s_Instance->RemoveEpollEvent(s_Instance->m_EpollInstance, client) == -1)
 		{
 			LOG_ERROR("Failed to remove client socket from epoll!");
 			s_Instance->m_Running = false;
@@ -454,16 +552,16 @@ void Server::HandleInputEvent(int epoll_fd)
 
 		//TODO: also when removing from epoll?
 
-		close(epoll_fd);
-		s_Instance->RemoveClient(epoll_fd);
+		close(client);
+		s_Instance->RemoveClient(client);
 		LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
 		
 	}
 	else
 	{
-		close(epoll_fd);
+		close(client);
 		LOG_ERROR("HandleInputEvent read: {}", strerror(errno));
-		s_Instance->RemoveClient(epoll_fd);
+		s_Instance->RemoveClient(client);
 		LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
 	}
 }
@@ -474,8 +572,12 @@ void Server::HandleOutputEvent(int epoll_fd)
 	if (auto it = m_ClientResponses.find(epoll_fd); it != m_ClientResponses.end())
 	{
 		const std::string& response = it->second;
-		//TODO: use response sender
-		if (s_Instance->m_ResponseSender.sendResponse(response, epoll_fd) == -1)
+
+		LOG_INFO("Sending response to client...");
+		LOG_INFO("Response:\n{}", response);
+
+		ssize_t bytes = send(epoll_fd, response.c_str(), response.size(), 0);
+		if (bytes == -1)
 		{
 			LOG_ERROR("send: {}", strerror(errno));
 			close(epoll_fd);
@@ -487,7 +589,7 @@ void Server::HandleOutputEvent(int epoll_fd)
 			// Remove the entry from the map
 			m_ClientResponses.erase(it);
 
-			if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollFD, epoll_fd, EPOLLIN) == -1)
+			if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, epoll_fd, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 			{
 				LOG_ERROR("Failed to modify client socket in epoll!");
 				s_Instance->m_Running = false;

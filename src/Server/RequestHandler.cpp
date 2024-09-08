@@ -27,7 +27,7 @@
 	- not okay to cache
 	- can change the server
 */
-const std::string RequestHandler::handleRequest(const Config& config, const std::string& request)
+const std::string RequestHandler::handleRequest(const Client& client, const Config& config, const std::string& request)
 {
 	parseRequest(request);
 
@@ -36,7 +36,7 @@ const std::string RequestHandler::handleRequest(const Config& config, const std:
 	HttpRequest req = m_RequestParser.getRequest();
 	req.setUri(config.getRoot() / std::filesystem::relative(req.getUri(), "/"));
 
-	return ResponseGenerator::generateResponse(config, req);
+	return ResponseGenerator::generateResponse(client, config, req);
 }
 
 

@@ -44,7 +44,7 @@ static const std::unordered_map<std::string, std::string> s_SupportedMineTypes =
 			{ ".png", "image/png" }
 		};
 
-const std::string ResponseGenerator::generateResponse(const Config& config, const HttpRequest& request)
+const std::string ResponseGenerator::generateResponse(const Client& client, const Config& config, const HttpRequest& request)
 {
 	//TODO: validate request
 	//? fo now only GET is supported
@@ -311,10 +311,11 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 
 		std::filesystem::path fileName = request.getUri().filename();
 		HttpRequest updatedRequest = request;
-		std::filesystem::path cgiPath = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin";
+		std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
 		updatedRequest.setUri(cgiPath / fileName);
 		LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
-		return Cgi::executeCGI(config, updatedRequest);
+		Cgi::executeCGI(config, updatedRequest);
+		return "";
 	}
 
 	//? Validate the requested path

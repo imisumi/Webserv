@@ -26,7 +26,32 @@ int main()
 	//TODOl: get root for config
 
 	// WEB_ASSERT(false, "make sure correct path is set");
-	if (setenv("HTML_ROOT_DIR", "/home/imisumi/Desktop/Webserv/root/html", 1) != 0)
+
+	// print working directory
+	char cwd[1024];
+	if (getcwd(cwd, sizeof(cwd)) != NULL)
+	{
+		std::cout << "Current working dir: " << cwd << std::endl;
+	}
+
+	std::string root = cwd;
+	root += "/root/html";
+	
+	if (setenv("WORKING_DIR", cwd, 1) != 0)
+	{
+		std::cerr << "Error setting environment variable" << std::endl;
+		return 1;
+	}
+
+	if (setenv("HTML_ROOT_DIR", root.c_str(), 1) != 0)
+	{
+		std::cerr << "Error setting environment variable" << std::endl;
+		return 1;
+	}
+
+	std::string cgiRoot = cwd;
+	cgiRoot += "/root/webserv/cgi-bin";
+	if (setenv("CGI_ROOT_DIR", cgiRoot.c_str(), 1) != 0)
 	{
 		std::cerr << "Error setting environment variable" << std::endl;
 		return 1;

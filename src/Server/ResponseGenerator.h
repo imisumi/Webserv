@@ -15,6 +15,7 @@
 
 
 #include "Core/Core.h"
+#include "Client.h"
 
 
 enum class HTTPStatusCode
@@ -45,7 +46,7 @@ public:
 	ResponseGenerator() {};
 	~ResponseGenerator() {};
 
-	static const std::string generateResponse(const Config& config, const HttpRequest& request);
+	static const std::string generateResponse(const Client& client, const Config& config, const HttpRequest& request);
 
 
 	static const std::string InternalServerError(const Config& config);

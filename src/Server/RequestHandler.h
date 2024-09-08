@@ -8,13 +8,15 @@
 #include <memory>
 #include <string>
 
+#include "Client.h"
+
 class RequestHandler
 {
 public:
 	RequestHandler() {};
 	~RequestHandler() {};
 
-	const std::string handleRequest(const Config& config, const std::string& request);
+	const std::string handleRequest(const Client& client, const Config& config, const std::string& request);
 
 private:
 	void parseRequest(const std::string& request);

@@ -78,5 +78,5 @@ private:
 	char m_PeerAddress[INET_ADDRSTRLEN] = { 0 };
 
 
-	int m_EpollFD = -1;
+	int m_EpollInstance = -1;
 };
