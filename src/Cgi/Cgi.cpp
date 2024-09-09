@@ -1,4 +1,5 @@
 #include "Cgi.h"
+#include "Server/Server.h"
 
 
 bool Cgi::isValidCGI(const Config& config, const std::filesystem::path& path)
@@ -36,6 +37,15 @@ void handle_alarm(int signal) {
 	// This signal handler does nothing but allows us to handle timeouts
 }
 
+static const char s_TimeoutErrorResponse[] =
+    "HTTP/1.1 504 Gateway Timeout\r\n"
+    "Content-Length: 41\r\n" // Length of the body below
+    "Connection: close\r\n"
+    "Content-Type: text/plain\r\n"
+    "\r\n"
+    "504 Gateway Timeout: The server timed out"; // Body of the response
+
+
 void sigalarm_handler(int signo) {
 	// (void) signo; // Unused parameter
 	// int status;
@@ -47,33 +57,96 @@ void sigalarm_handler(int signo) {
 	// 	}
 	// }
 
+	std::cout << s_TimeoutErrorResponse;
+
 	// printf("Child process (PID: %d) timed out and will terminate.\n", getpid());
-	std::cerr << "Child process (PID: " << getpid() << ") timed out and will terminate." << std::endl;
+	// std::cerr << "Child process (PID: " << getpid() << ") timed out and will terminate." << std::endl;
 	// exit(EXIT_FAILURE); // Terminate the child process
 	// exit(EXIT_SUCCESS); // Terminate the child process
+	_exit(99);
 }
 
-// Custom SIGCHLD handler to reap the specific child that has exited
+#define EPOLL_TYPE_SOCKET   BIT(0)
+
 void sigchld_handler(int signo)
 {
-	int status;
-	pid_t pid;
+    int status;
+    pid_t pid;
 
-	// Use WNOHANG to only reap child processes that have exited
-	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-		if (WIFEXITED(status)) {
-			std::cout << "Child process " << pid << " exited with status: " << WEXITSTATUS(status) << std::endl;
-		} else if (WIFSIGNALED(status)) {
-			std::cout << "Child process " << pid << " was terminated by signal: " << WTERMSIG(status) << std::endl;
-		}
+    // Use WNOHANG to only reap child processes that have exited
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        if (WIFEXITED(status)) {
+            int exit_code = WEXITSTATUS(status);
+            std::cout << "Child process " << pid << " exited with status: " << exit_code << std::endl;
+            
+            // Handle CGI script timeouts if exit code is known to be a timeout
+            // (assuming specific exit codes are set for timeouts, such as EXIT_FAILURE)
+            if (exit_code == EXIT_FAILURE) {
+                // Handle CGI timeout here (e.g., send timeout error page to client)
+                std::cerr << "Child process " << pid << " failed due to timeout" << std::endl;
+                // Send timeout error page to client
+            }
+        } else if (WIFSIGNALED(status)) {
+            int signal_num = WTERMSIG(status);
 
-		// Remove the child from the list of running processes
-		// childProcesses.erase(pid);
-	}
+            // Specifically handle SIGALRM as a timeout signal
+            if (signal_num == SIGALRM)
+			{
+				Server& server = Server::Get();
+
+				int client_fd = server.childProcesses[pid];
+				Client client = server.GetClient(client_fd);
+
+				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);
+				struct Server::EpollData *ev_data = new Server::EpollData();
+				ev_data->fd = client_fd;
+				ev_data->cgi_fd = -1;
+				ev_data->type = EPOLL_TYPE_SOCKET;
+
+				// Server::AddEpollEventStatic(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
+				Server::ModifyEpollEventStatic(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
+
+				std::string response = s_TimeoutErrorResponse;
+				server.m_ClientResponses[client_fd] = response;
+
+                // Handle CGI timeout here
+                std::cerr << "Child process " << pid << " timed out with signal: " << signal_num << std::endl;
+                // Send timeout error page to client
+            }
+			else
+			{
+            	std::cout << "Child process " << pid << " was terminated by signal: " << signal_num << std::endl;
+			}
+        }
+
+        // Remove the child from the list of running processes
+        // childProcesses.erase(pid);
+    }
 }
 
+
+// Custom SIGCHLD handler to reap the specific child that has exited
+
+// void sigchld_handler(int signo)
+// {
+// 	int status;
+// 	pid_t pid;
+
+// 	// Use WNOHANG to only reap child processes that have exited
+// 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+// 		if (WIFEXITED(status)) {
+// 			std::cout << "Child process " << pid << " exited with status: " << WEXITSTATUS(status) << std::endl;
+// 		} else if (WIFSIGNALED(status)) {
+// 			std::cout << "Child process " << pid << " was terminated by signal: " << WTERMSIG(status) << std::endl;
+// 		}
+
+// 		// Remove the child from the list of running processes
+// 		// childProcesses.erase(pid);
+// 	}
+// }
+
 #include <fcntl.h> // For fcntl
-#include "Server/Server.h"
+// #include "Server/Server.h"
 #define PACK_U64(fd, metadata)   (((uint64_t)(fd) << 32) | (metadata))
 #define EPOLL_TYPE_SOCKET   BIT(0)
 #define EPOLL_TYPE_CGI      BIT(1)
@@ -98,21 +171,21 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	fcntl(pipefd[WRITE_END], F_SETFL, flags2 | O_NONBLOCK);
 
 
-	Server& server = Server::Get();
+	struct Server::EpollData *ev_data = new Server::EpollData();
+	ev_data->fd = (int)client;
+	ev_data->cgi_fd = pipefd[READ_END];
+	ev_data->type = EPOLL_TYPE_CGI;
 
-	// struct epoll_event ev;
-	// ev.events = EPOLLIN | EPOLLET; // Monitor for readability
-	// // ev.data.fd = pipefd[READ_END];
-	// ev.data.u64 = PACK_U64(pipefd[READ_END], EPOLL_TYPE_CGI);
+	LOG_INFO("Forwarding client FD: {} to CGI handler", (int)client);
 
-	// struct epoll_event ev = server.GetEpollEventFD(client);
-	// LOG_INFO("Forwarding client FD: {} to CGI handler", (int)client);
-	Server::EpollData data = server.GetEpollData(client);
-	LOG_INFO("Forwarding client FD: {} to CGI handler", data.fd);
-	server.SetCgiToClientMap(pipefd[READ_END], data.fd);
+	// Server& server = Server::Get();
+	// server.AddEpollEvent(server.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
+	// LOG_INFO("poll instance: {}", server.GetEpollInstance());
 
-	server.AddEpollEvent(server.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, EPOLL_TYPE_CGI);
+	Server::AddEpollEventStatic(client.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
+	// LOG_INFO("poll instance: {}", client.GetEpollInstance());
 
+	
 	struct sigaction sa;
 	sa.sa_handler = sigchld_handler;  // Assign the custom handler
 	sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
@@ -139,12 +212,31 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	{ // Child process
 		handleChildProcess(config, request, pipefd);
 	}
+	Server& server = Server::Get();
+	server.childProcesses[pid] = (int)client;
 	return handleParentProcess(config, pipefd, pid);
 }
 
 
 void Cgi::handleChildProcess(const Config& config, const HttpRequest& request, int pipefd[])
 {
+
+	struct sigaction sa;
+	sa.sa_handler = sigalarm_handler;  // Assign the custom handler
+	sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
+	sa.sa_flags = 0;         // Restart interrupted system calls
+
+	// Register the handler for SIGALRM
+	if (sigaction(SIGALRM, &sa, NULL) == -1)
+	{
+		perror("sigaction");
+		exit(1);
+	}
+	alarm(3); // Set the alarm for CGI timeout
+
+
+
+
 	std::string path = request.getUri().string();
 
 	// alarm(3); // Set the alarm for CGI timeout
@@ -220,7 +312,7 @@ const std::string Cgi::handleParentProcess(const Config& config, int pipefd[], p
 			return ResponseGenerator::InternalServerError(config);
 		}
 	}
-	LOG_ERROR("CGI script failed with status: " + std::to_string(WEXITSTATUS(status)));
+	// LOG_ERROR("CGI script failed with status: " + std::to_string(WEXITSTATUS(status)));
 	// close(pipefd[READ_END]);
 	return ResponseGenerator::InternalServerError(config);
 }

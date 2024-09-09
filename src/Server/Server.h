@@ -84,16 +84,36 @@ public:
 	// 	return m_FdEventMap[fd];
 	// }
 
-	struct EpollData GetEpollData(int fd)
-	{
-		return m_FdEventMap[fd];
-	}
+	// struct EpollData GetEpollData(int fd)
+	// {
+	// 	return m_FdEventMap[fd];
+	// }
 
 	// static int AddEpollEventStatic(int fd, int event);
 
-	int AddEpollEvent(int epollFD, int fd, int event, uint32_t type);
+	// int AddEpollEvent(int epollFD, int fd, int event, uint32_t type);
+	// int RemoveEpollEvent(int epollFD, int fd);
+	// int ModifyEpollEvent(int epollFD, int fd, int event, uint32_t type);
+
+	static int AddEpollEventStatic(int epollFD, int fd, int event, struct EpollData* data);
+
+	static int ModifyEpollEventStatic(int epollFD, int fd, int event, struct EpollData* data);
+
+	int AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
 	int RemoveEpollEvent(int epollFD, int fd);
-	int ModifyEpollEvent(int epollFD, int fd, int event, uint32_t type);
+	int ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
+
+
+
+
+	std::unordered_map<pid_t, int> childProcesses;
+	std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
+
+
+	Client GetClient(int fd)
+	{
+		return m_Clients[fd];
+	}
 private:
 	Server(const Config& config);
 	~Server();
@@ -150,7 +170,7 @@ private:
 	RequestHandler m_RequestHandler;
 	ResponseSender m_ResponseSender;
 
-	std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
+	// std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
 
 	// std::unordered_map<int, struct epoll_event> m_FdEventMap;
 	std::unordered_map<int, struct EpollData> m_FdEventMap;
@@ -158,4 +178,11 @@ private:
 
 
 	std::unordered_map<int, Client> m_Clients;
+
+
+	struct EpollData m_Events[MAX_EVENTS];
+
+
+
+	// std::unordered_map<pid_t, int> childProcesses;
 };

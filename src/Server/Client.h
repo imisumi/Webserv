@@ -64,7 +64,8 @@ public:
 
 	uint16_t GetServerPort() const { return m_ServerPort; }
 
-	
+	int GetEpollInstance() const { return m_EpollInstance; }
+	void SetEpollInstance(int epollInstance) { m_EpollInstance = epollInstance; }
 private:
 	int m_Socket = -1;
 
