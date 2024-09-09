@@ -8,7 +8,7 @@ import time  # Import the time module for sleep functionality
 cgitb.enable()
 
 # Introduce a delay of 10 seconds
-time.sleep(10)
+time.sleep(3)
 
 # Output the HTTP headers with proper CRLF (carriage return + line feed)
 print("Content-Type: text/html\r\n\r\n")

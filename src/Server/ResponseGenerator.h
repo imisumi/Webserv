@@ -66,7 +66,7 @@ private:
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
-	static const std::string handleGetRequest(const Config& config, const HttpRequest& request);
+	static const std::string handleGetRequest(const Client& client, const Config& config, const HttpRequest& request);
 
 	static std::string generateOKResponse(const HttpRequest& request);
 

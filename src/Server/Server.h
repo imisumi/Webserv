@@ -68,7 +68,26 @@ public:
 		return m_EpollInstance;
 	}
 
+	void SetCgiToClientMap(int cgi_fd, int client_fd)
+	{
+		m_CgiToClientMap[cgi_fd] = client_fd;
+	}
 
+	int GetClientFromCgi(int cgi_fd)
+	{
+		return m_CgiToClientMap[cgi_fd];
+	}
+
+
+	// struct EpolLData GetEpollEventFD(int fd)
+	// {
+	// 	return m_FdEventMap[fd];
+	// }
+
+	struct EpollData GetEpollData(int fd)
+	{
+		return m_FdEventMap[fd];
+	}
 
 	// static int AddEpollEventStatic(int fd, int event);
 
@@ -133,7 +152,9 @@ private:
 
 	std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
 
-
+	// std::unordered_map<int, struct epoll_event> m_FdEventMap;
+	std::unordered_map<int, struct EpollData> m_FdEventMap;
+	std::unordered_map<int, int> m_CgiToClientMap;
 
 
 	std::unordered_map<int, Client> m_Clients;

@@ -52,7 +52,7 @@ const std::string ResponseGenerator::generateResponse(const Client& client, cons
 
 	switch (request.method)
 	{
-		case RequestMethod::GET:			return handleGetRequest(config, request);
+		case RequestMethod::GET:			return handleGetRequest(client, config, request);
 		case RequestMethod::POST:			break;
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
@@ -297,7 +297,7 @@ std::string ReadImageFile(const std::filesystem::path& path)
 
 #include "Utils/Utils.h"
 
-const std::string ResponseGenerator::handleGetRequest(const Config& config, const HttpRequest& request)
+const std::string ResponseGenerator::handleGetRequest(const Client& client, const Config& config, const HttpRequest& request)
 {
 	Utils::Timer timer;
 	LOG_INFO("Handling GET request");
@@ -314,7 +314,7 @@ const std::string ResponseGenerator::handleGetRequest(const Config& config, cons
 		std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
 		updatedRequest.setUri(cgiPath / fileName);
 		LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
-		Cgi::executeCGI(config, updatedRequest);
+		Cgi::executeCGI(client, config, updatedRequest);
 		return "";
 	}
 

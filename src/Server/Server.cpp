@@ -68,11 +68,20 @@ int Server::AddEpollEvent(int epollFD, int fd, int event, uint32_t type)
 	// ev.data.fd = fd;
 	ev.data.u64 = PACK_U64(fd, type);
 
+	// m_FdEventMap[fd] = ev;
+	EpollData data;
+	data.fd = fd;
+	data.type = type;
+	data.cgi_fd = -1;
+	m_FdEventMap[fd] = data;
+
 	return epoll_ctl(epollFD, EPOLL_CTL_ADD, fd, &ev);
 }
 
 int Server::RemoveEpollEvent(int epollFD, int fd)
 {
+	m_FdEventMap.erase(fd);
+
 	return epoll_ctl(epollFD, EPOLL_CTL_DEL, fd, nullptr);
 }
 
@@ -329,7 +338,7 @@ void Server::Run()
 	struct epoll_event events[MAX_EVENTS];
 
 	std::string clientIP[MAX_EVENTS];
-	int tempClient = -1;
+	// int tempClient = -1;
 
 	
 	while (s_Instance->m_Running)
@@ -364,7 +373,7 @@ void Server::Run()
 					LOG_ERROR("Failed to accept connection!");
 				}
 				s_Instance->m_Clients[newClient] = newClient;
-				tempClient = newClient;
+				// tempClient = newClient;
 				continue;
 			}
 
@@ -386,6 +395,9 @@ void Server::Run()
 						buffer[n] = '\0';
 						const std::string output = std::string(buffer, n);
 
+
+						int tempClient = s_Instance->GetClientFromCgi(epoll_fd);
+						LOG_INFO("Temp client: {}", tempClient);
 
 						size_t header_end = output.find("\r\n\r\n");
 						if (header_end != std::string::npos)

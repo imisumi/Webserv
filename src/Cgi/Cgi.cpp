@@ -54,21 +54,22 @@ void sigalarm_handler(int signo) {
 }
 
 // Custom SIGCHLD handler to reap the specific child that has exited
-void sigchld_handler(int signo) {
-    int status;
-    pid_t pid;
+void sigchld_handler(int signo)
+{
+	int status;
+	pid_t pid;
 
-    // Use WNOHANG to only reap child processes that have exited
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        if (WIFEXITED(status)) {
-            std::cout << "Child process " << pid << " exited with status: " << WEXITSTATUS(status) << std::endl;
-        } else if (WIFSIGNALED(status)) {
-            std::cout << "Child process " << pid << " was terminated by signal: " << WTERMSIG(status) << std::endl;
-        }
+	// Use WNOHANG to only reap child processes that have exited
+	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+		if (WIFEXITED(status)) {
+			std::cout << "Child process " << pid << " exited with status: " << WEXITSTATUS(status) << std::endl;
+		} else if (WIFSIGNALED(status)) {
+			std::cout << "Child process " << pid << " was terminated by signal: " << WTERMSIG(status) << std::endl;
+		}
 
-        // Remove the child from the list of running processes
-        // childProcesses.erase(pid);
-    }
+		// Remove the child from the list of running processes
+		// childProcesses.erase(pid);
+	}
 }
 
 #include <fcntl.h> // For fcntl
@@ -79,7 +80,7 @@ void sigchld_handler(int signo) {
 #define EPOLL_TYPE_STDIN    BIT(2)
 #define EPOLL_TYPE_STDOUT   BIT(3)
 
-std::string Cgi::executeCGI(const Config& config, const HttpRequest& request)
+std::string Cgi::executeCGI(const Client& client, const Config& config, const HttpRequest& request)
 {
 	std::string path = request.getUri().string();
 	int pipefd[2];
@@ -99,10 +100,16 @@ std::string Cgi::executeCGI(const Config& config, const HttpRequest& request)
 
 	Server& server = Server::Get();
 
-	struct epoll_event ev;
-	ev.events = EPOLLIN | EPOLLET; // Monitor for readability
-	// ev.data.fd = pipefd[READ_END];
-	ev.data.u64 = PACK_U64(pipefd[READ_END], EPOLL_TYPE_CGI);
+	// struct epoll_event ev;
+	// ev.events = EPOLLIN | EPOLLET; // Monitor for readability
+	// // ev.data.fd = pipefd[READ_END];
+	// ev.data.u64 = PACK_U64(pipefd[READ_END], EPOLL_TYPE_CGI);
+
+	// struct epoll_event ev = server.GetEpollEventFD(client);
+	// LOG_INFO("Forwarding client FD: {} to CGI handler", (int)client);
+	Server::EpollData data = server.GetEpollData(client);
+	LOG_INFO("Forwarding client FD: {} to CGI handler", data.fd);
+	server.SetCgiToClientMap(pipefd[READ_END], data.fd);
 
 	server.AddEpollEvent(server.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, EPOLL_TYPE_CGI);
 
