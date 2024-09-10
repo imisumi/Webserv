@@ -51,6 +51,9 @@ public:
 
 	static const std::string InternalServerError(const Config& config);
 
+
+	
+
 private:
 	static std::optional<std::string> readFileContents(const std::filesystem::path& path);
 

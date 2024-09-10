@@ -87,7 +87,7 @@ std::optional<std::string> ResponseGenerator::readFileContents(const std::filesy
 std::string ResponseGenerator::determineContentType(const std::filesystem::path& file)
 {
 	// log file
-	LOG_INFO("File: {}", file.string());
+	// LOG_INFO("File: {}", file.string());
 	std::string extension = file.extension().string();
 	LOG_INFO("Extension: {}", extension);
 	auto it = s_SupportedMineTypes.find(extension);
@@ -205,7 +205,6 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 	std::string contentType = determineContentType(request.getUri());
 	if (contentType.empty())
 	{
-		// return generateForbiddenResponse(path);
 		return generateForbiddenResponse();
 	}
 
@@ -216,8 +215,10 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 	std::string connection = request.getHeader("Connection");
 	if (connection.empty())
 	{
-		connection = "keep-alive";
+		// connection = "keep-alive";
+		connection = "close";
 	}
+	connection = "keep-alive";
 
 
 	// response << "HTTP/1.1 200 OK\r\n"
@@ -342,12 +343,12 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 			{
 				return generateNotModifiedResponse();
 			}
-			auto fileContents = readFileContents(updatedRequest.getUri());
-			if (fileContents == std::nullopt)
-			{
-				LOG_CRITICAL("Failed to read file contents: {}", updatedRequest.getUri().string());
-				return generateForbiddenResponse();
-			}
+			// auto fileContents = readFileContents(updatedRequest.getUri());
+			// if (fileContents == std::nullopt)
+			// {
+			// 	LOG_CRITICAL("Failed to read file contents: {}", updatedRequest.getUri().string());
+			// 	return generateForbiddenResponse();
+			// }
 			// return generateOKResponse(updatedRequest.getUri(), updatedRequest);
 			return generateOKResponse(updatedRequest);
 		}
@@ -551,9 +552,7 @@ std::string ResponseGenerator::generateInternalServerErrorResponse()
 
 const std::string ResponseGenerator::InternalServerError(const Config& config)
 {
-	//TODO: extract root
-
-	std::string response = s_InternalServerErrorResponse;
+	static std::string response = s_InternalServerErrorResponse;
 
 	return response;
 }

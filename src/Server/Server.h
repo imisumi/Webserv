@@ -89,25 +89,27 @@ public:
 	// 	return m_FdEventMap[fd];
 	// }
 
-	// static int AddEpollEventStatic(int fd, int event);
+	// static int AddEpollEvent(int fd, int event);
 
-	// int AddEpollEvent(int epollFD, int fd, int event, uint32_t type);
+
+	static int AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
+	static int ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
+	static int RemoveEpollEvent(int epollFD, int fd);
+
+	// int AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
 	// int RemoveEpollEvent(int epollFD, int fd);
-	// int ModifyEpollEvent(int epollFD, int fd, int event, uint32_t type);
-
-	static int AddEpollEventStatic(int epollFD, int fd, int event, struct EpollData* data);
-
-	static int ModifyEpollEventStatic(int epollFD, int fd, int event, struct EpollData* data);
-
-	int AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
-	int RemoveEpollEvent(int epollFD, int fd);
-	int ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
+	// int ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
 
 
 
 
 	std::unordered_map<pid_t, int> childProcesses;
 	std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
+
+
+	static int CgiRedirect(int cgi_fd, int redir_fd);
+	static void RegisterCgiProcess(pid_t pid, int client_fd) { Get().childProcesses[pid] = client_fd; }
+	static void DeregisterCgiProcess(pid_t pid) { Get().childProcesses.erase(pid); }
 
 
 	Client GetClient(int fd)
@@ -125,8 +127,10 @@ private:
 	// void ListenServerSocket();
 	Client AcceptConnection(int socket_fd);
 	// void HandleInputEvent(int fd);
-	void HandleInputEvent(const Client& client);
+	void HandleSocketInputEvent(const Client& client);
 	void HandleOutputEvent(int fd);
+
+	void HandleCgiInputEvent(int cgi_fd, int client_fd);
 
 	int CreateEpoll();
 

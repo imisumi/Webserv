@@ -57,40 +57,41 @@ void sigalarm_handler(int signo) {
 	// 	}
 	// }
 
-	std::cout << s_TimeoutErrorResponse;
+	// std::cout << s_TimeoutErrorResponse;
 
 	// printf("Child process (PID: %d) timed out and will terminate.\n", getpid());
 	// std::cerr << "Child process (PID: " << getpid() << ") timed out and will terminate." << std::endl;
 	// exit(EXIT_FAILURE); // Terminate the child process
 	// exit(EXIT_SUCCESS); // Terminate the child process
-	_exit(99);
+	_exit(EXIT_FAILURE); // Terminate the child process
 }
 
 #define EPOLL_TYPE_SOCKET   BIT(0)
 
 void sigchld_handler(int signo)
 {
-    int status;
-    pid_t pid;
+	int status;
+	pid_t pid;
 
-    // Use WNOHANG to only reap child processes that have exited
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        if (WIFEXITED(status)) {
-            int exit_code = WEXITSTATUS(status);
-            std::cout << "Child process " << pid << " exited with status: " << exit_code << std::endl;
-            
-            // Handle CGI script timeouts if exit code is known to be a timeout
-            // (assuming specific exit codes are set for timeouts, such as EXIT_FAILURE)
-            if (exit_code == EXIT_FAILURE) {
-                // Handle CGI timeout here (e.g., send timeout error page to client)
-                std::cerr << "Child process " << pid << " failed due to timeout" << std::endl;
-                // Send timeout error page to client
-            }
-        } else if (WIFSIGNALED(status)) {
-            int signal_num = WTERMSIG(status);
+	// Use WNOHANG to only reap child processes that have exited
+	while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+	{
+		Server::DeregisterCgiProcess(pid);
+		if (WIFEXITED(status))
+		{
+			int exit_code = WEXITSTATUS(status);
+			std::cout << "Child process: " << pid << " exited with status: " << exit_code << std::endl;
+			
+			if (exit_code == EXIT_FAILURE)
+			{
+				std::cerr << "Child process: " << pid << " failed with exit code: " << exit_code << std::endl;
+			}
+		}
+		else if (WIFSIGNALED(status))
+		{
+			int signal_num = WTERMSIG(status);
 
-            // Specifically handle SIGALRM as a timeout signal
-            if (signal_num == SIGALRM)
+			if (signal_num == SIGALRM)
 			{
 				Server& server = Server::Get();
 
@@ -103,25 +104,19 @@ void sigchld_handler(int signo)
 				ev_data->cgi_fd = -1;
 				ev_data->type = EPOLL_TYPE_SOCKET;
 
-				// Server::AddEpollEventStatic(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
-				Server::ModifyEpollEventStatic(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
+				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
 
 				std::string response = s_TimeoutErrorResponse;
 				server.m_ClientResponses[client_fd] = response;
 
-                // Handle CGI timeout here
-                std::cerr << "Child process " << pid << " timed out with signal: " << signal_num << std::endl;
-                // Send timeout error page to client
-            }
+				std::cerr << "Child process " << pid << " timed out with signal: " << signal_num << std::endl;
+			}
 			else
 			{
-            	std::cout << "Child process " << pid << " was terminated by signal: " << signal_num << std::endl;
+				std::cout << "Child process " << pid << " was terminated by signal: " << signal_num << std::endl;
 			}
-        }
-
-        // Remove the child from the list of running processes
-        // childProcesses.erase(pid);
-    }
+		}
+	}
 }
 
 
@@ -171,6 +166,8 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	fcntl(pipefd[WRITE_END], F_SETFL, flags2 | O_NONBLOCK);
 
 
+	Server::CgiRedirect(pipefd[READ_END], (int)client);
+#if 0
 	struct Server::EpollData *ev_data = new Server::EpollData();
 	ev_data->fd = (int)client;
 	ev_data->cgi_fd = pipefd[READ_END];
@@ -182,9 +179,9 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	// server.AddEpollEvent(server.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
 	// LOG_INFO("poll instance: {}", server.GetEpollInstance());
 
-	Server::AddEpollEventStatic(client.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
+	Server::AddEpollEvent(client.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
 	// LOG_INFO("poll instance: {}", client.GetEpollInstance());
-
+#endif
 	
 	struct sigaction sa;
 	sa.sa_handler = sigchld_handler;  // Assign the custom handler
@@ -195,7 +192,8 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	if (sigaction(SIGCHLD, &sa, NULL) == -1)
 	{
 		perror("sigaction");
-		exit(1);
+		// exit(1);
+		return ResponseGenerator::InternalServerError(config);
 	}
 
 
@@ -212,8 +210,9 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	{ // Child process
 		handleChildProcess(config, request, pipefd);
 	}
-	Server& server = Server::Get();
-	server.childProcesses[pid] = (int)client;
+	// Server& server = Server::Get();
+	// server.childProcesses[pid] = (int)client;
+	Server::RegisterCgiProcess(pid, (int)client);
 	return handleParentProcess(config, pipefd, pid);
 }
 
@@ -221,17 +220,17 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 void Cgi::handleChildProcess(const Config& config, const HttpRequest& request, int pipefd[])
 {
 
-	struct sigaction sa;
-	sa.sa_handler = sigalarm_handler;  // Assign the custom handler
-	sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
-	sa.sa_flags = 0;         // Restart interrupted system calls
+	// struct sigaction sa;
+	// sa.sa_handler = sigalarm_handler;  // Assign the custom handler
+	// sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
+	// sa.sa_flags = 0;         // Restart interrupted system calls
 
-	// Register the handler for SIGALRM
-	if (sigaction(SIGALRM, &sa, NULL) == -1)
-	{
-		perror("sigaction");
-		exit(1);
-	}
+	// // Register the handler for SIGALRM
+	// if (sigaction(SIGALRM, &sa, NULL) == -1)
+	// {
+	// 	perror("sigaction");
+	// 	exit(1);
+	// }
 	alarm(3); // Set the alarm for CGI timeout
 
 
@@ -262,6 +261,8 @@ void Cgi::handleChildProcess(const Config& config, const HttpRequest& request, i
 const std::string Cgi::handleParentProcess(const Config& config, int pipefd[], pid_t pid)
 {
 	close(pipefd[WRITE_END]); // Close the write end of the pipe
+
+	return "";
 
 	int status;
 	// if (waitpid(pid, &status, 0) == -1)
