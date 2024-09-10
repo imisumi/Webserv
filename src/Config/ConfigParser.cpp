@@ -13,20 +13,19 @@
 #include <string>
 #include <limits>
 
-ConfigParser::Servers ConfigParser::createDefaultConfig()
+Config	ConfigParser:: createDefaultConfig()
 {
-	Servers servers = createConfigFromFile(DEFAULT_PATH);
+	Config	config = createConfigFromFile(DEFAULT_PATH);
 
-	return servers;
+	return config;
 }
 
-ConfigParser::Servers ConfigParser::createConfigFromFile(
-	const std::filesystem::path& path)    
+Config	ConfigParser:: createConfigFromFile(const std::filesystem::path& path)    
 {
-	Servers		servers;
-	TokenVector	tokens;
-	TokenMap	tokenMap;
-	std::string	buffer;
+	Config			config;
+	TokenVector		tokens;
+	TokenMap		tokenMap;
+	std::string		buffer;
 
 	if (path.extension() != ".conf")
 		throw std::runtime_error(path.string() + ": invalid extension");
@@ -43,15 +42,15 @@ ConfigParser::Servers ConfigParser::createConfigFromFile(
 	
 	for (TokenMap::iterator it = tokenMap.begin(); it != tokenMap.end(); it++)
 	{
-		std::cout << std::setw(16) << escapeIdentifier(it->first) << std::setw(0) << " : " + it->second << '\n';
+		std::cout << std::setw(16) << identifierToString(it->first) << std::setw(0) << " : " + it->second << '\n';
 	}
 	std::cout << "================================\n";
-	tokenMapToServerSettings(tokenMap, servers);
-	return servers;
+	tokenMapToServerSettings(tokenMap, config.m_Servers);
+	return config;
 }
 
 
-ConfigParser::Servers	ConfigParser::tokenMapToServerSettings(
+void	ConfigParser::tokenMapToServerSettings(
 	const TokenMap& tokenMap,
 	Servers& servers)
 {
@@ -59,9 +58,8 @@ ConfigParser::Servers	ConfigParser::tokenMapToServerSettings(
 	{
 		if (it->first != SERVER)
 			throw std::runtime_error("expected server directive: found \"" + it->second + '\"');
-		servers.emplace_back(createServerSettings(tokenMap.end(), it));
+		servers.push_back(createServerSettings(tokenMap.end(), it));
 	}
-	return servers;
 }
 
 inline void	ConfigParser:: expectNextToken(
@@ -73,7 +71,7 @@ inline void	ConfigParser:: expectNextToken(
 	if (it == end)
 		throw std::runtime_error("error with format");
 	if (it->first != expected)
-		throw std::invalid_argument("expected " + escapeIdentifier(expected) + ": found \"" + it->second + '\"');
+		throw std::invalid_argument("expected " + identifierToString(expected) + ": found \"" + it->second + '\"');
 }
 
 inline bool	containsDigitsExclusively(const std::string& s)
@@ -97,16 +95,16 @@ static uint32_t	ipv4LiteralToUint32(const std::string& s)
 
 	while (std::getline(isstream, segment, '.'))
 	{
+		if (shift < 0)
+			throw std::invalid_argument("error in ip formatting");
 		if (!containsDigitsExclusively(segment) || segment.length() > 3)
 			throw std::invalid_argument("error in ip formatting");
 		uint32_t	segmentValue = static_cast<uint32_t>(std::stoul(segment));
 		if (segmentValue > 255)
-			throw std::invalid_argument("error in ip formatting");
+			throw std::out_of_range("error in ip formatting");
 		result |= (segmentValue << shift);
-		shift = shift - 8;
+		shift -= 8;
 	}
-	if (shift != 0)
-		throw std::invalid_argument("invalid ip literal: " + s);
 	return result;
 }
 
@@ -135,19 +133,25 @@ void	ConfigParser:: handlePort(
 
 	if (hostPort.size() > 2)
 		throw std::invalid_argument("invalid host:port format: " + it->second);
-	if (hostPort.size() == 1)
+	try
 	{
-		host = 0;
-		port = portLiteralToUint16(hostPort[0]);
+		if (hostPort.size() == 1)
+		{
+			host = 0;
+			port = portLiteralToUint16(hostPort[0]);
+		}
+		else
+		{
+			host = ipv4LiteralToUint32(hostPort[0]);
+			port = portLiteralToUint16(hostPort[1]);
+		}
 	}
-	else
+	catch (std::exception& e)
 	{
-		host = ipv4LiteralToUint32(hostPort[0]);
-		port = portLiteralToUint16(hostPort[1]);
+		std::cerr << "exception: " << e.what() << std::endl;
 	}
-	result += host;
-	result = result << 48;
-	result += port;
+	result += (static_cast<uint64_t>(host) << 48);
+	result += static_cast<uint64_t>(port);
 	ports.emplace_back(result);
 }
 
@@ -208,7 +212,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 		if (it->first == LOCATION)
 		{
 			expectNextToken(end, it, ARGUMENT);
-			server.m_Locations.emplace(createLocationSettings(end, it));
+			server.m_Locations.emplace(it->second, createLocationSettings(end, it));
 		}
 		else if (it->first == LIMIT_EXCEPT)
 		{
@@ -355,6 +359,7 @@ ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
 		{"return", REDIRECT},
 		{"location", LOCATION},
 		{"limit_except", LIMIT_EXCEPT},
+		{"error_page", ERROR_PAGE},
 		{"deny", HTTP_METHOD_DENY},
 		{"{", BRACKET_OPEN},
 		{"}", BRACKET_CLOSE},
@@ -368,7 +373,7 @@ ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
 	return ARGUMENT;
 }
 
-std::string	ConfigParser:: escapeIdentifier(TokenIdentifier id)
+std::string	ConfigParser:: identifierToString(TokenIdentifier id)
 {
 	const std::unordered_map<TokenIdentifier, std::string> idMap = {
 		{SERVER, "server"},
@@ -380,6 +385,7 @@ std::string	ConfigParser:: escapeIdentifier(TokenIdentifier id)
 		{REDIRECT, "redirect"},
 		{LOCATION, "location"},
 		{LIMIT_EXCEPT, "http_method"},
+		{ERROR_PAGE, "error_page"},
 		{HTTP_METHOD_DENY, "http_method_deny"},
 		{BRACKET_OPEN, "bracket open"},
 		{BRACKET_CLOSE, "bracket close"},

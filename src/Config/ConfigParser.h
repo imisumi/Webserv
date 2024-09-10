@@ -12,6 +12,8 @@
 #define DEFAULT_PORT 8080
 #define DEFAULT_PATH "conf/default.conf"
 
+class Config;
+
 class ConfigParser
 {
 	private:
@@ -31,6 +33,7 @@ class ConfigParser
 			REDIRECT,
 			LOCATION,
 			LIMIT_EXCEPT,
+			ERROR_PAGE,
 			HTTP_METHOD_DENY,
 			BRACKET_OPEN,
 			BRACKET_CLOSE,
@@ -39,16 +42,17 @@ class ConfigParser
 			UNRECOGNISED,
 		};
 
-		typedef std::vector<std::pair<TokenIdentifier, std::string>> TokenMap;
-		typedef std::vector<std::string> TokenVector;
-		typedef std::map<uint64_t, ServerSettings>	Servers;
+		typedef std::vector<std::pair<TokenIdentifier, std::string>>	TokenMap;
+		typedef std::vector<std::string>								TokenVector;
+		typedef std::map<uint64_t, ServerSettings>						ServerMap;
+		typedef	std::vector<ServerSettings>								Servers;
 
 		static TokenVector		tokenize(const std::string& input, const std::string& delimiters);
 		static TokenMap			assignTokenType(const TokenVector& tokens);
 		static TokenIdentifier	getIdentifier(const std::string& token, bool expectDirective);
-		static std::string		escapeIdentifier(TokenIdentifier id);
+		static std::string		identifierToString(TokenIdentifier id);
 
-		static Servers							tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers);
+		static void								tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers);
 		static ServerSettings					createServerSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static ServerSettings::LocationSettings	createLocationSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
@@ -59,7 +63,7 @@ class ConfigParser
 
 		static std::string						readFileIntoBuffer(const std::filesystem::path& path);
 	public:
-		static Servers	createDefaultConfig();
-		static Servers	createConfigFromFile(const std::filesystem::path& path);
+		static Config	createDefaultConfig();
+		static Config	createConfigFromFile(const std::filesystem::path& path);
 
 };

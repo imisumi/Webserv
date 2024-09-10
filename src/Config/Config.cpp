@@ -6,31 +6,46 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:31 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/05 14:13:09 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/10 15:40:07 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Config.h"
+#include "ServerSettings.h"
 
 Config:: Config()
 {
-	#ifdef DEBUG
-		std::cout << "Config constructor called.\n";
-	#endif
-	this->m_Servers = ConfigParser::createDefaultConfig();
-};
-		
-Config:: Config(const std::filesystem::path& path)
-{
-	#ifdef DEBUG
-		std::cout << "Config path constructor called.\n";
-	#endif
-	this->m_Servers = ConfigParser::createConfigFromFile(path);
+
 };
 
-Config::~Config()
+Config:: Config(Config& copy)
 {
-	#ifdef DEBUG
-		std::cout << "Config destructor called.\n";
-	#endif
+	this->m_ServerMap = copy.m_ServerMap;
+	this->m_Servers = copy.m_Servers;
+};
+
+Config&	Config:: operator=(Config& other)
+{
+	if (this != &other)
+	{
+		this->m_ServerMap = other.m_ServerMap;
+		this->m_Servers = other.m_Servers;
+	}
+	return *this;
+};
+
+Config:: Config(Config&& copy)
+{
+	this->m_ServerMap = copy.m_ServerMap;
+	this->m_Servers = copy.m_Servers;
+};
+
+Config&	Config:: operator=(Config&& other)
+{
+	if (this != &other)
+	{
+		this->m_ServerMap = other.m_ServerMap;
+		this->m_Servers = other.m_Servers;
+	}
+	return *this;
 };

@@ -9,7 +9,7 @@ DIR_DEP = dep
 DIR_OBJ = obj
 DIR_SRC = .
 
-SRC = ConfigParser.cpp Config.cpp test.cpp
+SRC = ConfigParser.cpp Config.cpp ServerSetings.cpp test.cpp
 
 SRC := ${addprefix ${DIR_SRC}/, ${SRC}}
 
