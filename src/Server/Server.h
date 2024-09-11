@@ -13,7 +13,8 @@
 
 #include "RequestHandler.h"
 #include "ResponseSender.h"
-#include "Config/ConfigParser.h"
+// #include "Config/ConfigParser.h"
+#include "Config/Config.h"
 #include "Client.h"
 
 #define MAX_EVENTS 4096

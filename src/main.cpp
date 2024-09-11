@@ -7,7 +7,8 @@
 #include <cstdlib>  // For setenv
 
 #include "Utils/Utils.h"
-#include "Config/ConfigParser.h"
+// #include "Config/ConfigParser.h"
+#include "Config/Config.h"
 
 
 static void SignalHandler(int signal)
@@ -20,6 +21,12 @@ static void SignalHandler(int signal)
 int main()
 {
 	Log::Init();
+
+	{
+		Config conf = Config::CreateDefaultConfig();
+		conf.Print();
+		return 0;
+	}
 
 	// std::signal(SIGINT, SignalHandler);
 

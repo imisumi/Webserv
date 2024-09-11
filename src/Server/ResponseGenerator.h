@@ -9,7 +9,8 @@
 
 
 //TODO: rename to Config, or abstract to ConfigParser
-#include "Config/ConfigParser.h"
+// #include "Config/ConfigParser.h"
+#include "Config/Config.h"
 
 #include "HttpRequestParser.h"
 

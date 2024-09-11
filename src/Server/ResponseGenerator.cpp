@@ -218,7 +218,7 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 		// connection = "keep-alive";
 		connection = "close";
 	}
-	connection = "keep-alive";
+	// connection = "keep-alive";
 
 
 	// response << "HTTP/1.1 200 OK\r\n"
@@ -343,18 +343,16 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 			{
 				return generateNotModifiedResponse();
 			}
-			// auto fileContents = readFileContents(updatedRequest.getUri());
-			// if (fileContents == std::nullopt)
-			// {
-			// 	LOG_CRITICAL("Failed to read file contents: {}", updatedRequest.getUri().string());
-			// 	return generateForbiddenResponse();
-			// }
-			// return generateOKResponse(updatedRequest.getUri(), updatedRequest);
 			return generateOKResponse(updatedRequest);
 		}
 		else if (std::filesystem::is_regular_file(request.getUri()))
 		{
 			//TODO: check if file is a CGI script
+
+
+
+
+			
 
 
 			LOG_DEBUG("Requested path is a file");

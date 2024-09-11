@@ -3,7 +3,8 @@
 #include "ResponseSender.h"
 #include "HttpRequestParser.h"
 
-#include "Config/ConfigParser.h"
+// #include "Config/ConfigParser.h"
+#include "Config/Config.h"
 
 #include <memory>
 #include <string>
