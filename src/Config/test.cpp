@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/08/30 13:57:51 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/11 14:08:49 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 16:21:08 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,12 @@ int main(int argc, char **argv)
 	std::filesystem::path	infile(argv[1]);
 	try
 	{
-		Config a = ConfigParser::createConfigFromFile(infile);
+		Config config = ConfigParser::createConfigFromFile(infile);
+
+		std::vector<ServerSettings*> serverVector = config[83];
+		std::vector<ServerSettings*>::iterator it = serverVector.begin();
+		ServerSettings*	server = *it;
+		std::cout << server->getServerName() << '\n';
 	}
 	catch (const std::exception& e)
 	{
