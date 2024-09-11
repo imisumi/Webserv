@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:31 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/10 15:40:07 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 14:06:12 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,13 +18,13 @@ Config:: Config()
 
 };
 
-Config:: Config(Config& copy)
+Config:: Config(const Config& copy)
 {
 	this->m_ServerMap = copy.m_ServerMap;
 	this->m_Servers = copy.m_Servers;
 };
 
-Config&	Config:: operator=(Config& other)
+Config&	Config:: operator=(const Config& other)
 {
 	if (this != &other)
 	{

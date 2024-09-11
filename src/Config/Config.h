@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/10 15:40:13 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 14:08:13 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,9 +23,6 @@ class Config
 		std::map<uint64_t, std::vector<ServerSettings*>>	m_ServerMap;
 		std::vector<ServerSettings>							m_Servers;
 		friend class ConfigParser;
-
-		Config(const Config&) = delete;
-		Config& operator=(const Config&) = delete;
 	public:
 		std::vector<ServerSettings*>	operator[](const uint64_t key)
 		{
@@ -42,8 +39,8 @@ class Config
 			throw std::out_of_range("key not found");
 		};
 		Config();
-		Config(Config& copy);
-		Config& operator=(Config& other);
+		Config(const Config& copy);
+		Config& operator=(const Config& other);
 		Config(Config&& copy);
 		Config& operator=(Config&& other);
 };

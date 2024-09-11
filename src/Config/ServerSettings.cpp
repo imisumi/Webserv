@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/10 15:16:05 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/10 15:29:30 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 14:06:33 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,7 @@ ServerSettings&	ServerSettings:: operator=(ServerSettings&& other)
 	return *this;
 };
 
-ServerSettings:: ServerSettings(ServerSettings& copy)
+ServerSettings:: ServerSettings(const ServerSettings& copy)
 {
 	this->m_GlobalSettings = copy.m_GlobalSettings;
 	this->m_Locations = copy.m_Locations;
@@ -45,7 +45,7 @@ ServerSettings:: ServerSettings(ServerSettings& copy)
 	this->m_ServerName = copy.m_ServerName;
 };
 
-ServerSettings&	ServerSettings:: operator=(ServerSettings& other)
+ServerSettings&	ServerSettings:: operator=(const ServerSettings& other)
 {
 	if (this != &other)
 	{

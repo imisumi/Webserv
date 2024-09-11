@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/10 15:28:47 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 14:06:39 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,8 +40,8 @@ class ServerSettings
 
 	public:
 		ServerSettings();
-		ServerSettings(ServerSettings& copy);
-		ServerSettings&	operator=(ServerSettings& other);
+		ServerSettings(const ServerSettings& copy);
+		ServerSettings&	operator=(const ServerSettings& other);
 		ServerSettings(ServerSettings&& copy);
 		ServerSettings&	operator=(ServerSettings&& other);
 		LocationSettings&		operator[](const std::filesystem::path& path)

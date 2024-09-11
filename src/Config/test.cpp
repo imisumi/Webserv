@@ -6,11 +6,12 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/08/30 13:57:51 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/05 16:19:00 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 14:08:49 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ConfigParser.h"
+#include "Config.h"
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -31,7 +32,7 @@ int main(int argc, char **argv)
 	std::filesystem::path	infile(argv[1]);
 	try
 	{
-		ConfigParser::createConfigFromFile(infile);
+		Config a = ConfigParser::createConfigFromFile(infile);
 	}
 	catch (const std::exception& e)
 	{
