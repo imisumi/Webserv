@@ -57,7 +57,7 @@ class ConfigParser
 		static ServerSettings::LocationSettings	createLocationSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
 		static void	expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it, TokenIdentifier expected);
-		static void	handlePort(std::vector<uint64_t> ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handlePort(std::vector<uint64_t>& ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleAutoIndex(bool& autoIndex, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleLimitExcept(uint8_t& httpMethods, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 

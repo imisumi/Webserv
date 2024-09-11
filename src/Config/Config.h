@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/11 14:08:13 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 16:26:13 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,13 +15,14 @@
 #include "ConfigParser.h"
 #include "ServerSettings.h"
 #include <filesystem>
+#include <unordered_map>
 #include <vector>
 
 class Config
 {
 	private:
-		std::map<uint64_t, std::vector<ServerSettings*>>	m_ServerMap;
-		std::vector<ServerSettings>							m_Servers;
+		std::unordered_map<uint64_t, std::vector<ServerSettings*>>	m_ServerMap;
+		std::vector<ServerSettings>									m_Servers;
 		friend class ConfigParser;
 	public:
 		std::vector<ServerSettings*>	operator[](const uint64_t key)

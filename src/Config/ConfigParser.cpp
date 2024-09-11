@@ -46,9 +46,23 @@ Config	ConfigParser:: createConfigFromFile(const std::filesystem::path& path)
 	}
 	std::cout << "================================\n";
 	tokenMapToServerSettings(tokenMap, config.m_Servers);
+	for (Servers::const_iterator it = config.m_Servers.begin(); it != config.m_Servers.end(); it++)
+	{
+		for (std::vector<uint64_t>::const_iterator itPort = it->m_Ports.begin(); itPort != it->m_Ports.end(); itPort++)
+		{
+			std::cout << *itPort << '\n';
+			config.m_ServerMap[*itPort];
+		}
+	}
+	for (Servers::iterator it = config.m_Servers.begin(); it != config.m_Servers.end(); it++)
+	{
+		for (std::vector<uint64_t>::const_iterator itPort = it->m_Ports.begin(); itPort != it->m_Ports.end(); itPort++)
+		{
+			config.m_ServerMap[*itPort].push_back(&(*it));
+		}
+	}
 	return config;
 }
-
 
 void	ConfigParser::tokenMapToServerSettings(
 	const TokenMap& tokenMap,
@@ -122,7 +136,7 @@ static uint16_t	portLiteralToUint16(const std::string& s)
 }
 
 void	ConfigParser:: handlePort(
-	std::vector<uint64_t> ports,
+	std::vector<uint64_t>& ports,
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
@@ -194,6 +208,8 @@ void	ConfigParser:: handleLimitExcept(
 	expectNextToken(end, it, ARGUMENT);
 	if (it->second != "all")
 		throw std::invalid_argument("invalid deny argument: " + it->second);
+	expectNextToken(end, it, DIRECTIVE_END);
+	expectNextToken(end, it, BRACKET_CLOSE);
 }
 
 ServerSettings	ConfigParser:: createServerSettings(
@@ -209,16 +225,17 @@ ServerSettings	ConfigParser:: createServerSettings(
 		throw std::runtime_error("invalid format");
 	for (; it != end; it++)
 	{
+		std::cout << ORANGE << it->second + " | " + identifierToString(it->first) + '\n' << RESET;
 		if (it->first == LOCATION)
 		{
 			expectNextToken(end, it, ARGUMENT);
 			server.m_Locations.emplace(it->second, createLocationSettings(end, it));
+			continue ;
 		}
 		else if (it->first == LIMIT_EXCEPT)
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleLimitExcept(server.m_GlobalSettings.httpMethods, end, it);
-			expectNextToken(end, it, BRACKET_CLOSE);
 		}
 
 		if (expectDirective && it->first == ARGUMENT)
@@ -256,7 +273,9 @@ ServerSettings	ConfigParser:: createServerSettings(
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == BRACKET_CLOSE)
+		{
 			break ;
+		}
 
 		if (it->first == DIRECTIVE_END)
 			expectDirective = true;
@@ -281,6 +300,7 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 		throw std::runtime_error("invalid format");
 	for (; it != end; it++)
 	{
+		std::cout << GREEN << it->second + " | " + identifierToString(it->first) + '\n' << RESET;
 		if (it->first == LOCATION)
 		{
 			throw std::runtime_error("nested locations not allowed");
@@ -289,7 +309,7 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleLimitExcept(location.httpMethods, end, it);
-			expectNextToken(end, it, BRACKET_CLOSE);
+			continue ;
 		}
 
 		if (expectDirective && it->first == ARGUMENT)
@@ -323,11 +343,14 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == BRACKET_CLOSE)
+		{
 			break ;
+		}
 
 		if (it->first == DIRECTIVE_END)
 			expectDirective = true;
 	}
+	std::cout << "location end\n";
 	return location;
 }
 
@@ -361,15 +384,23 @@ ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
 		{"limit_except", LIMIT_EXCEPT},
 		{"error_page", ERROR_PAGE},
 		{"deny", HTTP_METHOD_DENY},
+	};
+	const std::unordered_map<std::string, TokenIdentifier> NonDirectiveMap = {
 		{"{", BRACKET_OPEN},
 		{"}", BRACKET_CLOSE},
 		{";", DIRECTIVE_END},
 	};
 	std::unordered_map<std::string, TokenIdentifier>::const_iterator it;
 
-	it = TokenIdentifierMap.find(input);
-	if (expectDirective && it != TokenIdentifierMap.end())
+	it = NonDirectiveMap.find(input);
+	if (it != NonDirectiveMap.end())
 		return it->second;
+	if (expectDirective)
+	{
+		it = TokenIdentifierMap.find(input);
+		if (it != TokenIdentifierMap.end())
+			return it->second;
+	}
 	return ARGUMENT;
 }
 
