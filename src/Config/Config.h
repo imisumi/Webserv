@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/11 16:26:13 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/11 17:03:21 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,14 +27,14 @@ class Config
 	public:
 		std::vector<ServerSettings*>	operator[](const uint64_t key)
 		{
-			const std::map<uint64_t, std::vector<ServerSettings*>>::iterator it = this->m_ServerMap.find(key);
+			const std::unordered_map<uint64_t, std::vector<ServerSettings*>>::iterator it = this->m_ServerMap.find(key);
 			if (it != this->m_ServerMap.end())
 				return it->second;
 			throw std::out_of_range("key not found");
 		};
 		const std::vector<ServerSettings*>	operator[](const uint64_t key) const
 		{
-			const std::map<uint64_t, std::vector<ServerSettings*>>::const_iterator it = this->m_ServerMap.find(key);
+			const std::unordered_map<uint64_t, std::vector<ServerSettings*>>::const_iterator it = this->m_ServerMap.find(key);
 			if (it != this->m_ServerMap.end())
 				return it->second;
 			throw std::out_of_range("key not found");
