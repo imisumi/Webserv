@@ -39,18 +39,11 @@ Config	ConfigParser:: createConfigFromFile(const std::filesystem::path& path)
 		throw std::runtime_error("no tokens found");
 
 	tokenMap = assignTokenType(tokens);
-	
-	for (TokenMap::iterator it = tokenMap.begin(); it != tokenMap.end(); it++)
-	{
-		std::cout << std::setw(16) << identifierToString(it->first) << std::setw(0) << " : " + it->second << '\n';
-	}
-	std::cout << "================================\n";
 	tokenMapToServerSettings(tokenMap, config.m_Servers);
 	for (Servers::const_iterator it = config.m_Servers.begin(); it != config.m_Servers.end(); it++)
 	{
 		for (std::vector<uint64_t>::const_iterator itPort = it->m_Ports.begin(); itPort != it->m_Ports.end(); itPort++)
 		{
-			std::cout << *itPort << '\n';
 			config.m_ServerMap[*itPort];
 		}
 	}
@@ -225,7 +218,6 @@ ServerSettings	ConfigParser:: createServerSettings(
 		throw std::runtime_error("invalid format");
 	for (; it != end; it++)
 	{
-		std::cout << ORANGE << it->second + " | " + identifierToString(it->first) + '\n' << RESET;
 		if (it->first == LOCATION)
 		{
 			expectNextToken(end, it, ARGUMENT);
@@ -301,7 +293,6 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 		throw std::runtime_error("invalid format");
 	for (; it != end; it++)
 	{
-		std::cout << GREEN << it->second + " | " + identifierToString(it->first) + '\n' << RESET;
 		if (it->first == LOCATION)
 		{
 			throw std::runtime_error("nested locations not allowed");
@@ -350,7 +341,6 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 		if (it->first == DIRECTIVE_END)
 			expectDirective = true;
 	}
-	std::cout << "location end\n";
 	return location;
 }
 
