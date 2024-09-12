@@ -128,7 +128,7 @@ private:
 	// void ListenServerSocket();
 	Client AcceptConnection(int socket_fd);
 	// void HandleInputEvent(int fd);
-	void HandleSocketInputEvent(const Client& client);
+	void HandleSocketInputEvent(Client& client);
 	void HandleOutputEvent(int fd);
 
 	void HandleCgiInputEvent(int cgi_fd, int client_fd);

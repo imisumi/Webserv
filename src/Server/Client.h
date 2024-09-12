@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 
 #include "Config/Config.h"
+#include "HttpRequestParser.h"
 
 class Client
 {
@@ -72,6 +73,9 @@ public:
 
 	void SetConfig(ServerSettings* config) { m_Config = config; }
 	ServerSettings* GetConfig() const { return m_Config; }
+
+	void SetRequest(const HttpRequest& request) { m_Request = request; }
+	const HttpRequest& GetRequest() const { return m_Request; }
 private:
 	int m_Socket = -1;
 
@@ -90,4 +94,5 @@ private:
 
 
 	ServerSettings* m_Config;
+	HttpRequest m_Request;
 };

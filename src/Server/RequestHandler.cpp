@@ -11,7 +11,6 @@
 #define WHITE "\033[37m"
 #define RESET "\033[0m"
 
-
 /*
 	GET
 	- parameters in the URL
@@ -27,12 +26,13 @@
 	- not okay to cache
 	- can change the server
 */
-const std::string RequestHandler::HandleRequest(const Client& client, const std::string& request)
+const std::string RequestHandler::HandleRequest(Client& client, const std::string& request)
 {
 	parseRequest(request);
 
 	HttpRequest req = m_RequestParser.getRequest();
 	LOG_INFO("URI: {}", req.getUri().string());
+	client.SetRequest(req);
 
 	ServerSettings* serverSettings = client.GetConfig();
 	ServerSettings::LocationSettings location = (*serverSettings)[req.getUri()];
@@ -84,6 +84,4 @@ void RequestHandler::parseRequest(const std::string& requestBuffer)
 	{
 		std::cerr << "Failed to parse request" << std::endl;
 	}
-
-
 }

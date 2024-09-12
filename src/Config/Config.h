@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Config.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/05 13:09:45 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/12 15:57:48 by imisumi          ###   ########.fr       */
+/*   Updated: 2024/09/12 19:54:46 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@
 class Config
 {
 	private:
-		std::unordered_map<uint64_t, std::vector<ServerSettings*>>	m_ServerMap;
+		std::unordered_map<uint64_t, std::vector<ServerSettings*>>	m_ServerMap; // posible use index-based array
 		std::vector<ServerSettings>									m_Servers;
 		friend class ConfigParser;
 	public:

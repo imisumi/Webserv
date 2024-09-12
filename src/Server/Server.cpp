@@ -464,7 +464,7 @@ Client Server::AcceptConnection(int socket_fd)
 	return client;
 }
 
-void Server::HandleSocketInputEvent(const Client& client)
+void Server::HandleSocketInputEvent(Client& client)
 {
 	// uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
 			
