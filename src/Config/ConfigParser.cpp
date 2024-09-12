@@ -88,7 +88,7 @@ inline void	ConfigParser:: expectNextToken(
 		throw std::invalid_argument("expected " + identifierToString(expected) + ": found \"" + it->second + '\"');
 }
 
-inline bool	containsDigitsExclusively(const std::string& s)
+static inline bool	containsDigitsExclusively(const std::string& s)
 {
 	if (s.empty())
 		return false;
@@ -236,6 +236,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleLimitExcept(server.m_GlobalSettings.httpMethods, end, it);
+			continue ;
 		}
 
 		if (expectDirective && it->first == ARGUMENT)
@@ -315,7 +316,6 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 		if (expectDirective && it->first == ARGUMENT)
 			throw std::invalid_argument("expected directive: found \"" + it->second + '\"');
 		expectDirective = false;
-
 		if (it->first == SERVER_NAME)
 		{
 			throw std::runtime_error("server name not allowed in location context");
