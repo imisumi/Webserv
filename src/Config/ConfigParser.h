@@ -1,135 +1,72 @@
-// #pragma once
+#pragma once
 
-// #include <string>
-// #include <cstdint>
+#include <string>
+#include <cstdint>
+#include <filesystem>
+#include <vector>
+#include <map>
+#include <bitset>
+#include <memory>
+#include "ServerSettings.h"
 
-// // #include 
+#define DEFAULT_PORT 8080
+#define DEFAULT_PATH "conf/default.conf"
 
-// #include <filesystem>
-// #include <vector>
-// #include <map>
+class Config;
 
-// #include <bitset>
+class ConfigParser
+{
+	private:
+		ConfigParser(const ConfigParser&) = delete;
+		ConfigParser& operator=(const ConfigParser&) = delete;
+		ConfigParser(ConfigParser&&) = delete;
+		ConfigParser& operator=(ConfigParser&&) = delete;
 
-// #include <memory>
+		enum TokenIdentifier
+		{
+			SERVER,
+			PORT,
+			SERVER_NAME,
+			ROOT,
+			INDEX,
+			AUTOINDEX,
+			REDIRECT,
+			LOCATION,
+			LIMIT_EXCEPT,
+			ERROR_PAGE,
+			CGI,
+			HTTP_METHOD_DENY,
+			BRACKET_OPEN,
+			BRACKET_CLOSE,
+			DIRECTIVE_END,
+			ARGUMENT,
+			UNRECOGNISED,
+		};
 
+		typedef std::vector<std::pair<TokenIdentifier, std::string>>	TokenMap;
+		typedef std::vector<std::string>								TokenVector;
+		typedef std::map<uint64_t, ServerSettings>						ServerMap;
+		typedef	std::vector<ServerSettings>								Servers;
 
-// class Config
-// {
-// public:
-// 	struct LocationSettings
-// 	{
-// 		std::filesystem::path path;
-// 		std::filesystem::path root;
-// 		std::string index;
-// 		bool autoindex;
-// 		std::string cgi;
-// 		std::string returnCode;
-// 	};
+		static TokenVector		tokenize(const std::string& input, const std::string& delimiters);
+		static TokenMap			assignTokenType(const TokenVector& tokens);
+		static TokenIdentifier	getIdentifier(const std::string& token, bool expectDirective);
+		static std::string		identifierToString(TokenIdentifier id);
 
+		static void								tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers);
+		static ServerSettings					createServerSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static ServerSettings::LocationSettings	createLocationSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
-// 	struct ServerConfig
-// 	{
-// 		LocationSettings location;
-// 	};
+		static void	expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it, TokenIdentifier expected);
+		static void	handlePort(std::vector<uint64_t>& ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleIndex(std::vector<std::string>& indexFiles, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleCgi(std::vector<std::string>& cgi, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleAutoIndex(bool& autoIndex, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleLimitExcept(uint8_t& httpMethods, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
+		static std::string	readFileIntoBuffer(const std::filesystem::path& path);
+	public:
+		static Config	createDefaultConfig();
+		static Config	createConfigFromFile(const std::filesystem::path& path);
 
-
-// 	uint16_t getPort() const { return m_Port; }
-// 	const std::filesystem::path& getRoot() const { return m_Root; }
-// 	const std::string& getServerName() const { return m_ServerName; }
-
-
-// 	//? Maybe just stack allocate this
-// 	static Config CreateDefaultConfig();
-// 	static Config CreateConfigFromFile(const std::filesystem::path& path);
-
-
-// 	//TODO: add overload for operator[] to get location settings
-
-// private:
-// 	Config(const std::filesystem::path& path);
-
-// 	//temp
-// 	Config();
-
-// 	// Deleted copy constructor and assignment operator and move constructor and assignment operator
-// 	Config(const Config&) = delete;
-// 	Config& operator=(const Config&) = delete;
-// 	Config(Config&&) = delete;
-// 	Config& operator=(Config&&) = delete;
-
-// private:
-// 	const std::filesystem::path m_Path;
-// 	std::filesystem::path m_Root;
-
-// 	uint16_t m_Port;
-// 	std::string m_ServerName;
-
-// 	std::map<std::filesystem::path, LocationSettings> m_Locations;
-// };
-
-// // class ConfigProccessor
-// // {
-// // public:
-// // 	struct LocationSettings
-// // 	{
-// // 		std::filesystem::path path;
-// // 		std::filesystem::path root;
-// // 		std::string index;
-// // 		bool autoindex;
-// // 		std::string cgi;
-// // 		std::string returnCode;
-// // 	};
-// // public:
-// // 	static Config ParseConfig(const std::filesystem::path& path)
-// // 	{
-// // 		Config config;
-// // 		return config;
-// // 	}
-
-// // };
-
-// // class ConfigParser
-// // {
-// // 	public:
-// // 	//TODO: find better solution
-// // 	#define BIT(n) (1 << (n))
-
-// // 	#define GET	   BIT(0)
-// // 	#define POST   BIT(1)
-// // 	#define DELETE BIT(2)
-
-
-// // 	struct ServerSettings
-// // 	{
-// // 		//? Server settings
-// // 		std::string serverName;
-// // 		uint16_t port;
-// // 		std::filesystem::path root;
-// // 		std::map<uint16_t, std::filesystem::path> errorPages;
-
-
-// // 		//? Shared settings
-// // 		bool autoindex = true;
-// // 		uint32_t clientMaxBodySize = 0;
-// // 		std::vector<std::string> index = {"index.html"};
-// // 		int limitExcept = GET;
-		
-// // 		//TODO: add cgi
-// // 	};
-
-// // 	struct LocationSettings : ServerSettings
-// // 	{
-// // 		LocationSettings(ServerSettings settings) : ServerSettings(settings) {}
-
-// // 		std::filesystem::path path;
-// // 		std::filesystem::path locationRoot = root;
-// // 		uint16_t returnCode = 200;
-// // 	};
-
-
-// // private:
-// // 	struct ServerSettings m_ServerSettings;
-// // 	std::map<std::filesystem::path, ConfigParser::LocationSettings> m_LocationMap;
-// // };
+};

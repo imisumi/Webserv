@@ -58,8 +58,8 @@ const std::string RequestHandler::handleRequest(const Client& client, const Conf
 	LOG_INFO("Normalized URI: {}", req.getUri().string());
 
 
-	ServerSettings serverSettings = client.GetConfig();
-	ServerSettings::LocationSettings location = serverSettings[req.getUri()];
+	ServerSettings* serverSettings = client.GetConfig();
+	ServerSettings::LocationSettings location = (*serverSettings)[req.getUri()];
 
 	if (!location.root.is_absolute())
 	{
@@ -77,7 +77,7 @@ const std::string RequestHandler::handleRequest(const Client& client, const Conf
 	}
 
 
-	uint8_t allowedMethods = client.GetConfig().GetAllowedMethods(req.getUri());
+	uint8_t allowedMethods = client.GetConfig()->GetAllowedMethods(req.getUri());
 
 	LOG_INFO("Allowed methods: {}", allowedMethods);
 

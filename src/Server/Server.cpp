@@ -212,7 +212,7 @@ void Server::Init(const Config& config)
 
 	for (auto& [packedIPPort, serverSettings] : config)
 	{
-		ServerSettings settings = serverSettings[0];
+		ServerSettings* settings = serverSettings[0];
 		const uint32_t ip = static_cast<uint32_t>(packedIPPort >> 32);
 		const uint16_t port = static_cast<uint16_t>(packedIPPort & 0xFFFF);
 
@@ -458,8 +458,8 @@ Client Server::AcceptConnection(int socket_fd)
 
 	uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
 			
-	ServerSettings settings = s_Instance->m_Config[packedIpPort][0];
-	LOG_INFO("Server name: {}", settings.GetServerName());
+	ServerSettings* settings = s_Instance->m_Config[packedIpPort][0];
+	LOG_INFO("Server name: {}", settings->GetServerName());
 	client.SetConfig(settings);
 	return client;
 }
@@ -483,7 +483,7 @@ void Server::HandleSocketInputEvent(const Client& client)
 		LOG_TRACE("Received data:\n{}", bufferStr);
 
 		//TODO: get the correct sevrer config and pass it to the request handler
-		Config config = Config::CreateDefaultConfig();
+		Config config = ConfigParser::createDefaultConfig();
 		const std::string response = s_Instance->m_RequestHandler.handleRequest(client, config, bufferStr);
 
 		if (response.empty())

@@ -70,8 +70,8 @@ public:
 	void SetEpollInstance(int epollInstance) { m_EpollInstance = epollInstance; }
 
 
-	void SetConfig(const ServerSettings& config) { m_Config = config; }
-	const ServerSettings& GetConfig() const { return m_Config; }
+	void SetConfig(ServerSettings* config) { m_Config = config; }
+	ServerSettings* GetConfig() const { return m_Config; }
 private:
 	int m_Socket = -1;
 
@@ -89,5 +89,5 @@ private:
 	int m_EpollInstance = -1;
 
 
-	ServerSettings m_Config;
+	ServerSettings* m_Config;
 };

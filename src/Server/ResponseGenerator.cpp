@@ -338,7 +338,8 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 			//TODO: see if config maps to the given uri, if so see if index is overwriten esle use default
 			HttpRequest updatedRequest = request;
 			// std::filesystem::path index = client.GetConfig().GetIndex(updatedRequest.getUri());
-			std::filesystem::path index = request.getUri() / client.GetConfig().GetIndex(request.getOriginalUri());
+			LOG_INFO("Index: {}", client.GetConfig()->GetIndex(request.getOriginalUri()).string());
+			std::filesystem::path index = request.getUri() / client.GetConfig()->GetIndex(request.getOriginalUri());
 			LOG_INFO("Index: {}", index.string());
 			// updatedRequest.setUri(updatedRequest.getUri() / "index.html");
 			updatedRequest.setUri(updatedRequest.getUri() / index);

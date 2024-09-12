@@ -74,7 +74,7 @@ int main()
 		return 1;
 	}
 
-	Config conf = Config::CreateDefaultConfig();
+	Config conf = ConfigParser::createDefaultConfig();
 	{
 		Utils::Timer timer;
 		Server::Init(conf);
