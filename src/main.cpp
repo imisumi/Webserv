@@ -22,11 +22,11 @@ int main()
 {
 	Log::Init();
 
-	{
-		Config conf = Config::CreateDefaultConfig();
-		conf.Print();
-		return 0;
-	}
+	// {
+	// 	Config conf = Config::CreateDefaultConfig();
+	// 	conf.Print();
+	// 	return 0;
+	// }
 
 	// std::signal(SIGINT, SignalHandler);
 
@@ -41,7 +41,17 @@ int main()
 		std::cout << "Current working dir: " << cwd << std::endl;
 	}
 
+
+
 	std::string root = cwd;
+	if (setenv("WEBSERV_ROOT", cwd, 1) != 0)
+	{
+		std::cerr << "Error setting environment variable" << std::endl;
+		return 1;
+	}
+
+
+
 	root += "/root/html";
 	
 	if (setenv("WORKING_DIR", cwd, 1) != 0)

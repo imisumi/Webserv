@@ -4,6 +4,8 @@
 
 #include <arpa/inet.h>
 
+#include "Config/Config.h"
+
 class Client
 {
 public:
@@ -66,6 +68,10 @@ public:
 
 	int GetEpollInstance() const { return m_EpollInstance; }
 	void SetEpollInstance(int epollInstance) { m_EpollInstance = epollInstance; }
+
+
+	void SetConfig(const ServerSettings& config) { m_Config = config; }
+	const ServerSettings& GetConfig() const { return m_Config; }
 private:
 	int m_Socket = -1;
 
@@ -73,6 +79,7 @@ private:
 	char m_ClientAddress[INET_ADDRSTRLEN] = { 0 };
 
 	uint16_t m_ServerPort = -1;
+	char m_ServerAddress[INET_ADDRSTRLEN] = { 0 };
 
 
 	uint16_t m_PeerPort = -1;
@@ -80,4 +87,7 @@ private:
 
 
 	int m_EpollInstance = -1;
+
+
+	ServerSettings m_Config;
 };

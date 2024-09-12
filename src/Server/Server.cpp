@@ -200,20 +200,22 @@ void Server::Init(const Config& config)
 	std::unordered_map<uint64_t, int> serverHosts;
 	//? assuming that the config parser properly deals with duplicates
 
-	uint64_t newIP;
-	newIP = packIpAndPort("127.0.0.5", 8080);
-	serverHosts[newIP] = 0;
-	newIP = packIpAndPort("127.0.0.4", 8080);
-	serverHosts[newIP] = 0;
-	newIP = packIpAndPort("127.0.0.4", 8081);
-	serverHosts[newIP] = 0;
-	newIP = packIpAndPort("0.0.0.0", 8080);
-	serverHosts[newIP] = 0;
+	// uint64_t newIP;
+	// newIP = packIpAndPort("127.0.0.5", 8080);
+	// serverHosts[newIP] = 0;
+	// newIP = packIpAndPort("127.0.0.4", 8080);
+	// serverHosts[newIP] = 0;
+	// newIP = packIpAndPort("127.0.0.4", 8081);
+	// serverHosts[newIP] = 0;
+	// newIP = packIpAndPort("0.0.0.0", 8080);
+	// serverHosts[newIP] = 0;
 
-	// loop through the server hosts
-	for (auto& [packedIPPort, serverID] : serverHosts)
+	for (auto& [packedIPPort, serverSettings] : config)
 	{
-		int ip = (packedIPPort >> 32) & 0xFFFFFFFF;
+		ServerSettings settings = serverSettings[0];
+		const uint32_t ip = static_cast<uint32_t>(packedIPPort >> 32);
+		const uint16_t port = static_cast<uint16_t>(packedIPPort & 0xFFFF);
+
 		char ipStr[INET_ADDRSTRLEN];
 		struct in_addr ipAddr;
 		ipAddr.s_addr = htonl(ip);
@@ -223,7 +225,6 @@ void Server::Init(const Config& config)
 			s_Instance->m_Running = false;
 			return;
 		}
-		int port = packedIPPort & 0xFFFF;
 		LOG_INFO("Creating server socket on IP: {}, port: {}", ipStr, port);
 
 		auto it = s_Instance->m_ServerSockets64.find(packedIPPort);
@@ -286,6 +287,7 @@ void Server::Init(const Config& config)
 			return;
 		}
 	}
+	return ;
 }
 
 void Server::Shutdown()
@@ -449,11 +451,26 @@ Client Server::AcceptConnection(int socket_fd)
 	}
 
 	client.SetEpollInstance(s_Instance->m_EpollInstance);
+
+
+
+
+
+	uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
+			
+	ServerSettings settings = s_Instance->m_Config[packedIpPort][0];
+	LOG_INFO("Server name: {}", settings.GetServerName());
+	client.SetConfig(settings);
 	return client;
 }
 
 void Server::HandleSocketInputEvent(const Client& client)
 {
+	// uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
+			
+	// ServerSettings settings = s_Instance->m_Config[packedIpPort][0];
+	// LOG_INFO("Server name: {}", settings.GetServerName());
+
 	//TODO: what if the buffer is too small?
 	char buffer[BUFFER_SIZE];
 

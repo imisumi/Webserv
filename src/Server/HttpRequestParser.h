@@ -20,9 +20,9 @@ enum class ParserState
 	Error
 };
 
-#define BIT(n) (1 << (n))
+#define BIT(n) (1u << (n))
 
-enum class RequestMethod
+enum class RequestMethod : uint8_t
 {
 	GET      = BIT(0),
 	POST     = BIT(1),
@@ -32,7 +32,7 @@ enum class RequestMethod
 	HEAD     = BIT(5),
 	OPTIONS  = BIT(6),
 
-	UNKNOWN = -1
+	UNKNOWN = 0
 };
 
 class HttpRequest
@@ -63,8 +63,14 @@ public:
 		return uri;
 	}
 
+	std::filesystem::path getOriginalUri() const
+	{
+		return original_uri;
+	}
+
 public:
 	RequestMethod method = RequestMethod::UNKNOWN;
+	std::filesystem::path original_uri;
 	std::filesystem::path uri;
 	std::string version;
 	std::unordered_map<std::string, std::string> headers;

@@ -47,7 +47,10 @@ bool HttpRequestParser::parse(const std::string& data)
 				if (std::isspace(ch))
 					state = ParserState::Version;
 				else
+				{
 					request.uri += ch;
+					request.original_uri += ch;
+				}
 				break;
 
 			case ParserState::Version:

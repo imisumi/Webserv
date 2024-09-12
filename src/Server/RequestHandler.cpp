@@ -27,16 +27,66 @@
 	- not okay to cache
 	- can change the server
 */
-const std::string RequestHandler::handleRequest(const Client& client, const Config& config, const std::string& request)
+const std::string RequestHandler::handleRequest(const Client& client, const Config& c, const std::string& request)
 {
 	parseRequest(request);
 
 	// Config config = Config::CreateDefaultConfig();
 
-	HttpRequest req = m_RequestParser.getRequest();
-	req.setUri(config.getRoot() / std::filesystem::relative(req.getUri(), "/"));
 
-	return ResponseGenerator::generateResponse(client, config, req);
+	HttpRequest req = m_RequestParser.getRequest();
+	LOG_INFO("URI: {}", req.getUri().string());
+
+	auto normalize_uri = [](const std::filesystem::path& uri) {
+		std::filesystem::path result = uri;
+
+		// Remove trailing slash
+		// if (result.has_filename() && result.filename() == ".") {
+		// 	result.remove_filename();
+		// }
+		while (!result.empty() && result.filename() == ".") {
+			result.remove_filename();
+		}
+
+		// Remove leading slashes by iterating through the relative path
+		// result = result.lexically_relative("/");
+
+		return result;
+	};
+
+	// req.setUri(normalize_uri(req.getUri()));
+	LOG_INFO("Normalized URI: {}", req.getUri().string());
+
+
+	ServerSettings serverSettings = client.GetConfig();
+	ServerSettings::LocationSettings location = serverSettings[req.getUri()];
+
+	if (!location.root.is_absolute())
+	{
+		//? if the root is not absolute, prepend the webserv root
+		static const std::filesystem::path webservRoot = getenv("WEBSERV_ROOT");
+		LOG_INFO("Webserv root: {}", webservRoot.string());
+		location.root = webservRoot / location.root;
+		req.setUri(webservRoot / location.root / std::filesystem::relative(req.getUri(), "/"));
+		LOG_INFO("Location root: {}", location.root.string());
+		LOG_INFO("Request URI {}", req.getUri().string());
+	}
+	else
+	{
+		req.setUri(location.root / std::filesystem::relative(req.getUri(), "/"));
+	}
+
+
+	uint8_t allowedMethods = client.GetConfig().GetAllowedMethods(req.getUri());
+
+	LOG_INFO("Allowed methods: {}", allowedMethods);
+
+	//TODO: this is not working correctly
+	if (allowedMethods & static_cast<uint8_t>(req.method))
+	{
+		return ResponseGenerator::generateResponse(client, c, req);
+	}
+	return ResponseGenerator::MethodNotAllowed();
 }
 
 
