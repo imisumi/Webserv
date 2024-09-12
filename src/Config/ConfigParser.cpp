@@ -157,8 +157,7 @@ void	ConfigParser:: handlePort(
 	{
 		std::cerr << "exception: " << e.what() << std::endl;
 	}
-	result += (static_cast<uint64_t>(host) << 48);
-	result += static_cast<uint64_t>(port);
+	result += (static_cast<uint64_t>(host) << 32) + static_cast<uint64_t>(port);
 	ports.emplace_back(result);
 }
 
@@ -185,15 +184,15 @@ void	ConfigParser:: handleLimitExcept(
 		if (it->first == BRACKET_OPEN)
 			break ;
 		if (it->second == "GET")
-			httpMethods ^= 1;
+			httpMethods |= 1;
 		else if (it->second == "POST")
-			httpMethods ^= (1 << 1);
+			httpMethods |= (1 << 1);
 		else if (it->second == "DELETE")
-			httpMethods ^= (1 << 2);
+			httpMethods |= (1 << 2);
 		else if (it->second == "PATCH")
-			httpMethods ^= (1 << 3);
+			httpMethods |= (1 << 3);
 		else if (it->second == "PUT")
-			httpMethods ^= (1 << 4);
+			httpMethods |= (1 << 4);
 		else
 			throw std::invalid_argument("invalid http method: " + it->second);
 	}
@@ -203,6 +202,46 @@ void	ConfigParser:: handleLimitExcept(
 		throw std::invalid_argument("invalid deny argument: " + it->second);
 	expectNextToken(end, it, DIRECTIVE_END);
 	expectNextToken(end, it, BRACKET_CLOSE);
+}
+
+void	ConfigParser:: handleIndex(
+	std::vector<std::string>& indexFiles,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	for (; it != end; it++)
+	{
+		if (it->first == DIRECTIVE_END)
+		{
+			it--;
+			break ;
+		}
+		if (it->first != ARGUMENT)
+			throw std::invalid_argument("invalid index argument: " + it->second);
+		indexFiles.push_back(it->second);
+	}
+	if (it == end)
+		throw std::invalid_argument("invalid index format: " + it->second);
+}
+
+void	ConfigParser:: handleCgi(
+	std::vector<std::string>& cgi,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	for (; it != end; it++)
+	{
+		if (it->first == DIRECTIVE_END)
+		{
+			it--;
+			break ;
+		}
+		if (it->first != ARGUMENT)
+			throw std::invalid_argument("invalid cgi argument: " + it->second);
+		cgi.push_back(it->second);
+	}
+	if (it == end)
+		throw std::invalid_argument("invalid cgi format: " + it->second);
 }
 
 ServerSettings	ConfigParser:: createServerSettings(
@@ -256,7 +295,13 @@ ServerSettings	ConfigParser:: createServerSettings(
 		else if (it->first == INDEX)
 		{
 			expectNextToken(end, it, ARGUMENT);
-			server.m_GlobalSettings.index = it->second;
+			handleIndex(server.m_GlobalSettings.index, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == CGI)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleCgi(server.m_GlobalSettings.cgi, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == AUTOINDEX)
@@ -324,7 +369,13 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 		else if (it->first == INDEX)
 		{
 			expectNextToken(end, it, ARGUMENT);
-			location.index = it->second;
+			handleIndex(location.index, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == CGI)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleCgi(location.cgi, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == AUTOINDEX)
@@ -368,6 +419,7 @@ ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
 		{"server_name", SERVER_NAME},
 		{"root", ROOT},
 		{"index", INDEX},
+		{"cgi", CGI},
 		{"autoindex", AUTOINDEX},
 		{"return", REDIRECT},
 		{"location", LOCATION},
@@ -402,6 +454,7 @@ std::string	ConfigParser:: identifierToString(TokenIdentifier id)
 		{SERVER_NAME, "server name"},
 		{ROOT, "root"},
 		{INDEX, "index"},
+		{CGI, "cgi"},
 		{AUTOINDEX, "autoindex"},
 		{REDIRECT, "redirect"},
 		{LOCATION, "location"},

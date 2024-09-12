@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/11 17:03:21 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/12 14:47:21 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,7 @@ class Config
 				return it->second;
 			throw std::out_of_range("key not found");
 		};
+		void	print();
 		Config();
 		Config(const Config& copy);
 		Config& operator=(const Config& other);

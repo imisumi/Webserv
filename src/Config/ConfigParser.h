@@ -34,6 +34,7 @@ class ConfigParser
 			LOCATION,
 			LIMIT_EXCEPT,
 			ERROR_PAGE,
+			CGI,
 			HTTP_METHOD_DENY,
 			BRACKET_OPEN,
 			BRACKET_CLOSE,
@@ -58,10 +59,12 @@ class ConfigParser
 
 		static void	expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it, TokenIdentifier expected);
 		static void	handlePort(std::vector<uint64_t>& ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleIndex(std::vector<std::string>& indexFiles, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleCgi(std::vector<std::string>& cgi, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleAutoIndex(bool& autoIndex, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleLimitExcept(uint8_t& httpMethods, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
-		static std::string						readFileIntoBuffer(const std::filesystem::path& path);
+		static std::string	readFileIntoBuffer(const std::filesystem::path& path);
 	public:
 		static Config	createDefaultConfig();
 		static Config	createConfigFromFile(const std::filesystem::path& path);

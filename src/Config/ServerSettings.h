@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/11 14:06:39 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/12 15:21:38 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,13 +22,13 @@ class ServerSettings
 	public:
 		struct LocationSettings
 		{
-			std::filesystem::path	root;
-			std::string				index;
-			bool					autoindex;
-			std::string				cgi;
-			std::string				returnCode;
-			std::string				errorPages;
-			uint8_t					httpMethods;
+			std::filesystem::path		root;
+			std::vector<std::string>	index;
+			bool						autoindex;
+			std::vector<std::string>	cgi;
+			std::string					returnCode;
+			std::string					errorPages;
+			uint8_t						httpMethods = 1;
 		};
 
 	private:
@@ -60,6 +60,8 @@ class ServerSettings
 				return it->second;
 			return this->m_GlobalSettings;
 		};
-		const std::string& getServerName() const { return m_ServerName; };
+		const std::string& GetServerName() const { return m_ServerName; };
+		const LocationSettings&	GetGlobalSettings() const { return m_GlobalSettings; };
+		const std::map<std::filesystem::path, LocationSettings>&	GetLocations() const { return m_Locations; };
 		std::vector<uint64_t> getPorts() const { return m_Ports; };
 };

@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/08/30 13:57:51 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/12 13:44:05 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/12 14:25:38 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,6 +35,7 @@ int main(int argc, char **argv)
 		Config config = ConfigParser::createConfigFromFile(infile);
 
 		std::string line;
+		config.print();
 		while (std::getline(std::cin, line))
 		{
 			try
@@ -43,7 +44,7 @@ int main(int argc, char **argv)
 				std::vector<ServerSettings*> serverVector = config[port];
 				std::vector<ServerSettings*>::iterator it = serverVector.begin();
 				ServerSettings*	server = *it;
-				std::cout << server->getServerName() << '\n';
+				std::cout << server->GetServerName() << '\n';
 			}
 			catch (const std::exception& e)
 			{
