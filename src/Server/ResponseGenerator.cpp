@@ -52,7 +52,7 @@ static const std::unordered_map<std::string, std::string> s_SupportedMineTypes =
 			{ ".png", "image/png" }
 		};
 
-const std::string ResponseGenerator::generateResponse(const Client& client, const Config& config, const HttpRequest& request)
+const std::string ResponseGenerator::generateResponse(const Client& client, const HttpRequest& request)
 {
 	//TODO: validate request
 	//? fo now only GET is supported
@@ -60,7 +60,7 @@ const std::string ResponseGenerator::generateResponse(const Client& client, cons
 
 	switch (request.method)
 	{
-		case RequestMethod::GET:			return handleGetRequest(client, config, request);
+		case RequestMethod::GET:			return handleGetRequest(client, request);
 		case RequestMethod::POST:			break;
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
@@ -306,7 +306,7 @@ std::string ReadImageFile(const std::filesystem::path& path)
 
 #include "Utils/Utils.h"
 
-const std::string ResponseGenerator::handleGetRequest(const Client& client, const Config& config, const HttpRequest& request)
+const std::string ResponseGenerator::handleGetRequest(const Client& client, const HttpRequest& request)
 {
 	Utils::Timer timer;
 	LOG_INFO("Handling GET request");

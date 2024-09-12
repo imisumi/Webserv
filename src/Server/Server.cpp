@@ -484,8 +484,8 @@ void Server::HandleSocketInputEvent(const Client& client)
 
 		//TODO: get the correct sevrer config and pass it to the request handler
 		Config config = ConfigParser::createDefaultConfig();
-		const std::string response = s_Instance->m_RequestHandler.handleRequest(client, config, bufferStr);
-
+		// const std::string response = s_Instance->m_RequestHandler.handleRequest(client, bufferStr);
+		const std::string response = s_Instance->m_RequestHandler.HandleRequest(client, bufferStr);
 		if (response.empty())
 		{
 			LOG_INFO("Request is a CGI request, forwarding to CGI handler...");

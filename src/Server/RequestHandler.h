@@ -17,7 +17,7 @@ public:
 	RequestHandler() {};
 	~RequestHandler() {};
 
-	const std::string handleRequest(const Client& client, const Config& config, const std::string& request);
+	const std::string HandleRequest(const Client& client, const std::string& request);
 
 private:
 	void parseRequest(const std::string& request);

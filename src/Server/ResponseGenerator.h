@@ -47,7 +47,7 @@ public:
 	ResponseGenerator() {};
 	~ResponseGenerator() {};
 
-	static const std::string generateResponse(const Client& client, const Config& config, const HttpRequest& request);
+	static const std::string generateResponse(const Client& client, const HttpRequest& request);
 
 
 	static const std::string InternalServerError(const Config& config);
@@ -70,7 +70,7 @@ private:
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
-	static const std::string handleGetRequest(const Client& client, const Config& config, const HttpRequest& request);
+	static const std::string handleGetRequest(const Client& client, const HttpRequest& request);
 
 	static std::string generateOKResponse(const HttpRequest& request);
 
