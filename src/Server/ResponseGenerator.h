@@ -51,6 +51,7 @@ public:
 
 
 	static const std::string InternalServerError(const Config& config);
+	static const std::string InternalServerError();
 	static const std::string MethodNotAllowed();
 
 	

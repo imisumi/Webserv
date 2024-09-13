@@ -148,6 +148,84 @@ void sigchld_handler(int signo)
 #define EPOLL_TYPE_STDIN    BIT(2)
 #define EPOLL_TYPE_STDOUT   BIT(3)
 
+std::string Cgi::RunCgi(const Client& client, char* argv[])
+{
+	int pipefd[2];
+		
+	if (pipe(pipefd) == -1)
+	{
+		perror("pipe");
+		return ResponseGenerator::InternalServerError();
+	}
+
+	int flags = fcntl(pipefd[READ_END], F_GETFL);
+	fcntl(pipefd[READ_END], F_SETFL, flags | O_NONBLOCK);
+
+	int flags2 = fcntl(pipefd[WRITE_END], F_GETFL);
+	fcntl(pipefd[WRITE_END], F_SETFL, flags2 | O_NONBLOCK);
+
+
+	Server::CgiRedirect(pipefd[READ_END], (int)client);
+
+	struct sigaction sa;
+	sa.sa_handler = sigchld_handler;  // Assign the custom handler
+	sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
+	sa.sa_flags = SA_RESTART;         // Restart interrupted system calls
+
+	// Register the handler for SIGCHLD
+	if (sigaction(SIGCHLD, &sa, NULL) == -1)
+	{
+		perror("sigaction");
+		// exit(1);
+		return ResponseGenerator::InternalServerError();
+	}
+
+
+	pid_t pid = fork();
+	if (pid == -1)
+	{
+		perror("fork");
+		close(pipefd[READ_END]);
+		close(pipefd[WRITE_END]);
+		return ResponseGenerator::InternalServerError();
+	}
+
+	if (pid == CHILD_PROCESS)
+	{ // Child process
+		alarm(3); // Set the alarm for CGI timeout
+
+		// std::string path = request.getUri().string();
+
+		// alarm(3); // Set the alarm for CGI timeout
+
+		close(pipefd[READ_END]); // Close the read end of the pipe
+		dup2(pipefd[WRITE_END], STDOUT_FILENO); // Redirect stdout to the pipe
+		close(pipefd[WRITE_END]); // Close the original write end of the pipe
+
+		// char* argv[] = { const_cast<char*>(path.c_str()), NULL };
+		const char* envp[] = {
+			"SERVER_SOFTWARE=Webserv/1.0",
+			"QUERY_STRING=", // Add query string if available
+			"REQUEST_METHOD=GET", // Add request method (GET/POST etc.)
+			"REQUEST_URI=", // Add request URI
+			nullptr
+		};
+
+		execve(argv[0], argv, const_cast<char *const *>(envp));
+		perror("execve");
+		exit(EXIT_FAILURE);
+	}
+	// Server& server = Server::Get();
+	// server.childProcesses[pid] = (int)client;
+	Server::RegisterCgiProcess(pid, (int)client);
+	// return handleParentProcess(config, pipefd, pid);
+	close(pipefd[WRITE_END]); // Close the write end of the pipe
+
+	return "";
+
+	return "";
+}
+
 std::string Cgi::executeCGI(const Client& client, const Config& config, const HttpRequest& request)
 {
 	std::string path = request.getUri().string();

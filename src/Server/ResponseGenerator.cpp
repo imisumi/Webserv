@@ -341,10 +341,32 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 			LOG_INFO("Index: {}", client.GetConfig()->GetIndex(request.getOriginalUri()).string());
 			std::filesystem::path index = request.getUri() / client.GetConfig()->GetIndex(request.getOriginalUri());
 			LOG_INFO("Index: {}", index.string());
+			LOG_INFO("Index: {}", request.getUri().string());
 			// updatedRequest.setUri(updatedRequest.getUri() / "index.html");
+
+			// const std::filesystem::path& uri = request.getUri();
 			updatedRequest.setUri(updatedRequest.getUri() / index);
 			if (!std::filesystem::exists(updatedRequest.getUri()))
 			{
+				//? if autoindex is enabled, generate a list of files in the directory
+
+				// char *dirListing = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
+				// char *argv[] = { dirListing, (char*)updatedRequest.getUri().c_str(), NULL };
+
+
+				// const char *dirListing = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
+				// char *argv[] = { (char*)dirListing, (char*)request.getUri().c_str(), NULL };
+		
+				const char *scriptPath = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
+				std::string arg = request.getUri().string();
+				const char *arg1 = arg.c_str();
+				// Prepare the argv array. First element is the script itself.
+				char *argv[] = { (char*)scriptPath, (char*)arg1, NULL };
+
+				// Cgi::RunCgi(client, argv);
+				return Cgi::RunCgi(client, argv);
+
+
 				LOG_DEBUG("index.html does not exist");
 				//? send 404 response
 				return generateNotFoundResponse();
@@ -562,6 +584,13 @@ std::string ResponseGenerator::generateInternalServerErrorResponse()
 
 
 const std::string ResponseGenerator::InternalServerError(const Config& config)
+{
+	static std::string response = s_InternalServerErrorResponse;
+
+	return response;
+}
+
+const std::string ResponseGenerator::InternalServerError()
 {
 	static std::string response = s_InternalServerErrorResponse;
 
