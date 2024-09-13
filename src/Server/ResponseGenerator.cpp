@@ -357,7 +357,7 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 				// const char *dirListing = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
 				// char *argv[] = { (char*)dirListing, (char*)request.getUri().c_str(), NULL };
 		
-				const char *scriptPath = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
+				const char *scriptPath = "/home/kaltevog/Desktop/Webserv/root/webserv/cgi-bin/databasedelete.py";
 				std::string arg = request.getUri().string();
 				const char *arg1 = arg.c_str();
 				// Prepare the argv array. First element is the script itself.
