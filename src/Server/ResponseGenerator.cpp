@@ -61,10 +61,10 @@ const std::string ResponseGenerator::generateResponse(const Client& client, cons
 	switch (request.method)
 	{
 		case RequestMethod::GET:			return handleGetRequest(client, request);
-		case RequestMethod::POST:			return handlePostRequest(config, request);
+		case RequestMethod::POST:			return handlePostRequest(client, request);
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
-		case RequestMethod::DELETE:			return handleDeleteRequest(config, request);
+		case RequestMethod::DELETE:			return handleDeleteRequest(client, request);
 		case RequestMethod::HEAD:			break ;
 		case RequestMethod::OPTIONS:		return generateBadRequestResponse(); //TODO: this is just for testing, bad request in incase of a invalid request
 		default:							break;
@@ -270,7 +270,7 @@ std::string ResponseGenerator::buildHttpResponse(ContentType type, const std::st
 
 
 			<< "Content-Length: " << body.size() << "\r\n"
-			// << "Last-Modified: " << getFileModificationTime(path) << "\r\n"
+			// << "Last-Modified: " << getFileModifigit push --set-upstream origin merged-postandmaincationTime(path) << "\r\n"
 			//TODO: hard coded values should check this
 			<< "Connection: keep-alive\r\n"
 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
@@ -486,7 +486,7 @@ bool saveUploadedFile(const std::string &body, const std::string &boundary, cons
     return true;
 }
 
-const std::string ResponseGenerator::handlePostRequest(const Config& config, const HttpRequest& request) {
+const std::string ResponseGenerator::handlePostRequest(const Client& client, const HttpRequest& request) {
     Utils::Timer timer;
     LOG_INFO("Handling POST request");
 
@@ -532,7 +532,7 @@ const std::string ResponseGenerator::handlePostRequest(const Config& config, con
     return generateOKResponse(request);
 }
 
-const std::string ResponseGenerator::handleDeleteRequest(const Config& config, const HttpRequest& request) 
+const std::string ResponseGenerator::handleDeleteRequest(const Client& client, const HttpRequest& request) 
 {
     Utils::Timer timer;
     LOG_INFO("Handling DELETE request");

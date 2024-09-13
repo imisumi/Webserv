@@ -43,12 +43,14 @@ const std::string RequestHandler::HandleRequest(Client& client, const std::strin
 
 	LOG_INFO("Allowed methods: {}", allowedMethods);
 
+
+	//only used to work for get
 	//TODO: this is not working correctly
-	if (allowedMethods & static_cast<uint8_t>(req.method))
-	{
-		return ResponseGenerator::generateResponse(client, req);
-	}
-	return ResponseGenerator::MethodNotAllowed();
+	// if (allowedMethods & static_cast<uint8_t>(req.method))
+	// {
+ 	return ResponseGenerator::generateResponse(client, req);
+	// }
+	// return ResponseGenerator::MethodNotAllowed();
 }
 
 std::string RequestMethodToString(RequestMethod type)

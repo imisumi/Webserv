@@ -73,9 +73,9 @@ private:
 
 	static const std::string handleGetRequest(const Client& client, const HttpRequest& request);
 
-	static const std::string handlePostRequest(const Config& config, const HttpRequest& request);
+	static const std::string handlePostRequest(const Client& client, const HttpRequest& request);
 
-	static const std::string handleDeleteRequest(const Config& config, const HttpRequest& request);
+	static const std::string handleDeleteRequest(const Client& client, const HttpRequest& request);
 
 	static std::string generateOKResponse(const HttpRequest& request);
 
