@@ -61,10 +61,10 @@ const std::string ResponseGenerator::generateResponse(const Client& client, cons
 	switch (request.method)
 	{
 		case RequestMethod::GET:			return handleGetRequest(client, request);
-		case RequestMethod::POST:			break;
+		case RequestMethod::POST:			return handlePostRequest(config, request);
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
-		case RequestMethod::DELETE:			break;
+		case RequestMethod::DELETE:			return handleDeleteRequest(config, request);
 		case RequestMethod::HEAD:			break ;
 		case RequestMethod::OPTIONS:		return generateBadRequestResponse(); //TODO: this is just for testing, bad request in incase of a invalid request
 		default:							break;
@@ -410,6 +410,164 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 	LOG_DEBUG("Requested path does not exist");
 	return generateNotFoundResponse();
 }
+
+
+#include <regex>
+
+bool isBoundaryString(const std::string &value) {
+    return value.find("-----------------------------") != std::string::npos;
+}
+
+std::string extractBoundary(const std::string &contentType) {
+    std::regex boundaryRegex("boundary=(.*)");
+    std::smatch match;
+    if (std::regex_search(contentType, match, boundaryRegex)) {
+        return "--" + match[1].str();
+    }
+    return "";
+}
+
+std::string parseMultipartData(const std::string &body, const std::string &boundary, const std::string &fieldName) {
+    std::regex fieldRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName + R"(\"[\r\n]+[\r\n]+([^\r\n]*)[\r\n]+)");
+    std::smatch match;
+    if (std::regex_search(body, match, fieldRegex)) {
+        return match[1].str();
+    }
+    return "";
+}
+
+bool saveFormDataToFile(const std::string &firstName, std::string lastName, std::string email) {
+    if (isBoundaryString(lastName)) {
+        lastName = "EMPTY";
+    }
+    if (isBoundaryString(email)) {
+        email = "EMPTY";
+    }
+
+    std::ofstream file("/home/kaltevog/Desktop/Webserv/database/text.txt", std::ios_base::app);
+    if (!file.is_open()) {
+        std::cerr << "[ERROR] Failed to open file: /home/kaltevog/Desktop/Webserv/database/text.txt" << std::endl;
+        return false;
+    }
+
+    file << "First Name: " << firstName << "\n";
+    file << "Last Name: " << (lastName.empty() ? "EMPTY" : lastName) << "\n";
+    file << "Email: " << (email.empty() ? "EMPTY" : email) << "\n\n";
+
+    file.close();
+    return !file.fail();
+}
+
+bool saveUploadedFile(const std::string &body, const std::string &boundary, const std::string &fieldName, const std::string &uploadDir) {
+    std::regex fileRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName + R"(\"; filename=\"([^\"]+)\")" +
+                         R"([\r\n]+Content-Type: ([^\r\n]+)[\r\n]+[\r\n]+([\s\S]+?)[\r\n]+)" + boundary);
+    std::smatch match;
+    if (std::regex_search(body, match, fileRegex)) {
+        std::string fileName = match[1].str();
+        std::string fileContent = match[3].str();
+
+        std::string filePath = uploadDir + "/" + fileName;
+        if (fileName.empty()) {
+            std::cerr << "[INFO] No file uploaded." << std::endl;
+            return true;
+        }
+
+        std::ofstream file(filePath, std::ios::binary);
+        if (!file.is_open()) {
+            std::cerr << "[ERROR] Failed to open file: " << filePath << std::endl;
+            return false;
+        }
+
+        file.write(fileContent.c_str(), fileContent.size());
+        file.close();
+        return !file.fail();
+    }
+
+    return true;
+}
+
+const std::string ResponseGenerator::handlePostRequest(const Config& config, const HttpRequest& request) {
+    Utils::Timer timer;
+    LOG_INFO("Handling POST request");
+
+    std::string contentType = request.getHeader("Content-Type");
+    if (contentType.empty()) {
+        LOG_ERROR("Missing Content-Type header");
+        return generateBadRequestResponse();
+    }
+
+    std::string boundary = extractBoundary(contentType);
+    if (boundary.empty()) {
+        LOG_ERROR("Boundary missing in Content-Type header");
+        return generateBadRequestResponse();
+    }
+
+    std::string body = request.getBody();
+    if (body.empty()) {
+        LOG_ERROR("Request body is empty");
+        return generateBadRequestResponse();
+    }
+
+    std::string firstName = parseMultipartData(body, boundary, "firstname");
+    if (firstName.empty()) {
+        LOG_ERROR("First name is missing in the form data");
+        return generateBadRequestResponse();
+    }
+
+    std::string lastName = parseMultipartData(body, boundary, "lastname");
+    std::string email = parseMultipartData(body, boundary, "email");
+
+    if (!saveFormDataToFile(firstName, lastName, email)) {
+        LOG_ERROR("Failed to save form data to file");
+        return generateInternalServerErrorResponse();
+    }
+
+	//hardcoded
+    if (!saveUploadedFile(body, boundary, "file", "/home/kaltevog/Desktop/Webserv/database")) {
+        LOG_ERROR("Failed to save uploaded file");
+        return generateInternalServerErrorResponse();
+    }
+
+    LOG_INFO("Successfully handled POST request, saved form data, and saved file");
+    return generateOKResponse(request);
+}
+
+const std::string ResponseGenerator::handleDeleteRequest(const Config& config, const HttpRequest& request) 
+{
+    Utils::Timer timer;
+    LOG_INFO("Handling DELETE request");
+
+    // Get the requested URI
+    std::filesystem::path uri = request.getUri();
+
+    // Build the full path to the /database directory
+    std::filesystem::path basePath = "/home/kaltevog/Desktop/Webserv/database";
+    std::filesystem::path fullPath = basePath / uri.filename(); // Only delete file in /database, using the filename part of the URI
+
+    LOG_INFO("Attempting to delete file: {}", fullPath.string());
+
+    // Check if the requested file exists
+    if (std::filesystem::exists(fullPath) && std::filesystem::is_regular_file(fullPath))
+    {
+        // Try deleting the file
+        try {
+            std::filesystem::remove(fullPath);
+            LOG_INFO("File deleted successfully: {}", fullPath.string());
+
+            // Return success response
+            return buildHttpResponse(ContentType::TEXT, "File deleted successfully", HTTPStatusCode::OK);
+        } catch (const std::filesystem::filesystem_error& e) {
+            LOG_ERROR("Failed to delete file: {}", e.what());
+            return generateInternalServerErrorResponse();
+        }
+    }
+    else
+    {
+        LOG_ERROR("Requested file does not exist or is not a regular file: {}", fullPath.string());
+        return generateNotFoundResponse();
+    }
+}
+
 
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest
