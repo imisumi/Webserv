@@ -313,19 +313,20 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 
 
 	// very temp CGI
-	// std::string uir = request.getUri().string();
-	// if (uir.find("/cgi-bin/") != std::string::npos)
-	// {
-	// 	LOG_DEBUG("Requested path is a CGI script");
+	std::string uir = request.getUri().string();
+	if (uir.find("/cgi-bin/") != std::string::npos)
+	{
+		LOG_DEBUG("Requested path is a CGI script");
 
-	// 	std::filesystem::path fileName = request.getUri().filename();
-	// 	HttpRequest updatedRequest = request;
-	// 	std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
-	// 	updatedRequest.setUri(cgiPath / fileName);
-	// 	LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
-	// 	Cgi::executeCGI(client, config, updatedRequest);
-	// 	return "";
-	// }
+		std::filesystem::path fileName = request.getUri().filename();
+		HttpRequest updatedRequest = request;
+		std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
+		updatedRequest.setUri(cgiPath / fileName);
+		LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
+		// Cgi::executeCGI(client, updatedRequest);
+		return Cgi::executeCGI(client, updatedRequest);
+		return "";
+	}
 
 	//? Validate the requested path
 	if (std::filesystem::exists(request.getUri()))
@@ -350,12 +351,6 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 			{
 				//? if autoindex is enabled, generate a list of files in the directory
 
-				// char *dirListing = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
-				// char *argv[] = { dirListing, (char*)updatedRequest.getUri().c_str(), NULL };
-
-
-				// const char *dirListing = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
-				// char *argv[] = { (char*)dirListing, (char*)request.getUri().c_str(), NULL };
 		
 				const char *scriptPath = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
 				std::string arg = request.getUri().string();

@@ -13,11 +13,11 @@ public:
 
 	static bool isValidCGI(const Config& config, const std::filesystem::path& path);
 
-	static std::string executeCGI(const Client& client, const Config& config, const HttpRequest& request);
+	static std::string executeCGI(const Client& client, const HttpRequest& request);
 
 	// file path should be the first argument in argv
 	static std::string RunCgi(const Client& client, char* argv[]);
 private:
-	static void handleChildProcess(const Config& config, const HttpRequest& request, int pipefd[]);
-	static const std::string handleParentProcess(const Config& config, int pipefd[], pid_t pid);
+	static void handleChildProcess(const HttpRequest& request, int pipefd[]);
+	static const std::string handleParentProcess(int pipefd[], pid_t pid);
 };

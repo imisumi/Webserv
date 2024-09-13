@@ -398,6 +398,7 @@ void Server::Run()
 			else
 			{
 				LOG_DEBUG("Unhandled event type");
+				LOG_INFO("Event type: {}", events[i].events);
 			}
 		}
 	}
@@ -466,6 +467,7 @@ Client Server::AcceptConnection(int socket_fd)
 
 void Server::HandleSocketInputEvent(Client& client)
 {
+	LOG_INFO("Handling socket input event...");
 	// uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
 			
 	// ServerSettings settings = s_Instance->m_Config[packedIpPort][0];

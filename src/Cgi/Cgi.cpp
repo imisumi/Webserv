@@ -76,7 +76,7 @@ void sigchld_handler(int signo)
 	// Use WNOHANG to only reap child processes that have exited
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 	{
-		Server::DeregisterCgiProcess(pid);
+		// Server::DeregisterCgiProcess(pid);
 		if (WIFEXITED(status))
 		{
 			int exit_code = WEXITSTATUS(status);
@@ -93,29 +93,35 @@ void sigchld_handler(int signo)
 
 			if (signal_num == SIGALRM)
 			{
+				std::cerr << "Child process " << pid << " timed out with signal: " << signal_num << std::endl;
 				Server& server = Server::Get();
 
 				int client_fd = server.childProcesses[pid];
 				Client client = server.GetClient(client_fd);
+				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
 
 				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);
 				struct Server::EpollData *ev_data = new Server::EpollData();
+				LOG_INFO("Client FD: {}", client_fd);
 				ev_data->fd = client_fd;
 				ev_data->cgi_fd = -1;
 				ev_data->type = EPOLL_TYPE_SOCKET;
 
+				// Server::AddEpollEventStatic(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
 				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
 
 				std::string response = s_TimeoutErrorResponse;
 				server.m_ClientResponses[client_fd] = response;
 
-				std::cerr << "Child process " << pid << " timed out with signal: " << signal_num << std::endl;
+				// Handle CGI timeout here
+				// Send timeout error page to client
 			}
 			else
 			{
 				std::cout << "Child process " << pid << " was terminated by signal: " << signal_num << std::endl;
 			}
 		}
+		Server::DeregisterCgiProcess(pid);
 	}
 }
 
@@ -212,12 +218,15 @@ std::string Cgi::RunCgi(const Client& client, char* argv[])
 		};
 
 		execve(argv[0], argv, const_cast<char *const *>(envp));
-		perror("execve");
+		// perror("execve");
 		exit(EXIT_FAILURE);
 	}
 	// Server& server = Server::Get();
 	// server.childProcesses[pid] = (int)client;
-	Server::RegisterCgiProcess(pid, (int)client);
+	// Server::RegisterCgiProcess(pid, (int)client);
+	Server& server = Server::Get();
+	server.childProcesses[pid] = (int)client;
+	LOG_INFO("Child process: {} registered with client: {}", pid, (int)client);
 	// return handleParentProcess(config, pipefd, pid);
 	close(pipefd[WRITE_END]); // Close the write end of the pipe
 
@@ -226,7 +235,7 @@ std::string Cgi::RunCgi(const Client& client, char* argv[])
 	return "";
 }
 
-std::string Cgi::executeCGI(const Client& client, const Config& config, const HttpRequest& request)
+std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 {
 	std::string path = request.getUri().string();
 	int pipefd[2];
@@ -234,7 +243,7 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	if (pipe(pipefd) == -1)
 	{
 		perror("pipe");
-		return ResponseGenerator::InternalServerError(config);
+		return ResponseGenerator::InternalServerError();
 	}
 
 	int flags = fcntl(pipefd[READ_END], F_GETFL);
@@ -244,8 +253,8 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	fcntl(pipefd[WRITE_END], F_SETFL, flags2 | O_NONBLOCK);
 
 
-	Server::CgiRedirect(pipefd[READ_END], (int)client);
-#if 0
+	// Server::CgiRedirect(pipefd[READ_END], (int)client);
+// #if 0
 	struct Server::EpollData *ev_data = new Server::EpollData();
 	ev_data->fd = (int)client;
 	ev_data->cgi_fd = pipefd[READ_END];
@@ -253,14 +262,8 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 
 	LOG_INFO("Forwarding client FD: {} to CGI handler", (int)client);
 
-	// Server& server = Server::Get();
-	// server.AddEpollEvent(server.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
-	// LOG_INFO("poll instance: {}", server.GetEpollInstance());
-
 	Server::AddEpollEvent(client.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
-	// LOG_INFO("poll instance: {}", client.GetEpollInstance());
-#endif
-	
+
 	struct sigaction sa;
 	sa.sa_handler = sigchld_handler;  // Assign the custom handler
 	sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
@@ -271,7 +274,7 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 	{
 		perror("sigaction");
 		// exit(1);
-		return ResponseGenerator::InternalServerError(config);
+		return ResponseGenerator::InternalServerError();
 	}
 
 
@@ -281,21 +284,22 @@ std::string Cgi::executeCGI(const Client& client, const Config& config, const Ht
 		perror("fork");
 		close(pipefd[READ_END]);
 		close(pipefd[WRITE_END]);
-		return ResponseGenerator::InternalServerError(config);
+		return ResponseGenerator::InternalServerError();
 	}
 
 	if (pid == CHILD_PROCESS)
 	{ // Child process
-		handleChildProcess(config, request, pipefd);
+		handleChildProcess(request, pipefd);
 	}
-	// Server& server = Server::Get();
-	// server.childProcesses[pid] = (int)client;
 	Server::RegisterCgiProcess(pid, (int)client);
-	return handleParentProcess(config, pipefd, pid);
+	LOG_INFO("Child process (PID: {}) created for client FD: {}", pid, (int)client);
+	close(pipefd[WRITE_END]); // Close the write end of the pipe
+
+	return "";
 }
 
 
-void Cgi::handleChildProcess(const Config& config, const HttpRequest& request, int pipefd[])
+void Cgi::handleChildProcess(const HttpRequest& request, int pipefd[])
 {
 
 	// struct sigaction sa;
@@ -336,7 +340,7 @@ void Cgi::handleChildProcess(const Config& config, const HttpRequest& request, i
 	exit(EXIT_FAILURE);
 }
 
-const std::string Cgi::handleParentProcess(const Config& config, int pipefd[], pid_t pid)
+const std::string Cgi::handleParentProcess(int pipefd[], pid_t pid)
 {
 	close(pipefd[WRITE_END]); // Close the write end of the pipe
 
@@ -351,47 +355,47 @@ const std::string Cgi::handleParentProcess(const Config& config, int pipefd[], p
 	// }
 
 
-	if (waitpid(pid, &status, WNOHANG) == -1)
-	{
-		perror("waitpid");
-		close(pipefd[READ_END]);
-		return ResponseGenerator::InternalServerError(config);
-	}
+	// if (waitpid(pid, &status, WNOHANG) == -1)
+	// {
+	// 	perror("waitpid");
+	// 	close(pipefd[READ_END]);
+	// 	return ResponseGenerator::InternalServerError(config);
+	// }
 
 
-	if (WIFEXITED(status) && WEXITSTATUS(status) == EXIT_SUCCESS)
-	{
-		LOG_INFO("Successfully executed CGI script");
-		char buffer[1024];
-		std::string output;
-		ssize_t count;
-		while ((count = read(pipefd[READ_END], buffer, sizeof(buffer))) > 0)
-		{
-			output.append(buffer, count);
-		}
-		close(pipefd[READ_END]);
+	// if (WIFEXITED(status) && WEXITSTATUS(status) == EXIT_SUCCESS)
+	// {
+	// 	LOG_INFO("Successfully executed CGI script");
+	// 	char buffer[1024];
+	// 	std::string output;
+	// 	ssize_t count;
+	// 	while ((count = read(pipefd[READ_END], buffer, sizeof(buffer))) > 0)
+	// 	{
+	// 		output.append(buffer, count);
+	// 	}
+	// 	close(pipefd[READ_END]);
 
-		size_t header_end = output.find("\r\n\r\n");
-		if (header_end != std::string::npos)
-		{
-			size_t bodyLength = output.size() - header_end - 4;
-			std::string httpResponse = "HTTP/1.1 200 OK\r\n";
-			httpResponse += "Content-Length: " + std::to_string(bodyLength) + "\r\n";
-			httpResponse += "Connection: close\r\n";
-			httpResponse += "\r\n"; // End of headers
-			httpResponse += output.substr(header_end + 4); // Body
+	// 	size_t header_end = output.find("\r\n\r\n");
+	// 	if (header_end != std::string::npos)
+	// 	{
+	// 		size_t bodyLength = output.size() - header_end - 4;
+	// 		std::string httpResponse = "HTTP/1.1 200 OK\r\n";
+	// 		httpResponse += "Content-Length: " + std::to_string(bodyLength) + "\r\n";
+	// 		httpResponse += "Connection: close\r\n";
+	// 		httpResponse += "\r\n"; // End of headers
+	// 		httpResponse += output.substr(header_end + 4); // Body
 
 
-			LOG_INFO("Successfully executed CGI script");
-			return httpResponse;
-		}
-		else
-		{
-			LOG_ERROR("CGI script did not produce valid headers");
-			return ResponseGenerator::InternalServerError(config);
-		}
-	}
-	// LOG_ERROR("CGI script failed with status: " + std::to_string(WEXITSTATUS(status)));
-	// close(pipefd[READ_END]);
-	return ResponseGenerator::InternalServerError(config);
+	// 		LOG_INFO("Successfully executed CGI script");
+	// 		return httpResponse;
+	// 	}
+	// 	else
+	// 	{
+	// 		LOG_ERROR("CGI script did not produce valid headers");
+	// 		return ResponseGenerator::InternalServerError(config);
+	// 	}
+	// }
+	// // LOG_ERROR("CGI script failed with status: " + std::to_string(WEXITSTATUS(status)));
+	// // close(pipefd[READ_END]);
+	// return ResponseGenerator::InternalServerError(config);
 }

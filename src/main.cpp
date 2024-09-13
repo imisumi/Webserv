@@ -21,6 +21,17 @@ static void SignalHandler(int signal)
 int main()
 {
 	Log::Init();
+	char cwd[1024];
+	if (getcwd(cwd, sizeof(cwd)) != NULL)
+	{
+		std::cout << "Current working dir: " << cwd << std::endl;
+	}
+	std::string root = cwd;
+	if (setenv("WEBSERV_ROOT", cwd, 1) != 0)
+	{
+		std::cerr << "Error setting environment variable" << std::endl;
+		return 1;
+	}
 
 	// {
 	// 	Config conf = Config::CreateDefaultConfig();
@@ -35,20 +46,6 @@ int main()
 	// WEB_ASSERT(false, "make sure correct path is set");
 
 	// print working directory
-	char cwd[1024];
-	if (getcwd(cwd, sizeof(cwd)) != NULL)
-	{
-		std::cout << "Current working dir: " << cwd << std::endl;
-	}
-
-
-
-	std::string root = cwd;
-	if (setenv("WEBSERV_ROOT", cwd, 1) != 0)
-	{
-		std::cerr << "Error setting environment variable" << std::endl;
-		return 1;
-	}
 
 
 
