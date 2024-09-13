@@ -115,16 +115,16 @@ static uint32_t	ipv4LiteralToUint32(const std::string& s)
 	return result;
 }
 
-static uint16_t	portLiteralToUint16(const std::string& s)
+static uint16_t	stringToUInt16(const std::string& s)
 {
 	std::size_t	pos;
 	int			port;
 	
 	port = std::stoi(s, &pos);
 	if (pos != s.length())
-		throw std::invalid_argument("invalid port format: " + s);
-	if (port < 1 || port > std::numeric_limits<uint16_t>::max())
-		throw std::out_of_range("port out of range: " + s);
+		throw std::invalid_argument("invalid uint16_t format: " + s);
+	if (port < 0 || port > std::numeric_limits<uint16_t>::max())
+		throw std::out_of_range("uint16_t out of range: " + s);
 	return static_cast<uint16_t>(port);
 }
 
@@ -145,13 +145,15 @@ void	ConfigParser:: handlePort(
 		if (hostPort.size() == 1)
 		{
 			host = 0;
-			port = portLiteralToUint16(hostPort[0]);
+			port = stringToUInt16(hostPort[0]);
 		}
 		else
 		{
 			host = ipv4LiteralToUint32(hostPort[0]);
-			port = portLiteralToUint16(hostPort[1]);
+			port = stringToUInt16(hostPort[1]);
 		}
+		if (port == 0)
+			throw std::invalid_argument("port cannot be 0");
 	}
 	catch (std::exception& e)
 	{
@@ -179,23 +181,26 @@ void	ConfigParser:: handleLimitExcept(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
+	uint8_t	methods = 0;
+
 	for (; it != end; it++)
 	{
 		if (it->first == BRACKET_OPEN)
 			break ;
 		if (it->second == "GET")
-			httpMethods |= 1;
+			methods |= 1;
 		else if (it->second == "POST")
-			httpMethods |= (1 << 1);
+			methods |= (1 << 1);
 		else if (it->second == "DELETE")
-			httpMethods |= (1 << 2);
+			methods |= (1 << 2);
 		else if (it->second == "PATCH")
-			httpMethods |= (1 << 3);
+			methods |= (1 << 3);
 		else if (it->second == "PUT")
-			httpMethods |= (1 << 4);
+			methods |= (1 << 4);
 		else
 			throw std::invalid_argument("invalid http method: " + it->second);
 	}
+	httpMethods = methods;
 	expectNextToken(end, it, HTTP_METHOD_DENY);
 	expectNextToken(end, it, ARGUMENT);
 	if (it->second != "all")
@@ -244,12 +249,49 @@ void	ConfigParser:: handleCgi(
 		throw std::invalid_argument("invalid cgi format: " + it->second);
 }
 
+void	ConfigParser:: handleRedirect(
+	uint16_t& redirect,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	try
+	{
+		redirect = stringToUInt16(it->second);
+		if (redirect < 100 || redirect > 599)
+			throw std::invalid_argument("invalid return code");
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "exception: invalid redirect argument: " + it->second << std::endl;
+	}
+}
+
+void	ConfigParser:: handleErrorPage(
+	std::unordered_map<uint16_t, std::filesystem::path>& errorPageMap,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	for (; it != end; it++)
+	{
+		if (it->first == DIRECTIVE_END)
+		{
+			it--;
+			break ;
+		}
+		if (it->first != ARGUMENT)
+			throw std::invalid_argument("invalid cgi argument: " + it->second);
+		
+	}
+	if (it == end)
+		throw std::invalid_argument("invalid cgi format: " + it->second);
+}
+
 ServerSettings	ConfigParser:: createServerSettings(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
-	ServerSettings			server;
-	bool					expectDirective = true;
+	ServerSettings	server;
+	bool			expectDirective = true;
 
 	expectNextToken(end, it, BRACKET_OPEN);
 	it++;
@@ -304,6 +346,18 @@ ServerSettings	ConfigParser:: createServerSettings(
 			handleCgi(server.m_GlobalSettings.cgi, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
+		else if (it->first == REDIRECT)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleRedirect(server.m_GlobalSettings.returnCode, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == ERROR_PAGE)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleErrorPage(server.m_GlobalSettings.errorPageMap, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
 		else if (it->first == AUTOINDEX)
 		{
 			expectNextToken(end, it, ARGUMENT);
@@ -329,8 +383,8 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
-	ServerSettings::LocationSettings location;
-	bool							expectDirective = true;
+	ServerSettings::LocationSettings	location;
+	bool								expectDirective = true;
 
 	expectNextToken(end, it, BRACKET_OPEN);
 	it++;

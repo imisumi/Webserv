@@ -61,6 +61,8 @@ class ConfigParser
 		static void	handlePort(std::vector<uint64_t>& ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleIndex(std::vector<std::string>& indexFiles, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleCgi(std::vector<std::string>& cgi, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleRedirect(uint16_t& redirect, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleErrorPage(std::unordered_map<uint16_t, std::filesystem::path>& errorPageMap, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleAutoIndex(bool& autoIndex, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleLimitExcept(uint8_t& httpMethods, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 

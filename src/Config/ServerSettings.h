@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ServerSettings.h                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/12 16:04:47 by imisumi          ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ServerSettings.h                                   :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/09/13 13:18:08 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,8 +26,8 @@ class ServerSettings
 			std::vector<std::string>	index;
 			bool						autoindex;
 			std::vector<std::string>	cgi;
-			std::string					returnCode;
-			std::string					errorPages;
+			uint16_t					returnCode;
+			std::unordered_map<uint16_t, std::filesystem::path>	errorPageMap;
 			uint8_t						httpMethods = 1;
 		};
 
