@@ -1,5 +1,6 @@
 #include "Cgi.h"
 #include "Server/Server.h"
+#include "Server/ConnectionManager.h"
 
 
 bool Cgi::isValidCGI(const Config& config, const std::filesystem::path& path)
@@ -97,7 +98,8 @@ void sigchld_handler(int signo)
 				Server& server = Server::Get();
 
 				int client_fd = server.childProcesses[pid];
-				Client client = server.GetClient(client_fd);
+				// Client client = server.GetClient(client_fd);
+				Client client = ConnectionManager::GetClient(client_fd);
 				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
 
 				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);

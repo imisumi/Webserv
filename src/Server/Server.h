@@ -113,10 +113,13 @@ public:
 	static void DeregisterCgiProcess(pid_t pid) { Get().childProcesses.erase(pid); }
 
 
-	Client GetClient(int fd)
-	{
-		return m_Clients[fd];
-	}
+	static ServerSettings* GetServerSettings(uint64_t packedIpPort) { return Get().m_Config[packedIpPort][0]; }
+
+
+	// Client GetClient(int fd)
+	// {
+	// 	return m_Clients[fd];
+	// }
 private:
 	Server(const Config& config);
 	~Server();
@@ -141,21 +144,24 @@ private:
 	int ListenOnSocket(int socket_fd, int backlog);
 
 
-	void RemoveClient(int socket_fd)
-	{
-		auto it = m_Clients.find(socket_fd);
-		if (it != m_Clients.end())
-		{
-			m_Clients.erase(it);
-		}
-	}
+	// void RemoveClient(int socket_fd)
+	// {
+	// 	auto it = m_Clients.find(socket_fd);
+	// 	if (it != m_Clients.end())
+	// 	{
+	// 		m_Clients.erase(it);
+	// 	}
+	// }
 
-	uint32_t GetClientCount() const
-	{
-		return m_Clients.size();
-	}
+	// uint32_t GetClientCount() const
+	// {
+	// 	return m_Clients.size();
+	// }
 
 private:
+	static constexpr int m_MaxPollEvents = 1024;
+
+
 	const Config& m_Config;
 	// Config m_Config;
 
@@ -182,7 +188,7 @@ private:
 	std::unordered_map<int, int> m_CgiToClientMap;
 
 
-	std::unordered_map<int, Client> m_Clients;
+	// std::unordered_map<int, Client> m_Clients;
 
 
 	struct EpollData m_Events[MAX_EVENTS];

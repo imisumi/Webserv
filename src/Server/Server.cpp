@@ -2,6 +2,7 @@
 #include "Core/Core.h"
 
 #include "ResponseGenerator.h"
+#include "ConnectionManager.h"
 
 #include <chrono>
 #include <thread>
@@ -37,6 +38,7 @@ static Server* s_Instance = nullptr;
 Server::Server(const Config& config)
 	: m_Config(config)
 {
+
 }
 
 Server::~Server()
@@ -188,6 +190,8 @@ void Server::Init(const Config& config)
 
 	s_Instance = new Server(config);
 
+	ConnectionManager::Init();
+
 	//? EPOLL_CLOEXEC: automatically close the file descriptor when calling exec
 	if ((s_Instance->m_EpollInstance = s_Instance->CreateEpoll()) == -1)
 	{
@@ -199,16 +203,6 @@ void Server::Init(const Config& config)
 	//TODO: replace int with server settings, also this is handled in the config
 	std::unordered_map<uint64_t, int> serverHosts;
 	//? assuming that the config parser properly deals with duplicates
-
-	// uint64_t newIP;
-	// newIP = packIpAndPort("127.0.0.5", 8080);
-	// serverHosts[newIP] = 0;
-	// newIP = packIpAndPort("127.0.0.4", 8080);
-	// serverHosts[newIP] = 0;
-	// newIP = packIpAndPort("127.0.0.4", 8081);
-	// serverHosts[newIP] = 0;
-	// newIP = packIpAndPort("0.0.0.0", 8080);
-	// serverHosts[newIP] = 0;
 
 	for (auto& [packedIPPort, serverSettings] : config)
 	{
@@ -364,16 +358,19 @@ void Server::Run()
 			int incomingPort = s_Instance->isServerSocket(epoll_fd);
 			if (incomingPort != -1)
 			{
-				Client newClient = s_Instance->AcceptConnection(epoll_fd);
+				// Client newClient = s_Instance->AcceptConnection(epoll_fd);
+				Client newClient = ConnectionManager::AcceptConnection(epoll_fd);
 				if (newClient == -1)
 				{
 					LOG_ERROR("Failed to accept connection!");
 				}
-				s_Instance->m_Clients[newClient] = newClient;
+				ConnectionManager::RegisterClient(newClient, newClient);
+				// s_Instance->m_Clients[newClient] = newClient;
 				continue;
 			}
 
-			Client client = s_Instance->m_Clients[epoll_fd];
+			// Client client = s_Instance->m_Clients[epoll_fd];
+			Client client = ConnectionManager::GetClient(epoll_fd);
 			LOG_INFO("epoll fd: {}, client socket: {}", epoll_fd, (int)client);
 
 			if (events[i].events & EPOLLIN)
@@ -395,10 +392,18 @@ void Server::Run()
 				if (epoll_type == EPOLL_TYPE_SOCKET)
 					s_Instance->HandleOutputEvent(epoll_fd);
 			}
+			else if (events[i].events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
+			{
+				LOG_INFO("Handling error event...");
+				LOG_INFO("Event type: {}", (int)events[i].events);
+
+				// close(epoll_fd);
+				// continue;
+			}
 			else
 			{
 				LOG_DEBUG("Unhandled event type");
-				LOG_INFO("Event type: {}", events[i].events);
+				LOG_INFO("Event type: {}", (int)events[i].events);
 			}
 		}
 	}
@@ -419,51 +424,51 @@ bool Server::IsRunning()
 }
 
 
-Client Server::AcceptConnection(int socket_fd)
-{
-	struct sockaddr_in clientAddress;
-	socklen_t clientAddressLength = sizeof(clientAddress);
+// Client Server::AcceptConnection(int socket_fd)
+// {
+// 	struct sockaddr_in clientAddress;
+// 	socklen_t clientAddressLength = sizeof(clientAddress);
 
-	// Handle new incoming connection
-	Client client = accept(socket_fd, (struct sockaddr*)&clientAddress, &clientAddressLength);
-	if (client == -1)
-	{
-		LOG_ERROR("accept: {}", strerror(errno));
-		return -1;
-	}
+// 	// Handle new incoming connection
+// 	Client client = accept(socket_fd, (struct sockaddr*)&clientAddress, &clientAddressLength);
+// 	if (client == -1)
+// 	{
+// 		LOG_ERROR("accept: {}", strerror(errno));
+// 		return -1;
+// 	}
 
-	client.Initialize(clientAddress);
+// 	client.Initialize(clientAddress);
 
-	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}", 
-		client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort());
+// 	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}", 
+// 	client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort());
 
-	struct EpollData *data = new EpollData();
-	data->fd = client;
-	data->type = EPOLL_TYPE_SOCKET;
-	data->cgi_fd = -1;
+// 	struct EpollData *data = new EpollData();
+// 	data->fd = client;
+// 	data->type = EPOLL_TYPE_SOCKET;
+// 	data->cgi_fd = -1;
 
-	// if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
-	if (AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, data) == -1)
-	{
-		LOG_ERROR("Failed to add client socket to epoll!");
-		// m_Clients.erase(client);
-		close(client);
-		return -1;
-	}
+// 	// if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
+// 	if (AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, data) == -1)
+// 	{
+// 		LOG_ERROR("Failed to add client socket to epoll!");
+// 		// m_Clients.erase(client);
+// 		close(client);
+// 		return -1;
+// 	}
 
-	client.SetEpollInstance(s_Instance->m_EpollInstance);
-
-
+// 	client.SetEpollInstance(s_Instance->m_EpollInstance);
 
 
 
-	uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
+
+
+// 	uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
 			
-	ServerSettings* settings = s_Instance->m_Config[packedIpPort][0];
-	LOG_INFO("Server name: {}", settings->GetServerName());
-	client.SetConfig(settings);
-	return client;
-}
+// 	ServerSettings* settings = s_Instance->m_Config[packedIpPort][0];
+// 	LOG_INFO("Server name: {}", settings->GetServerName());
+// 	client.SetConfig(settings);
+// 	return client;
+// }
 
 void Server::HandleSocketInputEvent(Client& client)
 {
@@ -524,16 +529,21 @@ void Server::HandleSocketInputEvent(Client& client)
 		//TODO: also when removing from epoll?
 
 		close(client);
-		s_Instance->RemoveClient(client);
-		LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
+		// s_Instance->RemoveClient(client);
+		// LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
+		ConnectionManager::UnregisterClient(client);
+		LOG_INFO("Total Clients: {}", ConnectionManager::GetConnectedClients());
+
 		
 	}
 	else
 	{
 		close(client);
 		LOG_ERROR("HandleInputEvent read: {}", strerror(errno));
-		s_Instance->RemoveClient(client);
-		LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
+		// s_Instance->RemoveClient(client);
+		// LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
+		ConnectionManager::UnregisterClient(client);
+		LOG_INFO("Total Clients: {}", ConnectionManager::GetConnectedClients());
 	}
 }
 
@@ -555,11 +565,7 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd)
 			std::string httpResponse = "HTTP/1.1 200 OK\r\n";
 			httpResponse += "Content-Length: " + std::to_string(bodyLength) + "\r\n";
 			httpResponse += "Connection: close\r\n";
-			// httpResponse += output.substr(0, header_end + 2); // Body
-			// httpResponse += "\r\n"; // End of headers
-			// httpResponse += output.substr(header_end + 4); // Body
 			httpResponse += output;
-
 
 			LOG_DEBUG("Response:\n{}", httpResponse);
 
@@ -605,9 +611,12 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd)
 	{
 		close(client_fd);
 		LOG_ERROR("HandleInputEvent read: {}", strerror(errno));
-		s_Instance->RemoveClient(client_fd);
+		// s_Instance->RemoveClient(client_fd);
+		// close(cgi_fd);
+		// LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
+		ConnectionManager::UnregisterClient(client_fd);
+		LOG_INFO("Total Clients: {}", ConnectionManager::GetConnectedClients());
 		close(cgi_fd);
-		LOG_INFO("Total Clients: {}", s_Instance->GetClientCount());
 	}
 }
 
