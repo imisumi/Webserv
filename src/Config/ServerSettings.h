@@ -6,7 +6,7 @@
 /*   By: imisumi <imisumi@student.42.fr>              +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/13 13:18:08 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/16 20:07:28 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,19 +16,21 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 class ServerSettings
 {
 	public:
 		struct LocationSettings
 		{
-			std::filesystem::path		root;
-			std::vector<std::string>	index;
-			bool						autoindex;
-			std::vector<std::string>	cgi;
-			uint16_t					returnCode;
+			std::filesystem::path								root;
+			std::vector<std::string>							index;
+			bool												autoindex;
+			std::vector<std::string>							cgi;
+			uint16_t											returnCode = 0;
 			std::unordered_map<uint16_t, std::filesystem::path>	errorPageMap;
-			uint8_t						httpMethods = 1;
+			uint64_t											maxBodySize = 1024;
+			uint8_t												httpMethods = 1;
 		};
 
 	private:
@@ -96,8 +98,4 @@ class ServerSettings
 			return m_GlobalSettings;
 		}
 
-		// const LocationSettings& operator[](std::filesystem::path path) const
-		// {
-		// 	return GetLocationSettings(path);
-		// }
 };

@@ -34,6 +34,7 @@ class ConfigParser
 			LOCATION,
 			LIMIT_EXCEPT,
 			ERROR_PAGE,
+			MAX_BODY_SIZE,
 			CGI,
 			HTTP_METHOD_DENY,
 			BRACKET_OPEN,
@@ -63,6 +64,7 @@ class ConfigParser
 		static void	handleCgi(std::vector<std::string>& cgi, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleRedirect(uint16_t& redirect, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleErrorPage(std::unordered_map<uint16_t, std::filesystem::path>& errorPageMap, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleMaxBodySize(uint64_t& maxBodySize, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleAutoIndex(bool& autoIndex, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleLimitExcept(uint8_t& httpMethods, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 

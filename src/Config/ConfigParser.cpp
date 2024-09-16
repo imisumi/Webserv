@@ -140,25 +140,18 @@ void	ConfigParser:: handlePort(
 
 	if (hostPort.size() > 2)
 		throw std::invalid_argument("invalid host:port format: " + it->second);
-	try
+	if (hostPort.size() == 1)
 	{
-		if (hostPort.size() == 1)
-		{
-			host = 0;
-			port = stringToUInt16(hostPort[0]);
-		}
-		else
-		{
-			host = ipv4LiteralToUint32(hostPort[0]);
-			port = stringToUInt16(hostPort[1]);
-		}
-		if (port == 0)
-			throw std::invalid_argument("port cannot be 0");
+		host = 0;
+		port = stringToUInt16(hostPort[0]);
 	}
-	catch (std::exception& e)
+	else
 	{
-		std::cerr << "exception: " << e.what() << std::endl;
+		host = ipv4LiteralToUint32(hostPort[0]);
+		port = stringToUInt16(hostPort[1]);
 	}
+	if (port == 0)
+		throw std::invalid_argument("port cannot be 0");
 	result += (static_cast<uint64_t>(host) << 32) + static_cast<uint64_t>(port);
 	ports.emplace_back(result);
 }
@@ -226,7 +219,7 @@ void	ConfigParser:: handleIndex(
 		indexFiles.push_back(it->second);
 	}
 	if (it == end)
-		throw std::invalid_argument("invalid index format: " + it->second);
+		throw std::invalid_argument("invalid index format");
 }
 
 void	ConfigParser:: handleCgi(
@@ -246,7 +239,7 @@ void	ConfigParser:: handleCgi(
 		cgi.push_back(it->second);
 	}
 	if (it == end)
-		throw std::invalid_argument("invalid cgi format: " + it->second);
+		throw std::invalid_argument("invalid cgi format");
 }
 
 void	ConfigParser:: handleRedirect(
@@ -254,16 +247,9 @@ void	ConfigParser:: handleRedirect(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
-	try
-	{
-		redirect = stringToUInt16(it->second);
-		if (redirect < 100 || redirect > 599)
-			throw std::invalid_argument("invalid return code");
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << "exception: invalid redirect argument: " + it->second << std::endl;
-	}
+	redirect = stringToUInt16(it->second);
+	if (redirect < 100 || redirect > 599)
+		throw std::invalid_argument("invalid redirect code");
 }
 
 void	ConfigParser:: handleErrorPage(
@@ -271,19 +257,78 @@ void	ConfigParser:: handleErrorPage(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
+	std::vector<uint16_t>	returnCodes;
+
+	if (!containsDigitsExclusively(it->second))
+		throw std::invalid_argument("invalid error page format");
 	for (; it != end; it++)
 	{
-		if (it->first == DIRECTIVE_END)
+		if (it->first != ARGUMENT)
+			throw std::invalid_argument("invalid error page argument: " + it->second);
+		if (containsDigitsExclusively(it->second))
 		{
-			it--;
+			const uint16_t currentReturnCode = stringToUInt16(it->second);
+			if (currentReturnCode < 100 || currentReturnCode > 599)
+				throw std::invalid_argument("invalid error page redirect code");
+			auto result = errorPageMap.insert({currentReturnCode, std::filesystem::path()});
+			if (result.second)
+				returnCodes.push_back(currentReturnCode);
+		}
+		else
+		{
 			break ;
 		}
-		if (it->first != ARGUMENT)
-			throw std::invalid_argument("invalid cgi argument: " + it->second);
-		
 	}
 	if (it == end)
-		throw std::invalid_argument("invalid cgi format: " + it->second);
+		throw std::invalid_argument("invalid error page format");
+	if (it->first != ARGUMENT)
+		throw std::invalid_argument("invalid error page argument: " + it->second);
+	for (const uint16_t& code : returnCodes)
+	{
+		errorPageMap[code] = it->second;
+	}
+}
+
+void	ConfigParser:: handleMaxBodySize(
+	uint64_t& maxBodySize,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	uint64_t	initialSize;
+	std::size_t	pos;
+
+	initialSize = static_cast<uint64_t>(std::stoull(it->second, &pos));
+	const std::string unit = it->second.substr(pos);
+	if (unit.empty())
+	{
+		maxBodySize = initialSize;
+	}
+	else if (unit == "B")
+	{
+		maxBodySize = initialSize;
+	}
+	else if (unit == "KB")
+	{
+		maxBodySize = initialSize * 1024;
+		if (maxBodySize != 0 && maxBodySize / 1024 != initialSize)
+			throw std::out_of_range("max body size overflow");
+	}
+	else if (unit == "MB")
+	{
+		maxBodySize = initialSize * 1024 * 1024;
+		if (maxBodySize != 0 && maxBodySize / 1024 / 1024 != initialSize)
+			throw std::out_of_range("max body size overflow");
+	}
+	else if (unit == "GB")
+	{
+		maxBodySize = initialSize * 1024 * 1024 * 1024;
+		if (maxBodySize != 0 && maxBodySize / 1024 / 1024 / 1024 != initialSize)
+			throw std::out_of_range("max body size overflow");
+	}
+	else
+	{
+		throw std::invalid_argument("invalid unit type: " + it->second);
+	}
 }
 
 ServerSettings	ConfigParser:: createServerSettings(
@@ -302,7 +347,8 @@ ServerSettings	ConfigParser:: createServerSettings(
 		if (it->first == LOCATION)
 		{
 			expectNextToken(end, it, ARGUMENT);
-			server.m_Locations.emplace(it->second, createLocationSettings(end, it));
+			const std::filesystem::path location = it->second;
+			server.m_Locations.emplace(location, createLocationSettings(end, it));
 			continue ;
 		}
 		else if (it->first == LIMIT_EXCEPT)
@@ -356,6 +402,12 @@ ServerSettings	ConfigParser:: createServerSettings(
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleErrorPage(server.m_GlobalSettings.errorPageMap, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == MAX_BODY_SIZE)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleMaxBodySize(server.m_GlobalSettings.maxBodySize, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == AUTOINDEX)
@@ -432,6 +484,24 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 			handleCgi(location.cgi, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
+		else if (it->first == REDIRECT)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleRedirect(location.returnCode, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == ERROR_PAGE)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleErrorPage(location.errorPageMap, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
+		else if (it->first == MAX_BODY_SIZE)
+		{
+			expectNextToken(end, it, ARGUMENT);
+			handleMaxBodySize(location.maxBodySize, end, it);
+			expectNextToken(end, it, DIRECTIVE_END);
+		}
 		else if (it->first == AUTOINDEX)
 		{
 			expectNextToken(end, it, ARGUMENT);
@@ -479,6 +549,7 @@ ConfigParser::TokenIdentifier	ConfigParser:: getIdentifier(
 		{"location", LOCATION},
 		{"limit_except", LIMIT_EXCEPT},
 		{"error_page", ERROR_PAGE},
+		{"client_max_body_size", MAX_BODY_SIZE},
 		{"deny", HTTP_METHOD_DENY},
 	};
 	const std::unordered_map<std::string, TokenIdentifier> NonDirectiveMap = {
@@ -514,6 +585,7 @@ std::string	ConfigParser:: identifierToString(TokenIdentifier id)
 		{LOCATION, "location"},
 		{LIMIT_EXCEPT, "http_method"},
 		{ERROR_PAGE, "error_page"},
+		{MAX_BODY_SIZE, "client_max_body_size"},
 		{HTTP_METHOD_DENY, "http_method_deny"},
 		{BRACKET_OPEN, "bracket open"},
 		{BRACKET_CLOSE, "bracket close"},
