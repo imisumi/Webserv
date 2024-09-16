@@ -217,6 +217,18 @@ void	ConfigParser:: handleLimitExcept(
 	expectNextToken(end, it, BRACKET_CLOSE);
 }
 
+static inline bool	stringElementIsUnique(
+	const std::vector<std::string>& vec,
+	const std::string& input)
+{
+	for (const std::string& s : vec)
+	{
+		if (s == input)
+			return false;
+	}
+	return true;
+}
+
 void	ConfigParser:: handleIndex(
 	std::vector<std::string>& indexFiles,
 	const TokenMap::const_iterator& end,
@@ -231,7 +243,8 @@ void	ConfigParser:: handleIndex(
 		}
 		if (it->first != ARGUMENT)
 			throw std::invalid_argument("invalid index argument: " + it->second);
-		indexFiles.push_back(it->second);
+		if (stringElementIsUnique(indexFiles, it->second))
+			indexFiles.push_back(it->second);
 	}
 	if (it == end)
 		throw std::invalid_argument("invalid index format");
@@ -352,6 +365,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 {
 	ServerSettings	server;
 	bool			expectDirective = true;
+	std::vector<TokenMap::const_iterator>	locationStart;
 
 	expectNextToken(end, it, BRACKET_OPEN);
 	it++;
@@ -361,9 +375,10 @@ ServerSettings	ConfigParser:: createServerSettings(
 	{
 		if (it->first == LOCATION)
 		{
+			locationStart.push_back(it);
+			ServerSettings::LocationSettings	dummyLocation;
 			expectNextToken(end, it, ARGUMENT);
-			const std::filesystem::path location = it->second;
-			server.m_Locations.emplace(location, createLocationSettings(end, it));
+			addLocationSettings(dummyLocation, end, it);
 			continue ;
 		}
 		else if (it->first == LIMIT_EXCEPT)
@@ -439,6 +454,14 @@ ServerSettings	ConfigParser:: createServerSettings(
 		if (it->first == DIRECTIVE_END)
 			expectDirective = true;
 	}
+	for (TokenMap::const_iterator loc : locationStart)
+	{
+		expectNextToken(end, loc, ARGUMENT);
+		ServerSettings::LocationSettings	location = server.m_GlobalSettings;
+		const std::filesystem::path			locationPath = loc->second;
+		addLocationSettings(location, end, loc);
+		server.m_Locations.emplace(locationPath, location);
+	}
 	if (server.m_GlobalSettings.root.empty())
 		throw std::runtime_error("no root specified");
 	if (server.m_Ports.empty())
@@ -446,11 +469,12 @@ ServerSettings	ConfigParser:: createServerSettings(
 	return server;
 }
 
-ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
+ServerSettings::LocationSettings	ConfigParser:: addLocationSettings(
+	ServerSettings::LocationSettings& location,
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
-	ServerSettings::LocationSettings	location;
+	// ServerSettings::LocationSettings	location;
 	bool								expectDirective = true;
 
 	expectNextToken(end, it, BRACKET_OPEN);
