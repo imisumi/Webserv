@@ -234,6 +234,7 @@ void	ConfigParser:: handleIndex(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
+	indexFiles.clear();
 	for (; it != end; it++)
 	{
 		if (it->first == DIRECTIVE_END)
