@@ -330,10 +330,27 @@ void Cgi::handleChildProcess(const HttpRequest& request, int pipefd[])
 
 	char* argv[] = { const_cast<char*>(path.c_str()), NULL };
 	const char* envp[] = {
-		"SERVER_SOFTWARE=Webserv/1.0",
+		"CONTENT_LENGTH=",
 		"QUERY_STRING=", // Add query string if available
+		"REQUESTED_URI=", // Add request URI
+		"REDIRECT_STATUS=200",
+		"SCRIPT_NAME=", // Add script name
+		"SCRIPT_FILENAME=", // Add script filename
+		"DOCUMENT_ROOT=", // Add document root
 		"REQUEST_METHOD=GET", // Add request method (GET/POST etc.)
-		"REQUEST_URI=", // Add request URI
+		"SERVER_PROTOCOL=HTTP/1.1",
+		"SERVER_SOFTWARE=Webserv/1.0",
+		"SERVER_PORT=8080",
+		"SERVER_ADDR=",
+		"SERVER_NAME=",
+		"REMOTE_ADDR=", // Add remote address
+		"REMOTE_PORT=", // Add remote port
+		"HTTP_HOST=", // Add host
+		"HTTP_USER_AGENT=", // Add user agent
+		"HTTP_ACCEPT=", // Add accept
+		"HTTP_ACCEPT_LANGUAGE=", // Add accept language
+		"HTTP_ACCEPT_ENCODING=", // Add accept encoding
+		"HTTP_CONNECTION=", // Add connection
 		nullptr
 	};
 
@@ -347,57 +364,4 @@ const std::string Cgi::handleParentProcess(int pipefd[], pid_t pid)
 	close(pipefd[WRITE_END]); // Close the write end of the pipe
 
 	return "";
-
-	int status;
-	// if (waitpid(pid, &status, 0) == -1)
-	// {
-	// 	perror("waitpid");
-	// 	close(pipefd[READ_END]);
-	// 	return ResponseGenerator::InternalServerError(config);
-	// }
-
-
-	// if (waitpid(pid, &status, WNOHANG) == -1)
-	// {
-	// 	perror("waitpid");
-	// 	close(pipefd[READ_END]);
-	// 	return ResponseGenerator::InternalServerError(config);
-	// }
-
-
-	// if (WIFEXITED(status) && WEXITSTATUS(status) == EXIT_SUCCESS)
-	// {
-	// 	LOG_INFO("Successfully executed CGI script");
-	// 	char buffer[1024];
-	// 	std::string output;
-	// 	ssize_t count;
-	// 	while ((count = read(pipefd[READ_END], buffer, sizeof(buffer))) > 0)
-	// 	{
-	// 		output.append(buffer, count);
-	// 	}
-	// 	close(pipefd[READ_END]);
-
-	// 	size_t header_end = output.find("\r\n\r\n");
-	// 	if (header_end != std::string::npos)
-	// 	{
-	// 		size_t bodyLength = output.size() - header_end - 4;
-	// 		std::string httpResponse = "HTTP/1.1 200 OK\r\n";
-	// 		httpResponse += "Content-Length: " + std::to_string(bodyLength) + "\r\n";
-	// 		httpResponse += "Connection: close\r\n";
-	// 		httpResponse += "\r\n"; // End of headers
-	// 		httpResponse += output.substr(header_end + 4); // Body
-
-
-	// 		LOG_INFO("Successfully executed CGI script");
-	// 		return httpResponse;
-	// 	}
-	// 	else
-	// 	{
-	// 		LOG_ERROR("CGI script did not produce valid headers");
-	// 		return ResponseGenerator::InternalServerError(config);
-	// 	}
-	// }
-	// // LOG_ERROR("CGI script failed with status: " + std::to_string(WEXITSTATUS(status)));
-	// // close(pipefd[READ_END]);
-	// return ResponseGenerator::InternalServerError(config);
 }

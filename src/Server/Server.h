@@ -64,49 +64,18 @@ public:
 	Server& operator=(const Server&) = delete;
 
 
-	int GetEpollInstance() const
-	{
-		return m_EpollInstance;
-	}
+	int GetEpollInstance() const { return m_EpollInstance; }
 
-	void SetCgiToClientMap(int cgi_fd, int client_fd)
-	{
-		m_CgiToClientMap[cgi_fd] = client_fd;
-	}
+	void SetCgiToClientMap(int cgi_fd, int client_fd) { m_CgiToClientMap[cgi_fd] = client_fd; }
 
-	int GetClientFromCgi(int cgi_fd)
-	{
-		return m_CgiToClientMap[cgi_fd];
-	}
-
-
-	// struct EpolLData GetEpollEventFD(int fd)
-	// {
-	// 	return m_FdEventMap[fd];
-	// }
-
-	// struct EpollData GetEpollData(int fd)
-	// {
-	// 	return m_FdEventMap[fd];
-	// }
-
-	// static int AddEpollEvent(int fd, int event);
-
+	int GetClientFromCgi(int cgi_fd) { return m_CgiToClientMap[cgi_fd]; }
 
 	static int AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
 	static int ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
 	static int RemoveEpollEvent(int epollFD, int fd);
 
-	// int AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
-	// int RemoveEpollEvent(int epollFD, int fd);
-	// int ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
-
-
-
-
 	std::unordered_map<pid_t, int> childProcesses;
 	std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
-
 
 	static int CgiRedirect(int cgi_fd, int redir_fd);
 	static void RegisterCgiProcess(pid_t pid, int client_fd) { Get().childProcesses[pid] = client_fd; }
@@ -115,22 +84,12 @@ public:
 
 	static ServerSettings* GetServerSettings(uint64_t packedIpPort) { return Get().m_Config[packedIpPort][0]; }
 
-
-	// Client GetClient(int fd)
-	// {
-	// 	return m_Clients[fd];
-	// }
 private:
 	Server(const Config& config);
 	~Server();
 
 	int isServerSocket(int fd);
 
-	// int CreateServerSocket();
-	// void BindServerSocket();
-	// void ListenServerSocket();
-	Client AcceptConnection(int socket_fd);
-	// void HandleInputEvent(int fd);
 	void HandleSocketInputEvent(Client& client);
 	void HandleOutputEvent(int fd);
 
@@ -143,20 +102,6 @@ private:
 	int BindSocket(int fd, const SocketAddressConfig& config);
 	int ListenOnSocket(int socket_fd, int backlog);
 
-
-	// void RemoveClient(int socket_fd)
-	// {
-	// 	auto it = m_Clients.find(socket_fd);
-	// 	if (it != m_Clients.end())
-	// 	{
-	// 		m_Clients.erase(it);
-	// 	}
-	// }
-
-	// uint32_t GetClientCount() const
-	// {
-	// 	return m_Clients.size();
-	// }
 
 private:
 	static constexpr int m_MaxPollEvents = 1024;
@@ -171,29 +116,17 @@ private:
 	std::vector<int> m_ServerPorts;
 
 	// int port, int socket fd
-	// std::unordered_map<int, int> m_ServerSockets;
 	std::unordered_map<uint64_t, int> m_ServerSockets64;
 	int m_EpollInstance = -1;
-
-
 
 	struct sockaddr_in m_SockAddress;
 	RequestHandler m_RequestHandler;
 	ResponseSender m_ResponseSender;
-
-	// std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data
-
-	// std::unordered_map<int, struct epoll_event> m_FdEventMap;
+	
 	std::unordered_map<int, struct EpollData> m_FdEventMap;
 	std::unordered_map<int, int> m_CgiToClientMap;
 
 
-	// std::unordered_map<int, Client> m_Clients;
-
 
 	struct EpollData m_Events[MAX_EVENTS];
-
-
-
-	// std::unordered_map<pid_t, int> childProcesses;
 };

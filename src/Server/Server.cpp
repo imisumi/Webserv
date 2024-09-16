@@ -1,13 +1,19 @@
+// #include "pch.h"
+
 #include "Server.h"
 #include "Core/Core.h"
 
 #include "ResponseGenerator.h"
 #include "ConnectionManager.h"
 
+
+
+
 #include <chrono>
 #include <thread>
 #include <filesystem>
 #include <fstream>
+
 
 // include socket headers
 #include <sys/socket.h>
@@ -423,53 +429,6 @@ bool Server::IsRunning()
 	return s_Instance->m_Running;
 }
 
-
-// Client Server::AcceptConnection(int socket_fd)
-// {
-// 	struct sockaddr_in clientAddress;
-// 	socklen_t clientAddressLength = sizeof(clientAddress);
-
-// 	// Handle new incoming connection
-// 	Client client = accept(socket_fd, (struct sockaddr*)&clientAddress, &clientAddressLength);
-// 	if (client == -1)
-// 	{
-// 		LOG_ERROR("accept: {}", strerror(errno));
-// 		return -1;
-// 	}
-
-// 	client.Initialize(clientAddress);
-
-// 	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}", 
-// 	client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort());
-
-// 	struct EpollData *data = new EpollData();
-// 	data->fd = client;
-// 	data->type = EPOLL_TYPE_SOCKET;
-// 	data->cgi_fd = -1;
-
-// 	// if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
-// 	if (AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, data) == -1)
-// 	{
-// 		LOG_ERROR("Failed to add client socket to epoll!");
-// 		// m_Clients.erase(client);
-// 		close(client);
-// 		return -1;
-// 	}
-
-// 	client.SetEpollInstance(s_Instance->m_EpollInstance);
-
-
-
-
-
-// 	uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
-			
-// 	ServerSettings* settings = s_Instance->m_Config[packedIpPort][0];
-// 	LOG_INFO("Server name: {}", settings->GetServerName());
-// 	client.SetConfig(settings);
-// 	return client;
-// }
-
 void Server::HandleSocketInputEvent(Client& client)
 {
 	LOG_INFO("Handling socket input event...");
@@ -645,6 +604,11 @@ void Server::HandleOutputEvent(int epoll_fd)
 		if (bytes == -1)
 		{
 			LOG_ERROR("send: {}", strerror(errno));
+			if (RemoveEpollEvent(s_Instance->m_EpollInstance, epoll_fd) == -1)
+			{
+				LOG_ERROR("Failed to remove client socket from epoll!");
+				s_Instance->m_Running = false;
+			}
 			close(epoll_fd);
 		}
 		else
