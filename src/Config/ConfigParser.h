@@ -60,6 +60,7 @@ class ConfigParser
 
 		static void	expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it, TokenIdentifier expected);
 		static void	handlePort(std::vector<uint64_t>& ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleRoot(std::filesystem::path& root, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleIndex(std::vector<std::string>& indexFiles, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleCgi(std::vector<std::string>& cgi, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleRedirect(uint16_t& redirect, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);

@@ -156,6 +156,21 @@ void	ConfigParser:: handlePort(
 	ports.emplace_back(result);
 }
 
+void	ConfigParser:: handleRoot(
+	std::filesystem::path& root,
+	const TokenMap::const_iterator& end,
+	TokenMap::const_iterator& it)
+{
+	if (it->second[0] == '/')
+	{
+		root = it->second;
+	}
+	else
+	{
+		root = std::filesystem::current_path() / it->second;
+	}
+}
+
 void	ConfigParser:: handleAutoIndex(
 	bool& autoIndex,
 	const TokenMap::const_iterator& end,
@@ -377,7 +392,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 		else if (it->first == ROOT)
 		{
 			expectNextToken(end, it, ARGUMENT);
-			server.m_GlobalSettings.root = it->second;
+			handleRoot(server.m_GlobalSettings.root, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == INDEX)
@@ -469,7 +484,7 @@ ServerSettings::LocationSettings	ConfigParser:: createLocationSettings(
 		else if (it->first == ROOT)
 		{
 			expectNextToken(end, it, ARGUMENT);
-			location.root = it->second;
+			handleRoot(location.root, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == INDEX)
