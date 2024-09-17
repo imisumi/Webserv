@@ -44,7 +44,7 @@ const std::string RequestHandler::HandleRequest(Client& client, const std::strin
 	LOG_INFO("Allowed methods: {}", allowedMethods);
 
 	//TODO: this is not working correctly
-	if (allowedMethods & static_cast<uint8_t>(req.method))
+	// if (allowedMethods & static_cast<uint8_t>(req.method))
 	{
 		return ResponseGenerator::generateResponse(client, req);
 	}

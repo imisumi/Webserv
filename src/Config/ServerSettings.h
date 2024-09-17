@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ServerSettings.h                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/13 17:31:27 by imisumi          ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ServerSettings.h                                   :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/09/17 15:20:22 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,19 +16,21 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 class ServerSettings
 {
 	public:
 		struct LocationSettings
 		{
-			std::filesystem::path		root;
-			std::vector<std::string>	index = {"index.html"};
-			bool						autoindex = true;
-			std::vector<std::string>	cgi;
-			std::string					returnCode;
-			std::string					errorPages;
-			uint8_t						httpMethods = 1;
+			std::filesystem::path								root;
+			std::vector<std::string>							index = {"index.html, index.htm, index.php"};
+			bool												autoindex = false;
+			std::vector<std::string>							cgi;
+			uint16_t											returnCode = 0;
+			std::unordered_map<uint16_t, std::filesystem::path>	errorPageMap;
+			uint64_t											maxBodySize = 1024;
+			uint8_t												httpMethods = 1;
 		};
 
 	private:
@@ -96,8 +98,4 @@ class ServerSettings
 			return m_GlobalSettings;
 		}
 
-		// const LocationSettings& operator[](std::filesystem::path path) const
-		// {
-		// 	return GetLocationSettings(path);
-		// }
 };

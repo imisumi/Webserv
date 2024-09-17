@@ -113,6 +113,7 @@
 		"source_location": "cpp",
 		"numbers": "cpp",
 		"semaphore": "cpp",
-		"cinttypes": "cpp"
+		"cinttypes": "cpp",
+		"shared_mutex": "cpp"
 	}
 }

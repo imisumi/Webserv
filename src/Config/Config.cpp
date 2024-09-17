@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:31 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/12 15:05:52 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/16 21:13:05 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,29 +87,37 @@ void	Config:: print()
         // std::cout << "Server: " << key << std::endl;
         auto [ip, port] = ExtractIpAndPort(key);
         std::cout << "Server\n{\n";
-        std::cout << "\tServer name: " << value[0]->GetServerName() << std::endl;
-        std::cout << "\tListening on: " << ip << ":" << port << std::endl;
+        std::cout << "\tServer name: " << value[0]->GetServerName() << '\n';
+        std::cout << "\tListening on: " << ip << ":" << port << '\n';
         for (const auto& server : value)
         {
-            std::cout << "\tRoot: " << server->GetGlobalSettings().root << std::endl;
+            std::cout << "\tRoot: " << server->GetGlobalSettings().root << '\n';
 			for (auto& i : server->GetGlobalSettings().index)
-				std::cout << "\tIndex: " << i << std::endl;
-            std::cout << "\tAutoindex: " << std::boolalpha << server->GetGlobalSettings().autoindex << std::endl;
+				std::cout << "\tIndex: " << i << '\n';
+            std::cout << "\tAutoindex: " << std::boolalpha << server->GetGlobalSettings().autoindex << '\n';
 			for (auto& i : server->GetGlobalSettings().cgi)
-				std::cout << "\tCgi: " << i << std::endl;
-            std::cout << "\tMethods: " << MethodToString(server->GetGlobalSettings().httpMethods) << std::endl;
-            std::cout << std::endl;
+				std::cout << "\tCgi: " << i << '\n';
+            std::cout << "\tMethods: " << MethodToString(server->GetGlobalSettings().httpMethods) << '\n';
+			std::cout << "\tRedirect: " << server->GetGlobalSettings().returnCode << '\n';
+			std::cout << "\tMax Client Body Size: " << server->GetGlobalSettings().maxBodySize << "B\n";
+			for (const auto& [key, value] : server->GetGlobalSettings().errorPageMap)
+				std::cout << "\tError Page: " << key << " - " << value << '\n';
+            std::cout << '\n';
             for (const auto& [path, location] : server->GetLocations())
             {
-                std::cout << "\tLocation: " << path << std::endl;
+                std::cout << "\tLocation: " << path << '\n';
                 std::cout << "\t{\n";
-                std::cout << "\t\tRoot: " << location.root << std::endl;
+                std::cout << "\t\tRoot: " << location.root << '\n';
 				for (auto& i : location.index)
-					std::cout << "\t\tIndex: " << i << std::endl;
-                std::cout << "\t\tAutoindex: " << std::boolalpha << location.autoindex << std::endl;
+					std::cout << "\t\tIndex: " << i << '\n';
+                std::cout << "\t\tAutoindex: " << std::boolalpha << location.autoindex << '\n';
 				for (auto& i : location.cgi)
-					std::cout << "\t\tCgi: " << i << std::endl;
-                std::cout << "\t\tMethods: " << MethodToString(location.httpMethods) << std::endl;
+					std::cout << "\t\tCgi: " << i << '\n';
+				std::cout << "\t\tRedirect: " << location.returnCode << '\n';
+				std::cout << "\t\tMax Client Body Size: " << location.maxBodySize << "B\n";
+				for (const auto& [key, value] : location.errorPageMap)
+					std::cout << "\t\tError Page: " << key << " - " << value << '\n';
+                std::cout << "\t\tMethods: " << MethodToString(location.httpMethods) << '\n';
                 std::cout << "\t}\n";
             }
         }
