@@ -33,6 +33,14 @@ static const char s_InternalServerErrorResponse[] =
 		"\r\n"
 		"500 Internal Server Error: Server Error"; //? body of the response
 
+static const char s_OkResponse[] = 
+		"HTTP/1.1 200 OK\r\n"
+		"Content-Length: 6\r\n" //? length has to match the length of the body
+		"Connection: close\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"200 OK"; //? body of the response
+
 static const char s_MethodNotAllowedResponse[] =
 		"HTTP/1.1 405 Method Not Allowed\r\n"
 		"Content-Length: 42\r\n" //? length has to match the length of the body
@@ -314,19 +322,19 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 
 	// very temp CGI
 	std::string uir = request.getUri().string();
-	if (uir.find("/cgi-bin/") != std::string::npos)
-	{
-		LOG_DEBUG("Requested path is a CGI script");
+	// if (uir.find("/cgi-bin/") != std::string::npos)
+	// {
+	// 	LOG_DEBUG("Requested path is a CGI script");
 
-		std::filesystem::path fileName = request.getUri().filename();
-		HttpRequest updatedRequest = request;
-		std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
-		updatedRequest.setUri(cgiPath / fileName);
-		LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
-		// Cgi::executeCGI(client, updatedRequest);
-		return Cgi::executeCGI(client, updatedRequest);
-		return "";
-	}
+	// 	std::filesystem::path fileName = request.getUri().filename();
+	// 	HttpRequest updatedRequest = request;
+	// 	std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
+	// 	updatedRequest.setUri(cgiPath / fileName);
+	// 	LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
+	// 	// Cgi::executeCGI(client, updatedRequest);
+	// 	return Cgi::executeCGI(client, updatedRequest);
+	// 	return "";
+	// }
 
 	//? Validate the requested path
 	if (std::filesystem::exists(request.getUri()))
@@ -347,12 +355,13 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 
 			// const std::filesystem::path& uri = request.getUri();
 			updatedRequest.setUri(updatedRequest.getUri() / index);
+			LOG_ERROR("Updated URI: {}", updatedRequest.getUri().string());
 			if (!std::filesystem::exists(updatedRequest.getUri()))
 			{
 				//? if autoindex is enabled, generate a list of files in the directory
 
 		
-				const char *scriptPath = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
+				const char *scriptPath = "/home/kwchu/Documents/webserver/root/webserv/cgi-bin/directory_listing.py";
 				std::string arg = request.getUri().string();
 				const char *arg1 = arg.c_str();
 				// Prepare the argv array. First element is the script itself.
@@ -581,6 +590,13 @@ std::string ResponseGenerator::generateInternalServerErrorResponse()
 const std::string ResponseGenerator::InternalServerError(const Config& config)
 {
 	static std::string response = s_InternalServerErrorResponse;
+
+	return response;
+}
+
+const std::string ResponseGenerator::OkResponse()
+{
+	static std::string response = s_OkResponse;
 
 	return response;
 }

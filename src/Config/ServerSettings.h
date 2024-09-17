@@ -6,7 +6,7 @@
 /*   By: imisumi <imisumi@student.42.fr>              +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/17 15:20:22 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/17 16:20:30 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <iostream>
 
 class ServerSettings
 {
@@ -24,7 +25,7 @@ class ServerSettings
 		struct LocationSettings
 		{
 			std::filesystem::path								root;
-			std::vector<std::string>							index = {"index.html, index.htm, index.php"};
+			std::vector<std::string>							index = {"index.html", "index.htm", "index.php"};
 			bool												autoindex = false;
 			std::vector<std::string>							cgi;
 			uint16_t											returnCode = 0;

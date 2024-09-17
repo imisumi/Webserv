@@ -370,7 +370,7 @@ void Server::Run()
 				{
 					LOG_ERROR("Failed to accept connection!");
 				}
-				ConnectionManager::RegisterClient(newClient, newClient);
+				ConnectionManager::RegisterClient((int)newClient, newClient);
 				// s_Instance->m_Clients[newClient] = newClient;
 				continue;
 			}
@@ -436,7 +436,20 @@ void Server::HandleSocketInputEvent(Client& client)
 			
 	// ServerSettings settings = s_Instance->m_Config[packedIpPort][0];
 	// LOG_INFO("Server name: {}", settings.GetServerName());
+	// m_ClientResponses[client] = ResponseGenerator::OkResponse();
+	// struct EpollData* data = new EpollData();
+	// data->fd = client;
+	// data->type = EPOLL_TYPE_SOCKET;
+	// data->cgi_fd = -1;
 
+	// // if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
+	// if (ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, data) == -1)
+	// {
+	// 	LOG_ERROR("Failed to modify client socket in epoll!");
+	// 	s_Instance->m_Running = false;
+	// 	return;
+	// }
+	// return;
 	//TODO: what if the buffer is too small?
 	char buffer[BUFFER_SIZE];
 
