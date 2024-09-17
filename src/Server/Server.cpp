@@ -268,7 +268,7 @@ void Server::Init(const Config& config)
 			return;
 		}
 
-		if (listen(socketFD, 3) == -1)
+		if (listen(socketFD, 512) == -1)
 		{
 			LOG_ERROR("Failed to listen on server socket!");
 			s_Instance->m_Running = false;
