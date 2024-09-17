@@ -339,19 +339,19 @@ void	ConfigParser:: handleMaxBodySize(
 	else if (unit == "KB")
 	{
 		maxBodySize = initialSize * 1024;
-		if (maxBodySize != 0 && maxBodySize / 1024 != initialSize)
+		if (maxBodySize / 1024 != initialSize)
 			throw std::out_of_range("max body size overflow");
 	}
 	else if (unit == "MB")
 	{
 		maxBodySize = initialSize * 1024 * 1024;
-		if (maxBodySize != 0 && maxBodySize / 1024 / 1024 != initialSize)
+		if (maxBodySize / 1024 / 1024 != initialSize)
 			throw std::out_of_range("max body size overflow");
 	}
 	else if (unit == "GB")
 	{
 		maxBodySize = initialSize * 1024 * 1024 * 1024;
-		if (maxBodySize != 0 && maxBodySize / 1024 / 1024 / 1024 != initialSize)
+		if (maxBodySize / 1024 / 1024 / 1024 != initialSize)
 			throw std::out_of_range("max body size overflow");
 	}
 	else
