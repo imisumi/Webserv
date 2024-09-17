@@ -6,7 +6,7 @@
 /*   By: imisumi <imisumi@student.42.fr>              +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/16 21:33:41 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/17 14:45:57 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ class ServerSettings
 		struct LocationSettings
 		{
 			std::filesystem::path								root;
-			std::vector<std::string>							index = {"index.html"};
+			std::vector<std::string>							index = {"index.html, index.htm, index.php"};
 			bool												autoindex = false;
 			std::vector<std::string>							cgi;
 			uint16_t											returnCode = 0;

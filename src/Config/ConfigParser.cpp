@@ -217,13 +217,14 @@ void	ConfigParser:: handleLimitExcept(
 	expectNextToken(end, it, BRACKET_CLOSE);
 }
 
-static inline bool	stringElementIsUnique(
-	const std::vector<std::string>& vec,
-	const std::string& input)
+template<typename T>
+static inline bool	elementIsUniqueInVector(
+	const std::vector<T>& vec,
+	const T& input)
 {
-	for (const std::string& s : vec)
+	for (const T& element : vec)
 	{
-		if (s == input)
+		if (element == input)
 			return false;
 	}
 	return true;
@@ -244,7 +245,7 @@ void	ConfigParser:: handleIndex(
 		}
 		if (it->first != ARGUMENT)
 			throw std::invalid_argument("invalid index argument: " + it->second);
-		if (stringElementIsUnique(indexFiles, it->second))
+		if (elementIsUniqueInVector(indexFiles, it->second))
 			indexFiles.push_back(it->second);
 	}
 	if (it == end)
@@ -287,7 +288,11 @@ void	ConfigParser:: handleErrorPage(
 	TokenMap::const_iterator& it)
 {
 	std::vector<uint16_t>	returnCodes;
+	std::vector<uint16_t>	replaceReturnCodes;
+	bool					replace = false;
 
+	if (!errorPageMap.empty())
+		replace = true;
 	if (!containsDigitsExclusively(it->second))
 		throw std::invalid_argument("invalid error page format");
 	for (; it != end; it++)
@@ -299,6 +304,8 @@ void	ConfigParser:: handleErrorPage(
 			const uint16_t currentReturnCode = stringToUInt16(it->second);
 			if (currentReturnCode < 100 || currentReturnCode > 599)
 				throw std::invalid_argument("invalid error page redirect code");
+			if (replace && errorPageMap.find(currentReturnCode) != errorPageMap.end())
+				replaceReturnCodes.push_back(currentReturnCode);
 			auto result = errorPageMap.insert({currentReturnCode, std::filesystem::path()});
 			if (result.second)
 				returnCodes.push_back(currentReturnCode);
@@ -312,6 +319,10 @@ void	ConfigParser:: handleErrorPage(
 		throw std::invalid_argument("invalid error page format");
 	if (it->first != ARGUMENT)
 		throw std::invalid_argument("invalid error page argument: " + it->second);
+	for (const uint16_t& code : replaceReturnCodes)
+	{
+		errorPageMap[code] = it->second;
+	}
 	for (const uint16_t& code : returnCodes)
 	{
 		errorPageMap[code] = it->second;
@@ -366,6 +377,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 {
 	ServerSettings	server;
 	bool			expectDirective = true;
+	uint16_t		repeatDirective = 0;
 	std::vector<TokenMap::const_iterator>	locationStart;
 
 	expectNextToken(end, it, BRACKET_OPEN);
@@ -382,10 +394,11 @@ ServerSettings	ConfigParser:: createServerSettings(
 			addLocationSettings(dummyLocation, end, it);
 			continue ;
 		}
-		else if (it->first == LIMIT_EXCEPT)
+		else if (it->first == LIMIT_EXCEPT && !(repeatDirective & (1 << LIMIT_EXCEPT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleLimitExcept(server.m_GlobalSettings.httpMethods, end, it);
+			repeatDirective |= (1 << LIMIT_EXCEPT);
 			continue ;
 		}
 
@@ -393,11 +406,12 @@ ServerSettings	ConfigParser:: createServerSettings(
 			throw std::invalid_argument("expected directive: found \"" + it->second + '\"');
 		expectDirective = false;
 
-		if (it->first == SERVER_NAME)
+		if (it->first == SERVER_NAME && !(repeatDirective & (1 << SERVER_NAME)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			server.m_ServerName = it->second;
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << SERVER_NAME);
 		}
 		else if (it->first == PORT)
 		{
@@ -405,29 +419,33 @@ ServerSettings	ConfigParser:: createServerSettings(
 			handlePort(server.m_Ports, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
-		else if (it->first == ROOT)
+		else if (it->first == ROOT && !(repeatDirective & (1 << ROOT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleRoot(server.m_GlobalSettings.root, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << ROOT);
 		}
-		else if (it->first == INDEX)
+		else if (it->first == INDEX && !(repeatDirective & (1 << INDEX)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleIndex(server.m_GlobalSettings.index, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << INDEX);
 		}
-		else if (it->first == CGI)
+		else if (it->first == CGI && !(repeatDirective & (1 << CGI)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleCgi(server.m_GlobalSettings.cgi, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << CGI);
 		}
-		else if (it->first == REDIRECT)
+		else if (it->first == REDIRECT && !(repeatDirective & (1 << REDIRECT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleRedirect(server.m_GlobalSettings.returnCode, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << REDIRECT);
 		}
 		else if (it->first == ERROR_PAGE)
 		{
@@ -435,17 +453,19 @@ ServerSettings	ConfigParser:: createServerSettings(
 			handleErrorPage(server.m_GlobalSettings.errorPageMap, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
-		else if (it->first == MAX_BODY_SIZE)
+		else if (it->first == MAX_BODY_SIZE && !(repeatDirective & (1 << MAX_BODY_SIZE)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleMaxBodySize(server.m_GlobalSettings.maxBodySize, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << MAX_BODY_SIZE);
 		}
-		else if (it->first == AUTOINDEX)
+		else if (it->first == AUTOINDEX && !(repeatDirective & (1 << AUTOINDEX)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleAutoIndex(server.m_GlobalSettings.autoindex, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << AUTOINDEX);
 		}
 		else if (it->first == BRACKET_CLOSE)
 		{
@@ -475,8 +495,8 @@ ServerSettings::LocationSettings	ConfigParser:: addLocationSettings(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
-	// ServerSettings::LocationSettings	location;
-	bool								expectDirective = true;
+	bool		expectDirective = true;
+	uint16_t	repeatDirective = 0;
 
 	expectNextToken(end, it, BRACKET_OPEN);
 	it++;
@@ -488,10 +508,11 @@ ServerSettings::LocationSettings	ConfigParser:: addLocationSettings(
 		{
 			throw std::runtime_error("nested locations not allowed");
 		}
-		else if (it->first == LIMIT_EXCEPT)
+		else if (it->first == LIMIT_EXCEPT && !(repeatDirective & (1 << LIMIT_EXCEPT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleLimitExcept(location.httpMethods, end, it);
+			repeatDirective |= (1 << LIMIT_EXCEPT);
 			continue ;
 		}
 
@@ -506,29 +527,33 @@ ServerSettings::LocationSettings	ConfigParser:: addLocationSettings(
 		{
 			throw std::runtime_error("port not allowed in location context");
 		}
-		else if (it->first == ROOT)
+		else if (it->first == ROOT && !(repeatDirective & (1 << ROOT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleRoot(location.root, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << ROOT);
 		}
-		else if (it->first == INDEX)
+		else if (it->first == INDEX && !(repeatDirective & (1 << INDEX)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleIndex(location.index, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << INDEX);
 		}
-		else if (it->first == CGI)
+		else if (it->first == CGI && !(repeatDirective & (1 << CGI)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleCgi(location.cgi, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << CGI);
 		}
-		else if (it->first == REDIRECT)
+		else if (it->first == REDIRECT && !(repeatDirective & (1 << REDIRECT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleRedirect(location.returnCode, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << REDIRECT);
 		}
 		else if (it->first == ERROR_PAGE)
 		{
@@ -536,17 +561,19 @@ ServerSettings::LocationSettings	ConfigParser:: addLocationSettings(
 			handleErrorPage(location.errorPageMap, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
-		else if (it->first == MAX_BODY_SIZE)
+		else if (it->first == MAX_BODY_SIZE && !(repeatDirective & (1 << MAX_BODY_SIZE)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleMaxBodySize(location.maxBodySize, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << MAX_BODY_SIZE);
 		}
-		else if (it->first == AUTOINDEX)
+		else if (it->first == AUTOINDEX && !(repeatDirective & (1 << AUTOINDEX)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleAutoIndex(location.autoindex, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
+			repeatDirective |= (1 << AUTOINDEX);
 		}
 		else if (it->first == BRACKET_CLOSE)
 		{
