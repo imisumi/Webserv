@@ -1,0 +1,38 @@
+<html>
+<head><title>File List with Delete</title></head>
+
+    <script>
+        function deleteFile(filename) {
+            if (confirm('Are you sure you want to delete ' + filename + '?')) {
+                fetch('/delete/' + encodeURIComponent(filename), {
+                    method: 'DELETE'
+                }).then(response => {
+                    if (response.ok) {
+                        alert('File deleted successfully.');
+                        window.location.reload();  // Reload the page after deletion
+                    } else {
+                        alert('Failed to delete file.');
+                    }
+                }).catch(error => {
+                    console.error('Error deleting file:', error);
+                });
+            }
+        }
+    </script>
+
+</head>
+<body>
+<h1>Files in Directory</h1>
+<ul>
+<li>text.txt <button onclick="deleteFile('text.txt')">Delete</button></li>
+</ul>
+
+    <button id="goBackButton" style="margin-top: 10px;">Go Back</button>
+    <script>
+        document.getElementById('goBackButton').addEventListener('click', function() {
+            window.history.back();
+        });
+    </script>
+
+</body>
+</html>

@@ -18,7 +18,7 @@
 #include "Client.h"
 
 #define MAX_EVENTS 4096
-#define BUFFER_SIZE 4096 * 2
+#define BUFFER_SIZE 12000 * 2
 
 class Server
 {
