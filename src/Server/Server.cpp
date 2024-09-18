@@ -480,8 +480,8 @@ void Server::HandleSocketInputEvent(Client& client)
 	{
 		buffer[n] = '\0';
 		const std::string bufferStr = std::string(buffer, n);
+		// LOG_TRACE("Received data: uncomment if u want more\n");
 		LOG_TRACE("Received data:\n{}", bufferStr);
-
 		//TODO: get the correct sevrer config and pass it to the request handler
 		Config config = ConfigParser::createDefaultConfig();
 		// const std::string response = s_Instance->m_RequestHandler.handleRequest(client, bufferStr);

@@ -221,11 +221,13 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 	WEB_ASSERT(!statusCode.empty(), "Invalid HTTP status code! (add a custom code or use a valid one)");
 
 	std::string connection = request.getHeader("Connection");
-	if (connection.empty())
+	if (connection != "keep-alive")
 	{
 		// connection = "keep-alive";
-		connection = "close";
+		// connection = "close";
 	}
+	//tofix hardcoded not kept alive
+	// connection = "close";
 	// connection = "keep-alive";
 
 
@@ -411,7 +413,6 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 	return generateNotFoundResponse();
 }
 
-
 #include <regex>
 
 bool isBoundaryString(const std::string &value) {
@@ -466,12 +467,12 @@ bool saveUploadedFile(const std::string &body, const std::string &boundary, cons
         std::string fileName = match[1].str();
         std::string fileContent = match[3].str();
 
-        std::string filePath = uploadDir + "/" + fileName;
         if (fileName.empty()) {
             std::cerr << "[INFO] No file uploaded." << std::endl;
             return true;
         }
 
+        std::string filePath = uploadDir + "/" + fileName;
         std::ofstream file(filePath, std::ios::binary);
         if (!file.is_open()) {
             std::cerr << "[ERROR] Failed to open file: " << filePath << std::endl;
@@ -480,13 +481,20 @@ bool saveUploadedFile(const std::string &body, const std::string &boundary, cons
 
         file.write(fileContent.c_str(), fileContent.size());
         file.close();
-        return !file.fail();
+        if (file.fail()) {
+            std::cerr << "[ERROR] Failed to write to file: " << filePath << std::endl;
+            return false;
+        }
+        return true;
     }
 
-    return true;
+    std::cerr << "[ERROR] Regex failed to match for file field: " << fieldName << std::endl;
+    return false;
 }
 
-const std::string ResponseGenerator::handlePostRequest(const Client& client, const HttpRequest& request) {
+
+
+const std::string ResponseGenerator::handlePostRequest(const Client& Client, const HttpRequest& request) {
     Utils::Timer timer;
     LOG_INFO("Handling POST request");
 
@@ -532,7 +540,9 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client, con
     return generateOKResponse(request);
 }
 
-const std::string ResponseGenerator::handleDeleteRequest(const Client& client, const HttpRequest& request) 
+
+
+const std::string ResponseGenerator::handleDeleteRequest(const Client& Client, const HttpRequest& request) 
 {
     Utils::Timer timer;
     LOG_INFO("Handling DELETE request");
@@ -567,6 +577,7 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& client, c
         return generateNotFoundResponse();
     }
 }
+
 
 
 
