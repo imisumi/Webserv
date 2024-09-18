@@ -207,7 +207,6 @@ void Server::Init(const Config& config)
 	}
 
 	//TODO: replace int with server settings, also this is handled in the config
-	std::unordered_map<uint64_t, int> serverHosts;
 	//? assuming that the config parser properly deals with duplicates
 
 	for (auto& [packedIPPort, serverSettings] : config)
@@ -227,13 +226,13 @@ void Server::Init(const Config& config)
 		}
 		LOG_INFO("Creating server socket on IP: {}, port: {}", ipStr, port);
 
-		auto it = s_Instance->m_ServerSockets64.find(packedIPPort);
-		if (it != s_Instance->m_ServerSockets64.end())
-		{
-			LOG_ERROR("Server socket already exists!");
-			s_Instance->m_Running = false;
-			return;
-		}
+		// auto it = s_Instance->m_ServerSockets64.find(packedIPPort);
+		// if (it != s_Instance->m_ServerSockets64.end())
+		// {
+		// 	LOG_ERROR("Server socket already exists!");
+		// 	s_Instance->m_Running = false;
+		// 	return;
+		// }
 
 		//? Logic
 		int socketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -248,9 +247,16 @@ void Server::Init(const Config& config)
 		int reuse = 1;
 		//? SO_REUSEADDR: allows other sockets to bind to an address even if it is already in use
 		//? SO_REUSEPORT: allows multiple sockets to bind to the same port and ip
-		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT , &reuse, sizeof(reuse)) == -1)
+		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == -1)
 		{
-			LOG_ERROR("Failed to set socket options!");
+			LOG_ERROR("Failed to set SO_REUSEADDR!");
+			s_Instance->m_Running = false;
+			return;
+		}
+		reuse = 1;
+		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse)) == -1)
+		{
+			LOG_ERROR("Failed to set SO_REUSEPORT!");
 			s_Instance->m_Running = false;
 			return;
 		}
@@ -368,7 +374,8 @@ void Server::Run()
 				Client newClient = ConnectionManager::AcceptConnection(epoll_fd);
 				if (newClient == -1)
 				{
-					LOG_ERROR("Failed to accept connection!");
+					// LOG_ERROR("Failed to accept connection!");
+					LOG_CRITICAL("Failed to accept connection!");
 				}
 				ConnectionManager::RegisterClient((int)newClient, newClient);
 				// s_Instance->m_Clients[newClient] = newClient;
@@ -400,16 +407,18 @@ void Server::Run()
 			}
 			else if (events[i].events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
 			{
-				LOG_INFO("Handling error event...");
-				LOG_INFO("Event type: {}", (int)events[i].events);
+				// LOG_INFO("Handling error event...");
+				// LOG_INFO("Event type: {}", (int)events[i].events);
+				LOG_CRITICAL("Handling error event...");
 
 				// close(epoll_fd);
 				// continue;
 			}
 			else
 			{
-				LOG_DEBUG("Unhandled event type");
-				LOG_INFO("Event type: {}", (int)events[i].events);
+				LOG_CRITICAL("Unhandled event type");
+				// LOG_DEBUG("Unhandled event type");
+				// LOG_INFO("Event type: {}", (int)events[i].events);
 			}
 		}
 	}
@@ -453,8 +462,16 @@ void Server::HandleSocketInputEvent(Client& client)
 	//TODO: what if the buffer is too small?
 	char buffer[BUFFER_SIZE];
 
-	//TODO: MSG_DONTWAIT or 0?
+	//TODO: put in a loop till all data is read
 	ssize_t n = recv(client, buffer, sizeof(buffer) - 1, 0);
+
+	if (errno == EAGAIN || errno == EWOULDBLOCK)
+	{
+		LOG_DEBUG("No data available to read.");
+		LOG_CRITICAL("No data available to read.");
+		return;
+	}
+	// ssize_t n = read(client, buffer, sizeof(buffer) - 1);
 	if (n > 0)
 	{
 		buffer[n] = '\0';
@@ -613,7 +630,12 @@ void Server::HandleOutputEvent(int epoll_fd)
 		// LOG_TRACE("Sending response to client:\n{}", response);
 		// LOG_INFO("Response:\n{}", response);
 
+		//TODO: bit in a loop till all data is sent
 		ssize_t bytes = send(epoll_fd, response.c_str(), response.size(), 0);
+		if (bytes < response.size())
+		{
+			LOG_ERROR("Failed to send entire response to client: {}", epoll_fd);
+		}
 		if (bytes == -1)
 		{
 			LOG_ERROR("send: {}", strerror(errno));

@@ -57,7 +57,7 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	socklen_t client_addr_len = sizeof(client_addr);
 
 	Client client = accept(socket_fd, (struct sockaddr*)&client_addr, &client_addr_len);
-	if (client == -1)
+	if ((int)client == -1)
 	{
 		LOG_ERROR("Failed to accept connection!");
 		return Client();
@@ -68,17 +68,36 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 		client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort());
 
 
+	// make the socket non-blocking
+	int flags = fcntl((int)client, F_GETFL, 0);
+	if (flags == -1)
+	{
+		LOG_ERROR("Failed to get socket flags!");
+		close((int)client);
+		return -1;
+	}
+
+	if (fcntl((int)client, F_SETFL, flags | O_NONBLOCK) == -1)
+	{
+		LOG_ERROR("Failed to set socket flags!");
+		close((int)client);
+		return -1;
+	}
+
+
+
+
 	struct Server::EpollData *data = new Server::EpollData();
-	data->fd = client;
+	data->fd = (int)client;
 	data->type = EPOLL_TYPE_SOCKET;
 	data->cgi_fd = -1;
 
 	// if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
-	if (Server::AddEpollEvent(Server::Get().GetEpollInstance(), client, EPOLLIN | EPOLLET, data) == -1)
+	if (Server::AddEpollEvent(Server::Get().GetEpollInstance(), (int)client, EPOLLIN | EPOLLET, data) == -1)
 	{
 		LOG_ERROR("Failed to add client socket to epoll!");
 		// m_Clients.erase(client);
-		close(client);
+		close((int)client);
 		return -1;
 	}
 
