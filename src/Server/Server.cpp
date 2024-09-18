@@ -268,7 +268,7 @@ void Server::Init(const Config& config)
 			return;
 		}
 
-		if (listen(socketFD, 512) == -1)
+		if (listen(socketFD, SOMAXCONN) == -1)
 		{
 			LOG_ERROR("Failed to listen on server socket!");
 			s_Instance->m_Running = false;
@@ -459,7 +459,7 @@ void Server::HandleSocketInputEvent(Client& client)
 	{
 		buffer[n] = '\0';
 		const std::string bufferStr = std::string(buffer, n);
-		LOG_TRACE("Received data:\n{}", bufferStr);
+		// LOG_TRACE("Received data:\n{}", bufferStr);
 
 		//TODO: get the correct sevrer config and pass it to the request handler
 		Config config = ConfigParser::createDefaultConfig();

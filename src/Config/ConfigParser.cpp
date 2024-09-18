@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ConfigParser.cpp                                   :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/18 12:53:07 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/18 13:04:40 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ConfigParser.cpp                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/18 12:53:07 by kwchu             #+#    #+#             */
+/*   Updated: 2024/09/18 14:24:52 by imisumi          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,7 +64,7 @@ void	ConfigParser::tokenMapToServerSettings(
 
 void	ConfigParser::assignPortToServerSettings(
 	ServerMap& serverMap, 
-	const Servers& servers)
+	Servers& servers)
 {
 	for (Servers::const_iterator it = servers.begin(); it != servers.end(); it++)
 	{
@@ -73,7 +73,7 @@ void	ConfigParser::assignPortToServerSettings(
 			serverMap[*itPort];
 		}
 	}
-	for (Servers::const_iterator it = servers.begin(); it != servers.end(); it++)
+	for (Servers::iterator it = servers.begin(); it != servers.end(); it++)
 	{
 		for (std::vector<uint64_t>::const_iterator itPort = it->m_Ports.begin(); itPort != it->m_Ports.end(); itPort++)
 		{

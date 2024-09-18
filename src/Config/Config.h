@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   Config.h                                           :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/18 13:05:39 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   Config.h                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/05 13:09:45 by kwchu             #+#    #+#             */
+/*   Updated: 2024/09/18 14:23:15 by imisumi          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,11 +23,11 @@
 class Config
 {
 	private:
-		std::unordered_map<uint64_t, std::vector<const ServerSettings*>>	m_ServerMap; // posible use index-based array
-		std::vector<ServerSettings>											m_Servers;
+		std::unordered_map<uint64_t, std::vector<ServerSettings*>>	m_ServerMap; // posible use index-based array
+		std::vector<ServerSettings>									m_Servers;
 		friend class ConfigParser;
 	public:
-		std::vector<const ServerSettings*>	operator[](const uint64_t key)
+		std::vector<ServerSettings*>	operator[](const uint64_t key)
 		{
 			// std::cout << "key: " << key << std::endl;
 			auto it = m_ServerMap.find(key);
@@ -45,7 +45,7 @@ class Config
 			}
 			return it->second;
 		};
-		const std::vector<const ServerSettings*> operator[](const uint64_t key) const
+		const std::vector<ServerSettings*> operator[](const uint64_t key) const
 		{
 			// std::cout << "key: " << key << std::endl;
 			auto it = m_ServerMap.find(key);

@@ -46,7 +46,7 @@ class ConfigParser
 
 		typedef std::vector<std::pair<TokenIdentifier, std::string>>		TokenMap;
 		typedef std::vector<std::string>									TokenVector;
-		typedef std::unordered_map<uint64_t, std::vector<const ServerSettings*>>	ServerMap;
+		typedef std::unordered_map<uint64_t, std::vector<ServerSettings*>>	ServerMap;
 		typedef	std::vector<ServerSettings>									Servers;
 
 		static TokenVector		tokenize(const std::string& input, const std::string& delimiters);
@@ -54,7 +54,7 @@ class ConfigParser
 		static TokenIdentifier	getIdentifier(const std::string& token, bool expectDirective);
 		static std::string		identifierToString(TokenIdentifier id);
 
-		static void				assignPortToServerSettings(ServerMap& serverMap, const Servers& servers);
+		static void				assignPortToServerSettings(ServerMap& serverMap, Servers& servers);
 		static void				tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers);
 		static ServerSettings	createServerSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
