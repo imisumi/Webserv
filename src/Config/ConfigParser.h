@@ -44,21 +44,22 @@ class ConfigParser
 			UNRECOGNISED,
 		};
 
-		typedef std::vector<std::pair<TokenIdentifier, std::string>>	TokenMap;
-		typedef std::vector<std::string>								TokenVector;
-		typedef std::map<uint64_t, ServerSettings>						ServerMap;
-		typedef	std::vector<ServerSettings>								Servers;
+		typedef std::vector<std::pair<TokenIdentifier, std::string>>		TokenMap;
+		typedef std::vector<std::string>									TokenVector;
+		typedef std::unordered_map<uint64_t, std::vector<const ServerSettings*>>	ServerMap;
+		typedef	std::vector<ServerSettings>									Servers;
 
 		static TokenVector		tokenize(const std::string& input, const std::string& delimiters);
 		static TokenMap			assignTokenType(const TokenVector& tokens);
 		static TokenIdentifier	getIdentifier(const std::string& token, bool expectDirective);
 		static std::string		identifierToString(TokenIdentifier id);
 
-		static void								tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers);
-		static ServerSettings					createServerSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
-		static ServerSettings::LocationSettings	addLocationSettings(ServerSettings::LocationSettings& location, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void				assignPortToServerSettings(ServerMap& serverMap, const Servers& servers);
+		static void				tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers);
+		static ServerSettings	createServerSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
 		static void	expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it, TokenIdentifier expected);
+		static void	handleLocationSettings(ServerSettings::LocationSettings& location, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handlePort(std::vector<uint64_t>& ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleRoot(std::filesystem::path& root, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleIndex(std::vector<std::string>& indexFiles, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
@@ -75,3 +76,9 @@ class ConfigParser
 		static Config	createConfigFromFile(const std::filesystem::path& path);
 
 };
+
+bool		stringContainsDigitsExclusively(const std::string& s);
+uint32_t	ipv4LiteralToUint32(const std::string& s);
+uint16_t	stringToUInt16(const std::string& s);
+bool		isDelimiter(char& c, const std::string& delimiters);
+bool		isSpecialCharacter(char& c);

@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Config.h                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/05 13:09:45 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/12 19:54:46 by imisumi-wsl      ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   Config.h                                           :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/09/18 13:05:39 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,44 +14,47 @@
 
 #include "ConfigParser.h"
 #include "ServerSettings.h"
+
 #include <filesystem>
 #include <unordered_map>
 #include <vector>
-
-
 #include <iostream>
 
 class Config
 {
 	private:
-		std::unordered_map<uint64_t, std::vector<ServerSettings*>>	m_ServerMap; // posible use index-based array
-		std::vector<ServerSettings>									m_Servers;
+		std::unordered_map<uint64_t, std::vector<const ServerSettings*>>	m_ServerMap; // posible use index-based array
+		std::vector<ServerSettings>											m_Servers;
 		friend class ConfigParser;
 	public:
-		std::vector<ServerSettings*>	operator[](const uint64_t key)
+		std::vector<const ServerSettings*>	operator[](const uint64_t key)
 		{
-			const std::unordered_map<uint64_t, std::vector<ServerSettings*>>::iterator it = this->m_ServerMap.find(key);
-			if (it != this->m_ServerMap.end())
-				return it->second;
-			throw std::out_of_range("key not found");
-		};
-		// const std::vector<ServerSettings*>	operator[](const uint64_t key) const
-		// {
-		// 	const std::unordered_map<uint64_t, std::vector<ServerSettings*>>::const_iterator it = this->m_ServerMap.find(key);
-		// 	if (it != this->m_ServerMap.end())
-		// 		return it->second;
-		// 	throw std::out_of_range("key not found");
-		// };
-		const std::vector<ServerSettings*> operator[](uint64_t key) const
-		{
-			std::cout << "key: " << key << std::endl;
+			// std::cout << "key: " << key << std::endl;
 			auto it = m_ServerMap.find(key);
 			if (it == m_ServerMap.end())
 			{
 				// throw std::out_of_range("Key not found in the server map");
 				// uint32_t port = static_cast<uint32_t>(key & 0xFFFFFFFF);
 				uint16_t port = key;
-				std::cout << "port: " << port << std::endl;
+				// std::cout << "port: " << port << std::endl;
+				it = m_ServerMap.find(port);
+				if (it == m_ServerMap.end())
+				{
+					throw std::out_of_range("Key not found in the server map");
+				}
+			}
+			return it->second;
+		};
+		const std::vector<const ServerSettings*> operator[](const uint64_t key) const
+		{
+			// std::cout << "key: " << key << std::endl;
+			auto it = m_ServerMap.find(key);
+			if (it == m_ServerMap.end())
+			{
+				// throw std::out_of_range("Key not found in the server map");
+				// uint32_t port = static_cast<uint32_t>(key & 0xFFFFFFFF);
+				uint16_t port = key;
+				// std::cout << "port: " << port << std::endl;
 				it = m_ServerMap.find(port);
 				if (it == m_ServerMap.end())
 				{
