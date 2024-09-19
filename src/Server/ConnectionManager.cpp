@@ -59,7 +59,7 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	Client client = accept(socket_fd, (struct sockaddr*)&client_addr, &client_addr_len);
 	if ((int)client == -1)
 	{
-		LOG_ERROR("Failed to accept connection!");
+		// LOG_ERROR("Failed to accept connection!");
 		return Client();
 	}
 

@@ -367,25 +367,30 @@ void Server::Run()
 			const uint32_t epoll_type = epollData->type;
 			const uint32_t cgi_fd = epollData->cgi_fd;
 
-			int incomingPort = s_Instance->isServerSocket(epoll_fd);
-			if (incomingPort != -1)
+			if (events[i].events & EPOLLIN && s_Instance->isServerSocket(epoll_fd) != -1)
 			{
-				// Client newClient = s_Instance->AcceptConnection(epoll_fd);
-				Client newClient = ConnectionManager::AcceptConnection(epoll_fd);
-				if (newClient == -1)
+				// Handle incoming connections
+				while (true)
 				{
-					// LOG_ERROR("Failed to accept connection!");
-					LOG_CRITICAL("Failed to accept connection!");
+					Client newClient = ConnectionManager::AcceptConnection(epoll_fd);
+					if ((int)newClient == -1)
+					{
+						if (errno == EAGAIN || errno == EWOULDBLOCK)
+						{
+							// No more clients to accept
+							break;
+						}
+						// LOG_CRITICAL("Failed to accept connection!");
+						LOG_ERROR("Failed to accept connection! errno: {}, error: {}", errno, strerror(errno));
+
+						break;
+					}
+					ConnectionManager::RegisterClient((int)newClient, newClient);
 				}
-				ConnectionManager::RegisterClient((int)newClient, newClient);
-				// s_Instance->m_Clients[newClient] = newClient;
 				continue;
 			}
-
-			// Client client = s_Instance->m_Clients[epoll_fd];
 			Client client = ConnectionManager::GetClient(epoll_fd);
 			LOG_INFO("epoll fd: {}, client socket: {}", epoll_fd, (int)client);
-
 			if (events[i].events & EPOLLIN)
 			{
 				LOG_DEBUG("Handling input event...");
@@ -417,8 +422,6 @@ void Server::Run()
 			else
 			{
 				LOG_CRITICAL("Unhandled event type");
-				// LOG_DEBUG("Unhandled event type");
-				// LOG_INFO("Event type: {}", (int)events[i].events);
 			}
 		}
 	}
@@ -441,37 +444,12 @@ bool Server::IsRunning()
 void Server::HandleSocketInputEvent(Client& client)
 {
 	LOG_INFO("Handling socket input event...");
-	// uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
-			
-	// ServerSettings settings = s_Instance->m_Config[packedIpPort][0];
-	// LOG_INFO("Server name: {}", settings.GetServerName());
-	// m_ClientResponses[client] = ResponseGenerator::OkResponse();
-	// struct EpollData* data = new EpollData();
-	// data->fd = client;
-	// data->type = EPOLL_TYPE_SOCKET;
-	// data->cgi_fd = -1;
 
-	// // if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
-	// if (ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, data) == -1)
-	// {
-	// 	LOG_ERROR("Failed to modify client socket in epoll!");
-	// 	s_Instance->m_Running = false;
-	// 	return;
-	// }
-	// return;
 	//TODO: what if the buffer is too small?
 	char buffer[BUFFER_SIZE];
 
 	//TODO: put in a loop till all data is read
 	ssize_t n = recv(client, buffer, sizeof(buffer) - 1, 0);
-
-	if (errno == EAGAIN || errno == EWOULDBLOCK)
-	{
-		LOG_DEBUG("No data available to read.");
-		LOG_CRITICAL("No data available to read.");
-		return;
-	}
-	// ssize_t n = read(client, buffer, sizeof(buffer) - 1);
 	if (n > 0)
 	{
 		buffer[n] = '\0';
