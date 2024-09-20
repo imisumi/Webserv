@@ -70,8 +70,16 @@ int main()
 		std::cerr << "Error setting environment variable" << std::endl;
 		return 1;
 	}
-
-	Config conf = ConfigParser::createDefaultConfig();
+	Config conf;
+	try
+	{
+		conf = ConfigParser::createDefaultConfig();
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error while creating config." << std::endl;
+		return 1;
+	}
 	{
 		Utils::Timer timer;
 		Server::Init(conf);

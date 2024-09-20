@@ -33,7 +33,7 @@ enum class HTTPStatusCode : uint16_t
 	NotImplemented = 501,		// not implemented
 };
 
-std::map<HTTPStatusCode, std::string> errorcode = {
+static std::map<HTTPStatusCode, std::string> HTTPStatusMap = {
 	{HTTPStatusCode::OK, "200 OK"},
 	{HTTPStatusCode::OKCreated, "201 Created"},
 	{HTTPStatusCode::MovedToNewURL, "301 Moved Permanently"},

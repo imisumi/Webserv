@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/18 12:20:38 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/18 13:04:59 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/20 15:23:03 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -152,7 +152,7 @@ void	ConfigParser:: handleRedirect(
 	TokenMap::const_iterator& it)
 {
 	redirect = stringToUInt16(it->second);
-	if (redirect < 100 || redirect > 599)
+	if (redirect < 400 || redirect > 599)
 		throw std::invalid_argument("invalid redirect code");
 }
 
@@ -176,7 +176,7 @@ void	ConfigParser:: handleErrorPage(
 		if (stringContainsDigitsExclusively(it->second))
 		{
 			const uint16_t currentReturnCode = stringToUInt16(it->second);
-			if (currentReturnCode < 100 || currentReturnCode > 599)
+			if (currentReturnCode < 100 || currentReturnCode > 399)
 				throw std::invalid_argument("invalid error page redirect code");
 			if (replace && errorPageMap.find(currentReturnCode) != errorPageMap.end())
 				replaceReturnCodes.push_back(currentReturnCode);
