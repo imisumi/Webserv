@@ -1,7 +1,10 @@
-
 *.out
 build/
 bin/
 *.os
 *:Zone.Identifier
 database/
+obj
+*.o
+*.d
+Webserv

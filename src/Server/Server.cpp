@@ -629,7 +629,6 @@ void Server::HandleOutputEvent(int epoll_fd)
 			LOG_DEBUG("Sent response to client: {}", epoll_fd);
 
 			// Remove the entry from the map
-			m_ClientResponses.erase(it);
 
 			struct EpollData* data = new EpollData();
 			data->fd = epoll_fd;
@@ -656,6 +655,7 @@ void Server::HandleOutputEvent(int epoll_fd)
 					s_Instance->m_Running = false;
 				}
 			}
+			m_ClientResponses.erase(it);
 
 			// if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, epoll_fd, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 		}

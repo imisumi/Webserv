@@ -371,7 +371,7 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client, cons
 
 				//OF OF methode. moet beide werkend gemaakt worden.
 				//const char *scriptPath = "/home/kaltevog/Desktop/Webserv/root/webserv/cgi-bin/databasedelete.py";
-				const char *scriptPath = "/home/kaltevog/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
+				const char *scriptPath = "/home/kwchu/Documents/Webserv/root/webserv/cgi-bin/directory_listing.py";
 				std::string arg = request.getUri().string();
 				const char *arg1 = arg.c_str();
 				// Prepare the argv array. First element is the script itself.
