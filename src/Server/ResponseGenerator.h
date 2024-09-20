@@ -18,8 +18,7 @@
 #include "Core/Core.h"
 #include "Client.h"
 
-
-enum class HTTPStatusCode
+enum class HTTPStatusCode : uint16_t
 {
 	OK = 200,					// request successful
 	OKCreated = 201,			// resource created
@@ -32,6 +31,20 @@ enum class HTTPStatusCode
 	MethodNotAllowed = 405,		// method not allowed
 	InternalServerError = 500,	// server error
 	NotImplemented = 501,		// not implemented
+};
+
+std::map<HTTPStatusCode, std::string> errorcode = {
+	{HTTPStatusCode::OK, "200 OK"},
+	{HTTPStatusCode::OKCreated, "201 Created"},
+	{HTTPStatusCode::MovedToNewURL, "301 Moved Permanently"},
+	{HTTPStatusCode::NotModified, "304 Not Modified"},
+	{HTTPStatusCode::BadRequest, "400 Bad Request"},
+	{HTTPStatusCode::Unauthorized, "401 Unauthorized"},
+	{HTTPStatusCode::Forbidden, "403 Forbidden"},
+	{HTTPStatusCode::NotFound, "404 Not Found"},
+	{HTTPStatusCode::MethodNotAllowed, "405 Method Not Allowed"},
+	{HTTPStatusCode::InternalServerError, "500 Internal Server Error"},
+	{HTTPStatusCode::NotImplemented, "501 Not Implemented"},
 };
 
 enum class ContentType

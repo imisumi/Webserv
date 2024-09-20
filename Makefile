@@ -38,7 +38,7 @@ OBJ = ${subst ${DIR_SRC}/, ${DIR_OBJ}/, ${SRC:.cpp=.o}}
 DEP = ${OBJ:.o=.d}}
 
 multi:
-	${MAKE} -j 8 all
+	@${MAKE} -j 8 all
 
 ${NAME}: ${OBJ}
 	c++ ${CFLAGS} ${MFLAGS} ${INCLUDE} $^ ${LIB} -o $@ 
