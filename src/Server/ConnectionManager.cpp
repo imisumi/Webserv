@@ -85,12 +85,11 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	}
 
 
-
-
-	struct Server::EpollData *data = new Server::EpollData();
-	data->fd = (int)client;
-	data->type = EPOLL_TYPE_SOCKET;
-	data->cgi_fd = -1;
+	Server::EpollData data{
+		.fd = static_cast<uint16_t>(client),
+		.cgi_fd = std::numeric_limits<uint16_t>::max(),
+		.type = EPOLL_TYPE_SOCKET
+	};
 
 	// if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 	if (Server::AddEpollEvent(Server::Get().GetEpollInstance(), (int)client, EPOLLIN | EPOLLET, data) == -1)

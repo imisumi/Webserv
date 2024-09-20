@@ -64,16 +64,16 @@ int Server::CreateEpoll()
 	return epoll_create1(EPOLL_CLOEXEC);
 }
 
-int Server::AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data)
+int Server::AddEpollEvent(int epollFD, int fd, int event, EpollData data)
 {
 	WEB_ASSERT(epollFD, "Invalid epoll file descriptor!");
 	WEB_ASSERT(fd, "Invalid file descriptor!");
-	WEB_ASSERT(data, "Invalid data!");
+	// WEB_ASSERT(data, "Invalid data!");
 	WEB_ASSERT(event, "Invalid event!");
 
 	struct epoll_event ev;
 	ev.events = event;
-	ev.data.ptr = data;
+	ev.data.u64 = data;
 
 	return epoll_ctl(epollFD, EPOLL_CTL_ADD, fd, &ev);
 }
@@ -87,16 +87,16 @@ int Server::RemoveEpollEvent(int epollFD, int fd)
 }
 
 
-int Server::ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data)
+int Server::ModifyEpollEvent(int epollFD, int fd, int event, EpollData data)
 {
 	WEB_ASSERT(epollFD, "Invalid epoll file descriptor!");
 	WEB_ASSERT(fd, "Invalid file descriptor!");
-	WEB_ASSERT(data, "Invalid data!");
+	// WEB_ASSERT(data, "Invalid data!");
 	WEB_ASSERT(event, "Invalid event!");
 
 	struct epoll_event ev;
 	ev.events = event;
-	ev.data.ptr = data;
+	ev.data.u64 = data;
 
 	return epoll_ctl(epollFD, EPOLL_CTL_MOD, fd, &ev);
 }
@@ -181,10 +181,11 @@ std::pair<std::string, uint16_t> unpackIpAndPort(uint64_t packedValue)
  */
 int Server::CgiRedirect(int cgi_fd, int redir_fd)
 {
-	struct Server::EpollData *ev_data = new Server::EpollData();
-	ev_data->fd = redir_fd;
-	ev_data->cgi_fd = cgi_fd;
-	ev_data->type = EPOLL_TYPE_CGI;
+	EpollData ev_data{
+		.fd = static_cast<uint16_t>(redir_fd),
+		.cgi_fd = static_cast<uint16_t>(cgi_fd),
+		.type = EPOLL_TYPE_CGI
+	};
 
 	return AddEpollEvent(s_Instance->m_EpollInstance, cgi_fd, EPOLLIN | EPOLLET, ev_data);
 }
@@ -281,10 +282,11 @@ void Server::Init(const Config& config)
 			return;
 		}
 
-		struct EpollData* data = new EpollData();
-		data->fd = socketFD;
-		data->type = EPOLL_TYPE_SOCKET;
-		data->cgi_fd = -1;
+		EpollData data{
+			.fd = static_cast<uint16_t>(socketFD),
+			.cgi_fd = std::numeric_limits<uint16_t>::max(),
+			.type = EPOLL_TYPE_SOCKET
+		};
 
 		if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, socketFD, EPOLLIN | EPOLLET, data) == -1)
 		{
@@ -362,10 +364,11 @@ void Server::Run()
 		}
 		for (int i = 0; i < eventCount; i++)
 		{
-			const struct EpollData* epollData = (struct EpollData*)events[i].data.ptr;
-			const uint32_t epoll_fd = epollData->fd;
-			const uint32_t epoll_type = epollData->type;
-			const uint32_t cgi_fd = epollData->cgi_fd;
+			EpollData epollData;
+			epollData = events[i].data.u64;
+			const uint16_t epoll_fd = epollData.fd;
+			const uint16_t cgi_fd = epollData.cgi_fd;
+			const int epoll_type = epollData.type;
 
 			if (events[i].events & EPOLLIN && s_Instance->isServerSocket(epoll_fd) != -1)
 			{
@@ -469,11 +472,11 @@ void Server::HandleSocketInputEvent(Client& client)
 
 		// LOG_DEBUG("Response:\n{}", response);
 		m_ClientResponses[client] = response;
-
-		struct EpollData* data = new EpollData();
-		data->fd = client;
-		data->type = EPOLL_TYPE_SOCKET;
-		data->cgi_fd = -1;
+		EpollData data{
+			.fd = static_cast<uint16_t>(client),
+			.cgi_fd = std::numeric_limits<uint16_t>::max(),
+			.type = EPOLL_TYPE_SOCKET
+		};
 
 		// if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 		if (ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, data) == -1)
@@ -546,10 +549,11 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd)
 
 		// struct EpollData* tempData = (struct EpollData*)events[i].data.ptr;
 
-		struct EpollData* data = new EpollData();
-		data->fd = client_fd;
-		data->type = EPOLL_TYPE_SOCKET;
-		data->cgi_fd = -1;
+		EpollData data{
+			.fd = static_cast<uint16_t>(client_fd),
+			.cgi_fd = std::numeric_limits<uint16_t>::max(),
+			.type = EPOLL_TYPE_SOCKET
+		};
 
 		// if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, tempClient, EPOLLOUT | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 		if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, client_fd, EPOLLOUT | EPOLLET, data) == -1)
@@ -630,10 +634,11 @@ void Server::HandleOutputEvent(int epoll_fd)
 
 			// Remove the entry from the map
 
-			struct EpollData* data = new EpollData();
-			data->fd = epoll_fd;
-			data->type = EPOLL_TYPE_SOCKET;
-			data->cgi_fd = -1;
+			EpollData data{
+				.fd = static_cast<uint16_t>(epoll_fd),
+				.cgi_fd = std::numeric_limits<uint16_t>::max(),
+				.type = EPOLL_TYPE_SOCKET
+			};
 
 
 			//TODO: find a better way of doing this

@@ -103,14 +103,14 @@ void sigchld_handler(int signo)
 				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
 
 				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);
-				struct Server::EpollData *ev_data = new Server::EpollData();
 				LOG_INFO("Client FD: {}", client_fd);
-				ev_data->fd = client_fd;
-				ev_data->cgi_fd = -1;
-				ev_data->type = EPOLL_TYPE_SOCKET;
-
+				Server::EpollData data{
+					.fd = static_cast<uint16_t>(client_fd),
+					.cgi_fd = std::numeric_limits<uint16_t>::max(),
+					.type = EPOLL_TYPE_SOCKET
+				};
 				// Server::AddEpollEventStatic(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
-				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
+				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, data);
 
 				std::string response = s_TimeoutErrorResponse;
 				server.m_ClientResponses[client_fd] = response;
@@ -257,14 +257,15 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 
 	// Server::CgiRedirect(pipefd[READ_END], (int)client);
 // #if 0
-	struct Server::EpollData *ev_data = new Server::EpollData();
-	ev_data->fd = (int)client;
-	ev_data->cgi_fd = pipefd[READ_END];
-	ev_data->type = EPOLL_TYPE_CGI;
+	Server::EpollData data{
+			.fd = static_cast<uint16_t>(client),
+			.cgi_fd = static_cast<uint16_t>(pipefd[READ_END]),
+			.type = EPOLL_TYPE_CGI
+	};
 
 	LOG_INFO("Forwarding client FD: {} to CGI handler", (int)client);
 
-	Server::AddEpollEvent(client.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, ev_data);
+	Server::AddEpollEvent(client.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, data);
 
 	struct sigaction sa;
 	sa.sa_handler = sigchld_handler;  // Assign the custom handler

@@ -17,18 +17,43 @@
 #include "Config/Config.h"
 #include "Client.h"
 
+#include <assert.h>
+
+#include "Core/Core.h"
 #define MAX_EVENTS 4096
 #define BUFFER_SIZE 12000 * 2
 
 class Server
 {
 public:
-	struct EpollData
+	// struct EpollData
+	// {
+	// 	int fd = -1;
+	// 	int cgi_fd = -1;
+	// 	uint32_t type = 0;
+	// };
+
+	class EpollData
 	{
-		int fd = -1;
-		int cgi_fd = -1;
-		uint32_t type = 0;
-	};
+		public:
+			uint16_t fd = std::numeric_limits<uint16_t>::max();
+			uint16_t cgi_fd = std::numeric_limits<uint16_t>::max();
+			int type = -1;
+			EpollData& operator=(uint64_t packed)
+			{
+				this->fd = packed >> 48;
+				this->cgi_fd = packed >> 32;
+				this->type = packed & 0xFFFF;
+				return *this;
+			}
+			operator uint64_t() const
+			{
+				WEB_ASSERT(type >= 0, "type is not set");
+				return (static_cast<uint64_t>(fd) << 48) | (static_cast<uint64_t>(cgi_fd) << 32) | static_cast<uint64_t>(type);
+			}
+	}  __attribute__((packed));
+
+	static_assert(sizeof(EpollData) == 8);
 
 	struct SocketSettings
 	{
@@ -70,8 +95,8 @@ public:
 
 	int GetClientFromCgi(int cgi_fd) { return m_CgiToClientMap[cgi_fd]; }
 
-	static int AddEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
-	static int ModifyEpollEvent(int epollFD, int fd, int event, struct EpollData* data);
+	static int AddEpollEvent(int epollFD, int fd, int event, EpollData data);
+	static int ModifyEpollEvent(int epollFD, int fd, int event, EpollData data);
 	static int RemoveEpollEvent(int epollFD, int fd);
 
 	std::unordered_map<pid_t, int> childProcesses;
@@ -123,7 +148,7 @@ private:
 	RequestHandler m_RequestHandler;
 	ResponseSender m_ResponseSender;
 	
-	std::unordered_map<int, struct EpollData> m_FdEventMap;
+	std::unordered_map<int, EpollData> m_FdEventMap;
 	std::unordered_map<int, int> m_CgiToClientMap;
 
 

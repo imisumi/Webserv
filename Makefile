@@ -1,7 +1,7 @@
 NAME = Webserv
 
 # CFLAGS = -Wall -Wextra -Werror
-CFLAGS += --std=c++17
+CFLAGS += --std=c++17 -Ofast
 
 LIB = -Lbin/Linux -lspdlog
 INCLUDE = -I./src -I./dep/spdlog/include
@@ -57,11 +57,11 @@ debug: re
 
 
 clean:
-	rm -f ${OBJ} ${DEP}
+	rm -fr ${DIR_OBJ}
 
 fclean: clean
 	rm -f ${NAME}
 
-re: fclean all
+re: fclean multi
 
-.PHONY: all clean fclean re debug
+.PHONY: all multi clean fclean re debug
