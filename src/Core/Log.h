@@ -209,9 +209,9 @@ private:
 	}
 };
 
-#define LOG_TRACE(...)	        ::LoggerRegistry::instance().getLogger("APP")->trace(__VA_ARGS__)
-#define LOG_INFO(...)	        ::LoggerRegistry::instance().getLogger("APP")->info(__VA_ARGS__)
-#define LOG_DEBUG(...)	        ::LoggerRegistry::instance().getLogger("APP")->debug(__VA_ARGS__)
-#define LOG_WARN(...)	        ::LoggerRegistry::instance().getLogger("APP")->warn(__VA_ARGS__)
-#define LOG_ERROR(...)	        ::LoggerRegistry::instance().getLogger("APP")->error(__VA_ARGS__)
-#define LOG_CRITICAL(...)	    ::LoggerRegistry::instance().getLogger("APP")->critical(__VA_ARGS__)
+#define LOG_TRACE(...)	        ::LoggerRegistry::instance().getLogger("SERVER")->trace(__VA_ARGS__)
+#define LOG_INFO(...)	        ::LoggerRegistry::instance().getLogger("SERVER")->info(__VA_ARGS__)
+#define LOG_DEBUG(...)	        ::LoggerRegistry::instance().getLogger("SERVER")->debug(__VA_ARGS__)
+#define LOG_WARN(...)	        ::LoggerRegistry::instance().getLogger("SERVER")->warn(__VA_ARGS__)
+#define LOG_ERROR(...)	        ::LoggerRegistry::instance().getLogger("SERVER")->error(__VA_ARGS__)
+#define LOG_CRITICAL(...)	    ::LoggerRegistry::instance().getLogger("SERVER")->critical(__VA_ARGS__)

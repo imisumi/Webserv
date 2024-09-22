@@ -19,7 +19,6 @@ file(GLOB_RECURSE ALL_SOURCES
 )
 
 # Add the spdlog submodule to the project
-add_subdirectory(${CMAKE_SOURCE_DIR}/dep/spdlog)
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${ALL_SOURCES})
