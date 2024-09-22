@@ -10,4 +10,4 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 
 # Build the project
-make
+make -j8
