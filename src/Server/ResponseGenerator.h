@@ -57,6 +57,9 @@ public:
 	
 
 private:
+
+	static const std::string generateDirectoryListingResponse(const std::filesystem::path& path);
+
 	static std::optional<std::string> readFileContents(const std::filesystem::path& path);
 
 	static std::string determineContentType(const std::filesystem::path& file);
@@ -71,13 +74,14 @@ private:
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
-	static const std::string handleGetRequest(const Client& client, const HttpRequest& request);
+	static const std::string handleGetRequest(const Client& client);
 
 	static const std::string handlePostRequest(const Client& client, const HttpRequest& request);
 
 	static const std::string handleDeleteRequest(const Client& client, const HttpRequest& request);
 
 	static std::string generateOKResponse(const HttpRequest& request);
+	static std::string generateOKResponse(const std::filesystem::path& path, const HttpRequest& request);
 
 	static std::string generateFileResponse(const HttpRequest& request);
 

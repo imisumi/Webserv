@@ -60,6 +60,140 @@ static const std::unordered_map<std::string, std::string> s_SupportedMineTypes =
 			{ ".png", "image/png" }
 		};
 
+
+std::string generateDirectoryListing(const std::string& path)
+{
+	// Check if the path exists
+	if (!std::filesystem::exists(path)) {
+		std::cerr << "Error: The directory '" << path << "' does not exist." << std::endl;
+		return "";
+	}
+
+	// HTML template for the directory listing
+	std::string html_template = R"(
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Directory Listing</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				margin: 20px;
+				background-color: #121212;
+				color: #f0f0f0;
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-top: 20px;
+				background-color: #1e1e1e;
+			}
+			th, td {
+				padding: 12px 15px;
+				text-align: left;
+				border-bottom: 1px solid #333;
+			}
+			th {
+				background-color: #333;
+				color: #ffffff;
+				text-align: left;
+				font-weight: bold;
+			}
+			td {
+				color: #e0e0e0;
+			}
+			a {
+				text-decoration: none;
+				color: #1e90ff;
+			}
+			a:hover {
+				text-decoration: underline;
+			}
+			tr:hover {
+				background-color: #333;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Directory Listing for: {path}</h1>
+		<table>
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Type</th>
+					<th>Size (Bytes)</th>
+				</tr>
+			</thead>
+			<tbody>
+				{rows}
+			</tbody>
+		</table>
+	</body>
+	</html>
+	)";
+
+	// Vector to store the rows for the table
+	std::vector<std::string> rows;
+
+	// Iterate over directory entries
+	for (const auto& entry : std::filesystem::directory_iterator(path)) {
+		std::string item_name = entry.path().filename().string();
+		std::string item_type = entry.is_directory() ? "Directory" : "File";
+		std::string item_size = entry.is_regular_file() ? std::to_string(std::filesystem::file_size(entry.path())) : "-";
+
+		// Generate a row for each item
+		std::string row = R"(
+		<tr>
+			<td><a href=")" + item_name + R"(">)" + item_name + R"(</a></td>
+			<td>)" + item_type + R"(</td>
+			<td>)" + item_size + R"(</td>
+		</tr>
+		)";
+
+		// Add the row to the vector
+		rows.push_back(row);
+	}
+	// for (const auto& entry : std::filesystem::directory_iterator(path)) {
+    //     std::string item_name = entry.path().filename().string();
+    //     std::string item_type = entry.is_directory() ? "Directory" : "File";
+    //     std::string item_size = entry.is_regular_file() ? std::to_string(std::filesystem::file_size(entry.path())) : "-";
+
+    //     // Generate a row for each item, prepending the path to the link
+    //     std::string row = R"(
+    //     <tr>
+    //         <td><a href=")" + path + "/" + item_name + R"(">)" + item_name + R"(</a></td>
+    //         <td>)" + item_type + R"(</td>
+    //         <td>)" + item_size + R"(</td>
+    //     </tr>
+    //     )";
+
+    //     // Add the row to the vector
+    //     rows.push_back(row);
+    // }
+
+	// Combine all rows into a single string
+	std::string rows_html;
+	for (const auto& row : rows) {
+		rows_html += row + "\n";
+	}
+
+	// Replace placeholders in the HTML template
+	std::string html_content = html_template;
+	size_t pos = html_content.find("{path}");
+	html_content.replace(pos, 6, path);
+	pos = html_content.find("{rows}");
+	html_content.replace(pos, 6, rows_html);
+
+	// return "Content-Type: text/html\r\n\r\n" + html_content;
+	return html_content;
+
+	// Output the HTML content
+	// std::cout << "Content-Type: text/html\r\n\r\n";
+	// std::cout << html_content << std::endl;
+}
+
 const std::string ResponseGenerator::generateResponse(const Client& client, const HttpRequest& request)
 {
 	//TODO: validate request
@@ -68,7 +202,7 @@ const std::string ResponseGenerator::generateResponse(const Client& client, cons
 
 	switch (request.method)
 	{
-		case RequestMethod::GET:			return handleGetRequest(client, request);
+		case RequestMethod::GET:			return handleGetRequest(client);
 		case RequestMethod::POST:			return handlePostRequest(client, request);
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
@@ -314,104 +448,113 @@ std::string ReadImageFile(const std::filesystem::path& path)
 	return favicon_content;
 }
 
+const std::string ResponseGenerator::generateDirectoryListingResponse(const std::filesystem::path& path)
+{
+	std::string dirListing = generateDirectoryListing(path.string());
+	std::string restult = "HTTP/1.1 200 OK\r\n";
+	restult += "Content-Type: text/html\r\n";
+	restult += "Content-Length: " + std::to_string(dirListing.size()) + "\r\n";
+	restult += "Connection: keep-alive\r\n";
+	restult += "\r\n";
+	restult += dirListing;
+
+	return restult;
+}
+
 #include "Utils/Utils.h"
 
-const std::string ResponseGenerator::handleGetRequest(const Client& client, const HttpRequest& request)
+const std::string ResponseGenerator::handleGetRequest(const Client& client)
 {
 	Utils::Timer timer;
 	LOG_INFO("Handling GET request");
 
-
-	// very temp CGI
-	std::string uir = request.getUri().string();
-	if (uir.find("/cgi-bin/") != std::string::npos)
+	// very temporary
+	std::string uri = client.GetNewRequest().uri;
+	if (uri.find("/cgi-bin/") != std::string::npos)
 	{
 		LOG_DEBUG("Requested path is a CGI script");
 
-		std::filesystem::path fileName = request.getUri().filename();
-		HttpRequest updatedRequest = request;
+		// if (!std::filesystem::is_regular_file(client.GetNewRequest().path))
+		if (std::filesystem::is_directory(client.GetNewRequest().path))
+		{
+			LOG_ERROR("Requested path is not a file");
+			return std::string(s_ForbiddenResponse);
+		}
+
+		LOG_INFO("Requested path is a file: {}" , client.GetNewRequest().path.string());
+
+		// std::filesystem::path fileName = client.GetRequest().getUri().filename();
+		std::filesystem::path fileName = client.GetNewRequest().path.filename();
+		NewHttpRequest updatedRequest = client.GetNewRequest();
+
+		//TODO: extract from config
 		std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
-		updatedRequest.setUri(cgiPath / fileName);
-		LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
+		// updatedRequest.setUri(cgiPath / fileName);
+		updatedRequest.path = cgiPath / fileName;
+		if (!std::filesystem::exists(updatedRequest.path))
+		{
+			LOG_ERROR("CGI script does not exist: {}", updatedRequest.path.string());
+			return generateNotFoundResponse();
+		}
+		// LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
+		LOG_INFO("CGI path: {}", updatedRequest.path.string());
 		// Cgi::executeCGI(client, updatedRequest);
 		return Cgi::executeCGI(client, updatedRequest);
-		return "";
 	}
 
 	//? Validate the requested path
-	if (std::filesystem::exists(request.getUri()))
+
+	// if (std::filesystem::exists(client.GetRequest().getUri()))
+	if (std::filesystem::exists(client.GetNewRequest().path))
 	{
 		//? Check if the requested path is a directory or a file
-		if (std::filesystem::is_directory(request.getUri()))
+		// if (std::filesystem::is_directory(client.GetNewRequest().path))
+		if (std::filesystem::is_directory(client.GetRequest().getUri()))
 		{
 			LOG_DEBUG("Requested path is a directory");
 
-			//TODO: see if config maps to the given uri, if so see if index is overwriten esle use default
-			HttpRequest updatedRequest = request;
-			// std::filesystem::path index = client.GetConfig().GetIndex(updatedRequest.getUri());
-			LOG_INFO("Index: {}", client.GetConfig()->GetIndex(request.getOriginalUri()).string());
-			std::filesystem::path index = request.getUri() / client.GetConfig()->GetIndex(request.getOriginalUri());
-			LOG_INFO("Index: {}", index.string());
-			LOG_INFO("Index: {}", request.getUri().string());
-			// updatedRequest.setUri(updatedRequest.getUri() / "index.html");
+			const std::vector<std::string>& indexes = client.GetConfig()->GetIndexList(client.GetNewRequest().path);
+			LOG_INFO("Index: {}", indexes[0]);
 
-			// const std::filesystem::path& uri = request.getUri();
-			updatedRequest.setUri(updatedRequest.getUri() / index);
-			LOG_ERROR("Updated URI: {}", updatedRequest.getUri().string());
-			if (!std::filesystem::exists(updatedRequest.getUri()))
+			for (const auto& index : indexes)
 			{
-				//? if autoindex is enabled, generate a list of files in the directory
-
-				// char *dirListing = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
-				// char *argv[] = { dirListing, (char*)updatedRequest.getUri().c_str(), NULL };
-
-
-				// const char *dirListing = "/home/imisumi/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
-				// char *argv[] = { (char*)dirListing, (char*)request.getUri().c_str(), NULL };
-
-				//OF OF methode. moet beide werkend gemaakt worden.
-				//const char *scriptPath = "/home/kaltevog/Desktop/Webserv/root/webserv/cgi-bin/databasedelete.py";
-				const char *scriptPath = "/home/kaltevog/Desktop/Webserv/root/webserv/cgi-bin/directory_listing.py";
-				std::string arg = request.getUri().string();
-				const char *arg1 = arg.c_str();
-				// Prepare the argv array. First element is the script itself.
-				char *argv[] = { (char*)scriptPath, (char*)arg1, NULL };
-
-				// Cgi::RunCgi(client, argv);
-				return Cgi::RunCgi(client, argv);
+				LOG_INFO("Looking for: {}", index);
+				std::filesystem::path indexPath = client.GetNewRequest().path / index;
+				if (std::filesystem::exists(indexPath))
+				{
+					LOG_INFO("Index found: {}", indexPath.string());
 
 
-				LOG_DEBUG("index.html does not exist");
-				//? send 404 response
-				return generateNotFoundResponse();
+					const std::string& ifNoneMatch = client.GetRequest().getHeader("If-None-Match");
+					const std::string& ifModifiedSince = client.GetRequest().getHeader("If-Modified-Since");
+					const std::string& etag = generateETagv2(client.GetRequest().getUri());
+					const std::string& lastModified = getFileModificationTime(client.GetRequest().getUri());
+					if (ifNoneMatch == etag && ifModifiedSince == lastModified)
+					{
+						LOG_DEBUG("Resource has not been modified");
+						return generateNotModifiedResponse();
+					}
+					// client.GetRequest().setUri(indexPath);
+					HttpRequest updatedRequest = client.GetRequest();
+					updatedRequest.setUri(indexPath);
+					return generateOKResponse(indexPath, updatedRequest);
+				}
 			}
 
-			LOG_DEBUG("index.html exists");
-			//? Check source has been modified
-			if (updatedRequest.getHeader("If-None-Match") == generateETagv2(updatedRequest.getUri()) && updatedRequest.getHeader("If-Modified-Since") == getFileModificationTime(updatedRequest.getUri()))
-			{
-				return generateNotModifiedResponse();
-			}
-			return generateOKResponse(updatedRequest);
+			return generateDirectoryListingResponse(client.GetNewRequest().path);
 		}
-		else if (std::filesystem::is_regular_file(request.getUri()))
+		else if (std::filesystem::is_regular_file(client.GetRequest().getUri()))
 		{
 			//TODO: check if file is a CGI script
 
-
-
-
-			
-
-
 			LOG_DEBUG("Requested path is a file");
 
-			if (request.getHeader("If-None-Match") == generateETagv2(request.getUri()) && request.getHeader("If-Modified-Since") == getFileModificationTime(request.getUri()))
+			if (client.GetRequest().getHeader("If-None-Match") == generateETagv2(client.GetRequest().getUri()) && client.GetRequest().getHeader("If-Modified-Since") == getFileModificationTime(client.GetRequest().getUri()))
 			{
 				return generateNotModifiedResponse();
 			}
 
-			return generateFileResponse(request);
+			return generateFileResponse(client.GetRequest());
 		}
 		else
 		{
@@ -600,6 +743,22 @@ std::string ResponseGenerator::generateOKResponse(const HttpRequest& request)
 	LOG_INFO("Generating 200 OK response");
 
 	auto fileContents = readFileContents(request.getUri());
+	if (fileContents == std::nullopt)
+	{
+		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());
+		return generateForbiddenResponse();
+	}
+	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
+	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request);
+
+	return "";
+}
+
+std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
+{
+	LOG_INFO("Generating 200 OK response");
+
+	auto fileContents = readFileContents(path);
 	if (fileContents == std::nullopt)
 	{
 		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());

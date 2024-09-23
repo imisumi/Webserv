@@ -86,6 +86,21 @@ void sigchld_handler(int signo)
 			if (exit_code == EXIT_FAILURE)
 			{
 				std::cerr << "Child process: " << pid << " failed with exit code: " << exit_code << std::endl;
+
+				Server& server = Server::Get();
+				int client_fd = server.childProcesses[pid];
+				Client client = ConnectionManager::GetClient(client_fd);
+				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
+
+				struct Server::EpollData *ev_data = new Server::EpollData();
+				LOG_INFO("Client FD: {}", client_fd);
+				ev_data->fd = client_fd;
+				ev_data->cgi_fd = -1;
+				ev_data->type = EPOLL_TYPE_SOCKET;
+
+				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
+
+				server.m_ClientResponses[client_fd] = ResponseGenerator::InternalServerError();
 			}
 		}
 		else if (WIFSIGNALED(status))
@@ -237,9 +252,10 @@ std::string Cgi::RunCgi(const Client& client, char* argv[])
 	return "";
 }
 
-std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
+std::string Cgi::executeCGI(const Client& client, const NewHttpRequest& request)
 {
-	std::string path = request.getUri().string();
+	// std::string path = request.getUri().string();
+	std::string path = request.path.string();
 	int pipefd[2];
 		
 	if (pipe(pipefd) == -1)
@@ -301,7 +317,7 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 }
 
 
-void Cgi::handleChildProcess(const HttpRequest& request, int pipefd[])
+void Cgi::handleChildProcess(const NewHttpRequest& request, int pipefd[])
 {
 
 	// struct sigaction sa;
@@ -320,7 +336,8 @@ void Cgi::handleChildProcess(const HttpRequest& request, int pipefd[])
 
 
 
-	std::string path = request.getUri().string();
+	// std::string path = request.getUri().string();
+	std::string path = request.path.string();
 
 	// alarm(3); // Set the alarm for CGI timeout
 
