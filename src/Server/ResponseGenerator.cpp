@@ -280,6 +280,7 @@ std::string ResponseGenerator::ContentTypeToString(ContentType type)
 }
 
 std::string getProjectRootDir() {
+	return std::filesystem::current_path();
 	const char* rootDir = std::getenv("WEBSERV_ROOT");
 	if (!rootDir) {
 		LOG_ERROR("WEBSERV_ROOT environment variable not set!");
@@ -791,7 +792,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& Client, con
     Utils::Timer timer;
     LOG_INFO("Handling POST request");
 
-    std::string contentType = request.getHeader("Content-Type");
+    std::string contentType = Client.GetNewRequest().getHeaderValue("Content-Type");
     if (contentType.empty()) {
         LOG_ERROR("Missing Content-Type header");
         return generateBadRequestResponse();
@@ -803,7 +804,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& Client, con
         return generateBadRequestResponse();
     }
 
-    std::string body = request.getBody();
+    std::string body = Client.GetNewRequest().body;
     if (body.empty()) {
         LOG_ERROR("Request body is empty");
         return generateBadRequestResponse();
