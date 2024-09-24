@@ -17,48 +17,48 @@ static const std::unordered_set<std::string> supportedImageExtensions = {
 */
 std::string Api::getImages(const std::filesystem::path& path)
 {
-    std::string httpResponse;
-    std::string json = "{\n";
-    
-    // Add status
-    json += "\"status\": \"success\",\n";
-    json += "\"images\": [\n";
+	std::string httpResponse;
+	std::string json = "{\n";
+	
+	// Add status
+	json += "\"status\": \"success\",\n";
+	json += "\"images\": [\n";
 
-    bool firstImage = true; // Use this flag to handle commas correctly
-    for (const auto& entry : std::filesystem::directory_iterator(path))
-    {
-        if (entry.is_regular_file())
-        {
-            std::string extension = entry.path().extension().string();
-            if (supportedImageExtensions.find(extension) != supportedImageExtensions.end())
-            {
-                // If this is not the first image, add a comma
-                if (!firstImage)
-                {
-                    json += ",\n"; // Add comma before subsequent images
-                }
-                firstImage = false;
+	bool firstImage = true; // Use this flag to handle commas correctly
+	for (const auto& entry : std::filesystem::directory_iterator(path))
+	{
+		if (entry.is_regular_file())
+		{
+			std::string extension = entry.path().extension().string();
+			if (supportedImageExtensions.find(extension) != supportedImageExtensions.end())
+			{
+				// If this is not the first image, add a comma
+				if (!firstImage)
+				{
+					json += ",\n"; // Add comma before subsequent images
+				}
+				firstImage = false;
 
-                // Add image details
-                json += "{\n";
-                json += "\"filename\": \"" + entry.path().filename().string() + "\",\n";
-                json += "\"url\": \"/images/" + entry.path().filename().string() + "\",\n"; // Adjust URL as needed
-                json += "\"size\": " + std::to_string(std::filesystem::file_size(entry.path())) + "\n";
-                json += "}";
-            }
-        }
-    }
+				// Add image details
+				json += "{\n";
+				json += "\"filename\": \"" + entry.path().filename().string() + "\",\n";
+				json += "\"url\": \"/images/" + entry.path().filename().string() + "\",\n"; // Adjust URL as needed
+				json += "\"size\": " + std::to_string(std::filesystem::file_size(entry.path())) + "\n";
+				json += "}";
+			}
+		}
+	}
 
-    json += "\n]}\n"; // Close the images array and the JSON object
+	json += "\n]}\n"; // Close the images array and the JSON object
 
-    // Prepare HTTP response
-    httpResponse += "HTTP/1.1 200 OK\r\n";
-    httpResponse += "Content-Type: application/json\r\n";
-    httpResponse += "Content-Length: " + std::to_string(json.size()) + "\r\n";
-    httpResponse += "\r\n";
-    httpResponse += json;
+	// Prepare HTTP response
+	httpResponse += "HTTP/1.1 200 OK\r\n";
+	httpResponse += "Content-Type: application/json\r\n";
+	httpResponse += "Content-Length: " + std::to_string(json.size()) + "\r\n";
+	httpResponse += "\r\n";
+	httpResponse += json;
 
-    return httpResponse;
+	return httpResponse;
 }
 // std::string Api::getImages(const std::filesystem::path& path)
 // {
