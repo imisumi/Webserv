@@ -108,6 +108,7 @@ int NewHttpRequest::parse(const std::string& data)
 				{
 					path += c;
 					uri += c;
+					mappedPath += c;
 				}
 				break;
 			case HttpParserState::URI_Query:
@@ -184,6 +185,8 @@ int NewHttpRequest::parse(const std::string& data)
 				break;
 		}
 	}
+	path = normalizePath(path);
+	mappedPath = normalizePath(mappedPath);
 	if (getHeaderValue("host").empty())
 		return -1;
 	if (state == HttpParserState::Body || state == HttpParserState::HeaderName)

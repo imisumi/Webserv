@@ -13,6 +13,7 @@
 #include "Config/Config.h"
 
 #include "HttpRequestParser.h"
+#include "NewHttpParser.h"
 
 
 #include "Core/Core.h"
@@ -58,6 +59,8 @@ public:
 
 private:
 
+	static bool isFileModified(const Client& client);
+
 	static const std::string generateDirectoryListingResponse(const std::filesystem::path& path);
 
 	static std::optional<std::string> readFileContents(const std::filesystem::path& path);
@@ -71,6 +74,7 @@ private:
 	static std::string getCurrentDateAndTime();
 
 	static std::string buildHttpResponse(const std::string& body, HTTPStatusCode code, const HttpRequest& request);
+	static std::string buildHttpResponse(const std::string& body, HTTPStatusCode code, const NewHttpRequest& request);
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
@@ -81,9 +85,10 @@ private:
 	static const std::string handleDeleteRequest(const Client& client, const HttpRequest& request);
 
 	static std::string generateOKResponse(const HttpRequest& request);
-	static std::string generateOKResponse(const std::filesystem::path& path, const HttpRequest& request);
+	static std::string generateOKResponse(const std::filesystem::path& path, const NewHttpRequest& request);
 
 	static std::string generateFileResponse(const HttpRequest& request);
+	static std::string generateFileResponse(const NewHttpRequest& request);
 
 	static std::string generateForbiddenResponse();
 

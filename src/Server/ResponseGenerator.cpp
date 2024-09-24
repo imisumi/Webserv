@@ -396,6 +396,54 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 	return response.str();
 }
 
+std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPStatusCode code, const NewHttpRequest& request)
+{
+	std::ostringstream response;
+
+	std::string contentType = determineContentType(request.mappedPath);
+	if (contentType.empty())
+	{
+		return generateForbiddenResponse();
+	}
+
+	const std::string statusCode = HTTPStatusCodeToString(code);
+
+	WEB_ASSERT(!statusCode.empty(), "Invalid HTTP status code! (add a custom code or use a valid one)");
+
+	std::string connection = request.getHeaderValue("Connection");
+	if (connection != "keep-alive")
+	{
+		// connection = "keep-alive";
+		// connection = "close";
+	}
+	//tofix hardcoded not kept alive
+	// connection = "close";
+	// connection = "keep-alive";
+
+
+	// response << "HTTP/1.1 200 OK\r\n"
+	response << "HTTP/1.1 " << statusCode << "\r\n"
+			<< "Server: Webserv/1.0\r\n"
+			<< "Date: " << getCurrentDateAndTime() << "\r\n"
+			<< "Content-Type: " << contentType << "\r\n"
+			<< "Content-Length: " << body.size() << "\r\n"
+			<< "Last-Modified: " << getFileModificationTime(request.mappedPath) << "\r\n"
+			//TODO: hard coded values should check this
+			// << "Connection: keep-alive\r\n"
+			<< "Connection: " << connection << "\r\n"
+			// << "Connection: close\r\n"
+			// << "ETag: \"" << generateETag(body) << "\"\r\n"
+			<< "ETag: " << generateETagv2(request.mappedPath) << "\r\n"
+			<< "Accept-Ranges: bytes\r\n"
+			// << "Cache-Control: max-age=3600\r\n"  // Cache for 1 hour
+			<< "\r\n";  // End of headers
+
+	if (!body.empty())
+		response << body;
+
+	return response.str();
+}
+
 
 std::string ResponseGenerator::buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code)
 {
@@ -431,6 +479,40 @@ std::string ResponseGenerator::buildHttpResponse(ContentType type, const std::st
 	return response.str();
 }
 
+// std::string ResponseGenerator::buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code)
+// {
+// 	std::ostringstream response;
+
+// 	// response << "HTTP/1.1 200 OK\r\n"
+// 	response << "HTTP/1.1 " << HTTPStatusCodeToString(code) << "\r\n"
+// 			<< "Server: Webserv/1.0\r\n"
+// 			<< "Date: " << getCurrentDateAndTime() << "\r\n"
+
+
+
+// 			<< "Content-Type: " << ContentTypeToString(type) << "\r\n"
+// 			// << "Content-Type: text/html\r\n"
+// 			// << "Content-Type: image/x-icon\r\n"
+
+
+// 			<< "Content-Length: " << body.size() << "\r\n"
+// 			// << "Last-Modified: " << getFileModifigit push --set-upstream origin merged-postandmaincationTime(path) << "\r\n"
+// 			//TODO: hard coded values should check this
+// 			<< "Connection: keep-alive\r\n"
+// 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
+// 			// << "Accept-Ranges: bytes\r\n"
+// 			// Disable caching
+// 			// << "Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0\r\n"
+// 			// << "Pragma: no-cache\r\n"
+// 			// << "Expires: 0\r\n"
+// 			<< "\r\n";  // End of headers
+
+// 	if (!body.empty())
+// 		response << body;
+
+// 	return response.str();
+// }
+
 
 std::string ReadImageFile(const std::filesystem::path& path)
 {
@@ -461,87 +543,126 @@ const std::string ResponseGenerator::generateDirectoryListingResponse(const std:
 	return restult;
 }
 
+#include "Api/Api.h"
 #include "Utils/Utils.h"
+
+/*
+	check wether the requested file has been modified based on the last-modified and etag headers
+*/
+bool ResponseGenerator::isFileModified(const Client& client)
+{
+	const std::string& ifNoneMatch = client.GetNewRequest().getHeaderValue("If-None-Match");
+	const std::string& ifModifiedSince = client.GetNewRequest().getHeaderValue("If-Modified-Since");
+	const std::string& etag = generateETagv2(client.GetNewRequest().mappedPath);
+	const std::string& lastModified = getFileModificationTime(client.GetNewRequest().mappedPath);
+	if (ifNoneMatch == etag && ifModifiedSince == lastModified)
+	{
+		LOG_DEBUG("Resource has not been modified");
+		return false;
+	}
+	return true;
+}
 
 const std::string ResponseGenerator::handleGetRequest(const Client& client)
 {
 	Utils::Timer timer;
 	LOG_INFO("Handling GET request");
 
-	// very temporary
-	std::string uri = client.GetNewRequest().uri;
-	if (uri.find("/cgi-bin/") != std::string::npos)
+
+
+	Api api;
+	api.addApiRoute("/api/v1/images");
+
+	if (api.isApiRoute(client.GetNewRequest().path.string()))
 	{
-		LOG_DEBUG("Requested path is a CGI script");
-
-		// if (!std::filesystem::is_regular_file(client.GetNewRequest().path))
-		if (std::filesystem::is_directory(client.GetNewRequest().path))
-		{
-			LOG_ERROR("Requested path is not a file");
-			return std::string(s_ForbiddenResponse);
-		}
-
-		LOG_INFO("Requested path is a file: {}" , client.GetNewRequest().path.string());
-
-		// std::filesystem::path fileName = client.GetRequest().getUri().filename();
-		std::filesystem::path fileName = client.GetNewRequest().path.filename();
-		NewHttpRequest updatedRequest = client.GetNewRequest();
-
-		//TODO: extract from config
-		std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
-		// updatedRequest.setUri(cgiPath / fileName);
-		updatedRequest.path = cgiPath / fileName;
-		if (!std::filesystem::exists(updatedRequest.path))
-		{
-			LOG_ERROR("CGI script does not exist: {}", updatedRequest.path.string());
-			return generateNotFoundResponse();
-		}
-		// LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
-		LOG_INFO("CGI path: {}", updatedRequest.path.string());
-		// Cgi::executeCGI(client, updatedRequest);
-		return Cgi::executeCGI(client, updatedRequest);
+		return Api::getImages("/home/imisumi-wsl/dev/Webserv/database/images");
 	}
+
+
+	// very temporary
+	// std::string uri = client.GetNewRequest().uri;
+	// if (uri.find("/cgi-bin/") != std::string::npos)
+	// {
+	// 	LOG_DEBUG("Requested path is a CGI script");
+
+	// 	// if (!std::filesystem::is_regular_file(client.GetNewRequest().path))
+	// 	if (std::filesystem::is_directory(client.GetNewRequest().mappedPath))
+	// 	{
+	// 		LOG_ERROR("Requested path is not a file");
+	// 		return std::string(s_ForbiddenResponse);
+	// 	}
+
+	// 	LOG_INFO("Requested path is a file: {}" , client.GetNewRequest().mappedPath.string());
+
+	// 	// std::filesystem::path fileName = client.GetRequest().getUri().filename();
+	// 	std::filesystem::path fileName = client.GetNewRequest().mappedPath.filename();
+	// 	NewHttpRequest updatedRequest = client.GetNewRequest();
+
+	// 	//TODO: extract from config
+	// 	std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
+	// 	// updatedRequest.setUri(cgiPath / fileName);
+	// 	updatedRequest.path = cgiPath / fileName;
+	// 	if (!std::filesystem::exists(updatedRequest.path))
+	// 	{
+	// 		LOG_ERROR("CGI script does not exist: {}", updatedRequest.path.string());
+	// 		return generateNotFoundResponse();
+	// 	}
+	// 	// LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
+	// 	LOG_INFO("CGI path: {}", updatedRequest.path.string());
+	// 	// Cgi::executeCGI(client, updatedRequest);
+	// 	return Cgi::executeCGI(client, updatedRequest);
+	// }
 
 	//? Validate the requested path
 
+
+
 	// if (std::filesystem::exists(client.GetRequest().getUri()))
-	if (std::filesystem::exists(client.GetNewRequest().path))
+	if (std::filesystem::exists(client.GetNewRequest().mappedPath))
 	{
 		//? Check if the requested path is a directory or a file
 		// if (std::filesystem::is_directory(client.GetNewRequest().path))
-		if (std::filesystem::is_directory(client.GetRequest().getUri()))
+		// if (std::filesystem::is_directory(client.GetRequest().getUri()))
+		if (std::filesystem::is_directory(client.GetNewRequest().mappedPath))
 		{
 			LOG_DEBUG("Requested path is a directory");
 
-			const std::vector<std::string>& indexes = client.GetConfig()->GetIndexList(client.GetNewRequest().path);
+			const std::vector<std::string>& indexes = client.GetConfig()->GetIndexList(client.GetNewRequest().mappedPath);
 			LOG_INFO("Index: {}", indexes[0]);
 
 			for (const auto& index : indexes)
 			{
 				LOG_INFO("Looking for: {}", index);
-				std::filesystem::path indexPath = client.GetNewRequest().path / index;
+				std::filesystem::path indexPath = client.GetNewRequest().mappedPath / index;
 				if (std::filesystem::exists(indexPath))
 				{
 					LOG_INFO("Index found: {}", indexPath.string());
 
-
-					const std::string& ifNoneMatch = client.GetRequest().getHeader("If-None-Match");
-					const std::string& ifModifiedSince = client.GetRequest().getHeader("If-Modified-Since");
-					const std::string& etag = generateETagv2(client.GetRequest().getUri());
-					const std::string& lastModified = getFileModificationTime(client.GetRequest().getUri());
-					if (ifNoneMatch == etag && ifModifiedSince == lastModified)
+					// const std::string& ifNoneMatch = client.GetNewRequest().getHeaderValue("If-None-Match");
+					// const std::string& ifModifiedSince = client.GetNewRequest().getHeaderValue("If-Modified-Since");
+					// const std::string& etag = generateETagv2(client.GetNewRequest().mappedPath);
+					// const std::string& lastModified = getFileModificationTime(client.GetNewRequest().mappedPath);
+					// if (ifNoneMatch == etag && ifModifiedSince == lastModified)
+					// {
+					// 	LOG_DEBUG("Resource has not been modified");
+					// 	return generateNotModifiedResponse();
+					// }
+					if (!isFileModified(client))
 					{
-						LOG_DEBUG("Resource has not been modified");
 						return generateNotModifiedResponse();
 					}
+
 					// client.GetRequest().setUri(indexPath);
-					HttpRequest updatedRequest = client.GetRequest();
-					updatedRequest.setUri(indexPath);
+					// HttpRequest updatedRequest = client.GetRequest();
+					// updatedRequest.setUri(indexPath);
+
+					NewHttpRequest updatedRequest = client.GetNewRequest();
+					updatedRequest.mappedPath = indexPath;
 					return generateOKResponse(indexPath, updatedRequest);
 				}
 			}
 
-			return generateDirectoryListingResponse(client.GetNewRequest().path);
+			return generateDirectoryListingResponse(client.GetNewRequest().mappedPath);
 		}
 		else if (std::filesystem::is_regular_file(client.GetRequest().getUri()))
 		{
@@ -549,11 +670,21 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 
 			LOG_DEBUG("Requested path is a file");
 
-			if (client.GetRequest().getHeader("If-None-Match") == generateETagv2(client.GetRequest().getUri()) && client.GetRequest().getHeader("If-Modified-Since") == getFileModificationTime(client.GetRequest().getUri()))
+			LOG_INFO("File: {}", client.GetRequest().getUri().string());
+			LOG_INFO("File: {}", client.GetNewRequest().mappedPath.string());
+			if (client.GetRequest().getHeader("If-None-Match") == generateETagv2(client.GetRequest().getUri()) && 
+				client.GetRequest().getHeader("If-Modified-Since") == getFileModificationTime(client.GetRequest().getUri()))
 			{
 				return generateNotModifiedResponse();
 			}
 
+			// if (client.GetNewRequest().getHeaderValue("If-None-Match") == generateETagv2(client.GetNewRequest().path) && 
+			// 	client.GetNewRequest().getHeaderValue("If-Modified-Since") == getFileModificationTime(client.GetNewRequest().path))
+			// {
+			// 	return generateNotModifiedResponse();
+			// }
+
+			return generateFileResponse(client.GetNewRequest());
 			return generateFileResponse(client.GetRequest());
 		}
 		else
@@ -737,7 +868,6 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client, c
 
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest
-// std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
 std::string ResponseGenerator::generateOKResponse(const HttpRequest& request)
 {
 	LOG_INFO("Generating 200 OK response");
@@ -754,20 +884,18 @@ std::string ResponseGenerator::generateOKResponse(const HttpRequest& request)
 	return "";
 }
 
-std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
+std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const NewHttpRequest& request)
 {
 	LOG_INFO("Generating 200 OK response");
 
 	auto fileContents = readFileContents(path);
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());
+		LOG_CRITICAL("Failed to read file contents: {}", request.mappedPath.string());
 		return generateForbiddenResponse();
 	}
 	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
 	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request);
-
-	return "";
 }
 
 std::string ResponseGenerator::generateForbiddenResponse()
@@ -800,6 +928,21 @@ std::string ResponseGenerator::generateFileResponse(const HttpRequest& request)
 	if (fileContents.empty())
 	{
 		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());
+		// return generateForbiddenResponse(path);
+		return generateForbiddenResponse();
+	}
+	// return buildHttpResponse(request.getUri(), fileContents, HTTPStatusCode::OK, request);
+	return buildHttpResponse(fileContents, HTTPStatusCode::OK, request);
+}
+
+std::string ResponseGenerator::generateFileResponse(const NewHttpRequest& request)
+{
+	LOG_TRACE("Generating file response");
+	LOG_TRACE("Request URI: {}", request.mappedPath.string());
+	std::string fileContents = ReadImageFile(request.mappedPath);
+	if (fileContents.empty())
+	{
+		LOG_CRITICAL("Failed to read file contents: {}", request.mappedPath.string());
 		// return generateForbiddenResponse(path);
 		return generateForbiddenResponse();
 	}

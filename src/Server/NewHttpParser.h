@@ -39,8 +39,8 @@ public:
 	// Basic properties
 	std::string method;
 	std::string uri;
-	// std::string path;
 	std::filesystem::path path;
+	std::filesystem::path mappedPath; //? Path to the file/directory on the server
 	std::string query;
 	std::string httpVersion;
 	std::unordered_map<std::string, std::string> headers;
@@ -75,6 +75,7 @@ public:
 		std::cout << green << "Method: " << white << method << reset << std::endl;
 		std::cout << green << "URI: " << white << uri << reset << std::endl;
 		std::cout << green << "Path: " << white << path.string() << reset << std::endl;
+		std::cout << green << "Mapped Path: " << white << mappedPath.string() << reset << std::endl;
 		// std::cout << green << "Path: " << white << path << reset << std::endl;
 		std::cout << green << "Query: " << white << query << reset << std::endl;
 		std::cout << green << "HTTP Version: " << white << httpVersion << reset << std::endl;
