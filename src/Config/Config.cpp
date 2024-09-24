@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/05 13:09:31 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/16 21:13:05 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/24 16:16:35 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,7 +98,7 @@ void	Config:: print()
 			for (auto& i : server->GetGlobalSettings().cgi)
 				std::cout << "\tCgi: " << i << '\n';
             std::cout << "\tMethods: " << MethodToString(server->GetGlobalSettings().httpMethods) << '\n';
-			std::cout << "\tRedirect: " << server->GetGlobalSettings().returnCode << '\n';
+			std::cout << "\tRedirect: " << server->GetGlobalSettings().redirect.first << " " << server->GetGlobalSettings().redirect.second << '\n';
 			std::cout << "\tMax Client Body Size: " << server->GetGlobalSettings().maxBodySize << "B\n";
 			for (const auto& [key, value] : server->GetGlobalSettings().errorPageMap)
 				std::cout << "\tError Page: " << key << " - " << value << '\n';
@@ -113,7 +113,7 @@ void	Config:: print()
                 std::cout << "\t\tAutoindex: " << std::boolalpha << location.autoindex << '\n';
 				for (auto& i : location.cgi)
 					std::cout << "\t\tCgi: " << i << '\n';
-				std::cout << "\t\tRedirect: " << location.returnCode << '\n';
+				std::cout << "\t\tRedirect: " << location.redirect.first << " " << location.redirect.second << '\n';
 				std::cout << "\t\tMax Client Body Size: " << location.maxBodySize << "B\n";
 				for (const auto& [key, value] : location.errorPageMap)
 					std::cout << "\t\tError Page: " << key << " - " << value << '\n';

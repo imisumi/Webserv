@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ConfigParser.cpp                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/18 12:53:07 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/18 14:24:52 by imisumi          ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ConfigParser.cpp                                   :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/18 12:53:07 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/09/24 16:04:00 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -166,7 +166,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 		else if (it->first == REDIRECT && !(repeatDirective & (1 << REDIRECT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleRedirect(server.m_GlobalSettings.returnCode, end, it);
+			handleRedirect(server.m_GlobalSettings.redirect, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << REDIRECT);
 		}
@@ -274,7 +274,7 @@ void	ConfigParser:: handleLocationSettings(
 		else if (it->first == REDIRECT && !(repeatDirective & (1 << REDIRECT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleRedirect(location.returnCode, end, it);
+			handleRedirect(location.redirect, end, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << REDIRECT);
 		}

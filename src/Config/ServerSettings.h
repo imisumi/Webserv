@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ServerSettings.h                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/22 03:46:15 by imisumi-wsl      ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ServerSettings.h                                   :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/09/24 16:15:27 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ class ServerSettings
 			std::vector<std::string>							index = {"index.html", "index.htm", "index.php"};
 			bool												autoindex = false;
 			std::vector<std::string>							cgi;
-			uint16_t											returnCode = 0;
+			std::pair<uint16_t, std::filesystem::path>			redirect;
 			std::unordered_map<uint16_t, std::filesystem::path>	errorPageMap;
 			uint64_t											maxBodySize = 1024;
 			uint8_t												httpMethods = 1;
