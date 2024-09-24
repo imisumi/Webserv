@@ -279,6 +279,15 @@ std::string ResponseGenerator::ContentTypeToString(ContentType type)
 	}
 }
 
+std::string getProjectRootDir() {
+	const char* rootDir = std::getenv("WEBSERV_ROOT");
+	if (!rootDir) {
+		LOG_ERROR("WEBSERV_ROOT environment variable not set!");
+		throw std::runtime_error("WEBSERV_ROOT environment variable is not set.");
+	}
+	return std::string(rootDir);
+}
+
 std::string ResponseGenerator::getCurrentDateAndTime()
 {
 	// Get current time
@@ -729,12 +738,12 @@ bool saveFormDataToFile(const std::string &firstName, std::string lastName, std:
         email = "EMPTY";
     }
 
-    std::ofstream file("/home/kaltevog/Desktop/Webserv/database/text.txt", std::ios_base::app);
-    if (!file.is_open()) {
-        std::cerr << "[ERROR] Failed to open file: /home/kaltevog/Desktop/Webserv/database/text.txt" << std::endl;
-        return false;
-    }
-
+    std::string filePath = getProjectRootDir() + "/database/text.txt";
+	std::ofstream file(filePath, std::ios_base::app);
+	if (!file.is_open()) {
+		std::cerr << "[ERROR] Failed to open file: " << filePath << std::endl;
+		return false;
+	}
     file << "First Name: " << firstName << "\n";
     file << "Last Name: " << (lastName.empty() ? "EMPTY" : lastName) << "\n";
     file << "Email: " << (email.empty() ? "EMPTY" : email) << "\n\n";
@@ -813,13 +822,12 @@ const std::string ResponseGenerator::handlePostRequest(const Client& Client, con
         LOG_ERROR("Failed to save form data to file");
         return generateInternalServerErrorResponse();
     }
+	std::string uploadDir = getProjectRootDir() + "/database";
 
-	//hardcoded
-    if (!saveUploadedFile(body, boundary, "file", "/home/kaltevog/Desktop/Webserv/database")) {
+    if (!saveUploadedFile(body, boundary, "file", uploadDir)) {
         LOG_ERROR("Failed to save uploaded file");
         return generateInternalServerErrorResponse();
     }
-
     LOG_INFO("Successfully handled POST request, saved form data, and saved file");
     return generateOKResponse(request);
 }
@@ -830,14 +838,9 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client, c
 {
     Utils::Timer timer;
     LOG_INFO("Handling DELETE request");
-
-    // Get the requested URI
-    std::filesystem::path uri = request.getUri();
-
-    // Build the full path to the /database directory
-    std::filesystem::path basePath = "/home/kaltevog/Desktop/Webserv/database";
-    std::filesystem::path fullPath = basePath / uri.filename(); // Only delete file in /database, using the filename part of the URI
-
+	std::filesystem::path uri = request.getUri();
+    std::string basePath = getProjectRootDir() + "/database";
+    std::filesystem::path fullPath = basePath / uri.filename();
     LOG_INFO("Attempting to delete file: {}", fullPath.string());
 
     // Check if the requested file exists
