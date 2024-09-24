@@ -6,7 +6,7 @@
 /*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2024/09/18 12:20:38 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/24 16:15:38 by kwchu         ########   odam.nl         */
+/*   Updated: 2024/09/24 16:21:52 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -154,8 +154,15 @@ void	ConfigParser:: handleRedirect(
 	redirect.first = stringToUInt16(it->second);
 	if (redirect.first < 300 || redirect.first > 308)
 		throw std::invalid_argument("invalid redirect code");
-	expectNextToken(end, it, ARGUMENT);
-	redirect.second = it->second;
+	try
+	{
+		expectNextToken(end, it, ARGUMENT);
+		redirect.second = it->second;
+	}
+	catch (const std::exception& e)
+	{
+		it--;
+	}
 }
 
 void	ConfigParser:: handleErrorPage(
