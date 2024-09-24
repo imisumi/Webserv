@@ -599,15 +599,16 @@ void Server::HandleOutputEvent(int epoll_fd)
 		const std::string& response = it->second;
 
 
-		if (response.find("image/x-icon") != std::string::npos)
-		{
-			// LOG_DEBUG("Sending favicon.ico to client: {}", epoll_fd);
-			LOG_TRACE("Sending favicon.ico to client: {}", epoll_fd);
-		}
-		else
-		{
-			LOG_TRACE("Sending response to client:\n{}", response);
-		}
+		// if (response.find("image/x-icon") != std::string::npos || response.find("image/png") != std::string::npos)
+		// {
+		// 	// LOG_DEBUG("Sending favicon.ico to client: {}", epoll_fd);
+		// 	// LOG_TRACE("Sending favicon.ico to client: {}", epoll_fd);
+		// 	LOG_INFO("Sending image to client: {}", epoll_fd);
+		// }
+		// else
+		// {
+		// 	LOG_TRACE("Sending response to client:\n{}", response);
+		// }
 
 		// LOG_TRACE("Sending response to client:\n{}", response);
 		// LOG_INFO("Response:\n{}", response);

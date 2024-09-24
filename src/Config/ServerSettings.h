@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ServerSettings.h                                   :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/17 16:20:30 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ServerSettings.h                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
+/*   Updated: 2024/09/22 03:46:15 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,6 +86,15 @@ class ServerSettings
 			if (it != this->m_Locations.end())
 				return it->second.index[0]; //TODO: fix
 			return this->m_GlobalSettings.index[0]; //TODO: fix
+		}
+
+		const std::vector<std::string>& GetIndexList(const std::filesystem::path& path) const
+		{
+			std::map<std::filesystem::path, LocationSettings>::const_iterator	it = this->m_Locations.find(path);
+
+			if (it != m_Locations.end())
+				return it->second.index;
+			return m_GlobalSettings.index;
 		}
 
 

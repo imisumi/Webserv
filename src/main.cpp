@@ -20,7 +20,6 @@ static void SignalHandler(int signal)
 
 int main()
 {
-	Log::Init();
 	char cwd[1024];
 	if (getcwd(cwd, sizeof(cwd)) != NULL)
 	{
@@ -32,6 +31,22 @@ int main()
 		std::cerr << "Error setting environment variable" << std::endl;
 		return 1;
 	}
+
+	LOG_TRACE("trace");
+	LOG_INFO("info");
+	LOG_DEBUG("debug");
+	LOG_WARN("warn");
+	LOG_ERROR("error");
+	LOG_CRITICAL("critical {}", 123, 1);
+
+	LOG_TRACE("This is a trace message {}: {}: {}", 123, "Hello", 10.12f);
+	LOG_TRACE("This is an info message {}: {}: {}", 123, "Hello", 10.12f);
+	LOG_TRACE("This is a debug message {}: {}: {}", 123, "Hello", 10.12f);
+	LOG_TRACE("This is a warning message {}: {}: {}", 123, "Hello", 10.12f);
+	LOG_TRACE("This is an error message {}: {}: {}", 123, "Hello", 10.12f);
+	LOG_TRACE("This is a critical message {}: {}: {}", 123, "Hello", 10.12f);
+	// LOG_TRACE("This is a critical message {}: {}: {", 123, "Hello", 10.12f);
+	LOG_TRACE("trace: ", 123);
 
 	// {
 	// 	Config conf = Config::CreateDefaultConfig();

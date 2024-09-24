@@ -6,6 +6,7 @@
 
 #include "Config/Config.h"
 #include "HttpRequestParser.h"
+#include "NewHttpParser.h"
 
 class Client
 {
@@ -76,6 +77,10 @@ public:
 
 	void SetRequest(const HttpRequest& request) { m_Request = request; }
 	const HttpRequest& GetRequest() const { return m_Request; }
+
+
+	void SetNewRequest(const NewHttpRequest& request) { m_NewRequest = request; }
+	const NewHttpRequest& GetNewRequest() const { return m_NewRequest; }
 private:
 	int m_Socket = -1;
 
@@ -95,4 +100,6 @@ private:
 
 	ServerSettings* m_Config;
 	HttpRequest m_Request;
+
+	NewHttpRequest m_NewRequest;
 };

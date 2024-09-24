@@ -26,18 +26,48 @@
 	- not okay to cache
 	- can change the server
 */
+#include "NewHttpParser.h"
+
 const std::string RequestHandler::HandleRequest(Client& client, const std::string& request)
 {
 	parseRequest(request);
+	NewHttpRequest parsedRequest;
+	if (parsedRequest.parse(request) == -1)
+	{
+		LOG_ERROR("Failed to parse request");
+		return ResponseGenerator::InternalServerError();
+	}
 
 	HttpRequest req = m_RequestParser.getRequest();
 	LOG_INFO("URI: {}", req.getUri().string());
-	client.SetRequest(req);
 
 	ServerSettings* serverSettings = client.GetConfig();
-	ServerSettings::LocationSettings location = (*serverSettings)[req.getUri()];
+	// ServerSettings::LocationSettings location = (*serverSettings)[req.getUri()];
+	LOG_INFO("Directory: {}", parsedRequest.path.string());
+	std::filesystem::path directory = parsedRequest.path.parent_path();
+	LOG_INFO("Directory: {}", directory.string());
+	ServerSettings::LocationSettings location = (*serverSettings)[directory];
+
+	//TODO: fix the way we handle uri's that end with a slash
+	if (std::filesystem::is_directory(parsedRequest.path))
+	{
+		LOG_INFO("Directory: {}", parsedRequest.path.string());
+	}
+	else if (std::filesystem::is_regular_file(parsedRequest.path))
+	{
+		LOG_INFO("File: {}", parsedRequest.path.string());
+	}
+	else
+	{
+		LOG_ERROR("Invalid path: {}", parsedRequest.path.string());
+	}
+
+	// parsedRequest.path = location.root / std::filesystem::relative(parsedRequest.path, "/");
+	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
+	parsedRequest.print();
 
 	req.setUri(location.root / std::filesystem::relative(req.getUri(), "/"));
+	LOG_INFO("URI: {}", req.getUri().string());
 
 	uint8_t allowedMethods = client.GetConfig()->GetAllowedMethods(req.getUri());
 
@@ -48,6 +78,9 @@ const std::string RequestHandler::HandleRequest(Client& client, const std::strin
 	//TODO: this is not working correctly
 	// if (allowedMethods & static_cast<uint8_t>(req.method))
 	// {
+	client.SetNewRequest(parsedRequest);
+	client.SetRequest(req);
+	// return ResponseGenerator::OkResponse();
  	return ResponseGenerator::generateResponse(client, req);
 	// }
 	// return ResponseGenerator::MethodNotAllowed();

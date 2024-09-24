@@ -3,8 +3,10 @@
 #include "Server.h"
 
 // #include <
+#include <fcntl.h>
 
 #include "Core/Core.h"
+#include <unistd.h>
 
 #include <sys/socket.h>
 
