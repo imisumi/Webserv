@@ -665,16 +665,14 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 
 			return generateDirectoryListingResponse(client.GetNewRequest().mappedPath);
 		}
-		else if (std::filesystem::is_regular_file(client.GetRequest().getUri()))
+		else if (std::filesystem::is_regular_file(client.GetNewRequest().mappedPath))
 		{
 			//TODO: check if file is a CGI script
 
 			LOG_DEBUG("Requested path is a file");
 
-			LOG_INFO("File: {}", client.GetRequest().getUri().string());
 			LOG_INFO("File: {}", client.GetNewRequest().mappedPath.string());
-			if (client.GetRequest().getHeader("If-None-Match") == generateETagv2(client.GetRequest().getUri()) && 
-				client.GetRequest().getHeader("If-Modified-Since") == getFileModificationTime(client.GetRequest().getUri()))
+			if (!isFileModified(client))
 			{
 				return generateNotModifiedResponse();
 			}
@@ -686,7 +684,6 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 			// }
 
 			return generateFileResponse(client.GetNewRequest());
-			return generateFileResponse(client.GetRequest());
 		}
 		else
 		{
