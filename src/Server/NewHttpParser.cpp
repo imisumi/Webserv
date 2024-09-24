@@ -183,10 +183,13 @@ int NewHttpRequest::parse(const std::string& data)
 			case HttpParserState::Body:
 				body += c;
 				break;
+
+			case HttpParserState::Error:
+				return -1;
+			case HttpParserState::Done:
+				return 0;
 		}
 	}
-	path = normalizePath(path);
-	mappedPath = normalizePath(mappedPath);
 	if (getHeaderValue("host").empty())
 		return -1;
 	if (state == HttpParserState::Body || state == HttpParserState::HeaderName)

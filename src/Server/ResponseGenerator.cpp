@@ -575,7 +575,8 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 
 	if (api.isApiRoute(client.GetNewRequest().path.string()))
 	{
-		return Api::getImages("/home/imisumi-wsl/dev/Webserv/database/images");
+		std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
+		return Api::getImages(databaseImagePath);
 	}
 
 
