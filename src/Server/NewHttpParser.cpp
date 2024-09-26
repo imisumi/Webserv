@@ -108,7 +108,6 @@ int NewHttpRequest::parse(const std::string& data)
 				{
 					path += c;
 					uri += c;
-					mappedPath += c;
 				}
 				break;
 			case HttpParserState::URI_Query:
@@ -192,13 +191,87 @@ int NewHttpRequest::parse(const std::string& data)
 	}
 	if (getHeaderValue("host").empty())
 		return -1;
-	if (state == HttpParserState::Body || state == HttpParserState::HeaderName)
-		return 0;
-	else
+	if (state != HttpParserState::Body && state != HttpParserState::HeaderName)
 		return -1;
+
+	path = normalizePath(path);
+	mappedPath = path;
 	return 0;
 }
 
+std::vector<std::string> NewHttpRequest::stringSplit(const std::string& str, char delimiter)
+{
+	std::vector<std::string> tokens;
+	std::string token;
+	
+	for (char ch : str)
+	{
+		if (ch == delimiter)
+		{
+			if (!token.empty())
+			{
+				tokens.push_back(std::move(token));  // Move token to avoid extra copies
+				token.clear();  // Clear string after moving
+			}
+		}
+		else
+		{
+			token += ch;
+		}
+	}
+	
+	if (!token.empty())
+	{
+		tokens.push_back(std::move(token));
+	}
+	
+	return tokens;
+}
+
+
+// Function to normalize a given URI
+std::string NewHttpRequest::normalizePath(const std::string& uri)
+{
+	std::vector<std::string> parts = stringSplit(uri, '/');
+	std::vector<std::string> stack;
+
+	for (const auto& part : parts)
+	{
+		if (part == "." || part.empty())
+		{
+			// Skip current directory and empty parts (e.g., multiple slashes)
+			continue;
+		}
+		else if (part == "..")
+		{
+			// Go to parent directory if not empty
+			if (!stack.empty())
+			{
+				stack.pop_back();
+			}
+		}
+		else
+		{
+			// Normal directory or file, push to the stack
+			stack.push_back(part);
+		}
+	}
+
+	// Reconstruct the normalized path
+	std::string normalizedPath = "/";
+	for (const auto& part : stack)
+	{
+		normalizedPath += part + "/";
+	}
+
+	// Remove trailing slash if it's not the root
+	if (normalizedPath.size() > 1 && normalizedPath.back() == '/')
+	{
+		normalizedPath.pop_back();
+	}
+
+	return normalizedPath;
+}
 
 
 void test1()

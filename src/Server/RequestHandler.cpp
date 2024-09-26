@@ -44,23 +44,10 @@ const std::string RequestHandler::HandleRequest(Client& client, const std::strin
 	ServerSettings* serverSettings = client.GetConfig();
 	// ServerSettings::LocationSettings location = (*serverSettings)[req.getUri()];
 	LOG_INFO("Directory: {}", parsedRequest.path.string());
-	std::filesystem::path directory = parsedRequest.path.parent_path();
+	// std::filesystem::path directory = parsedRequest.path.parent_path();
+	std::filesystem::path directory = parsedRequest.path;
 	LOG_INFO("Directory: {}", directory.string());
 	ServerSettings::LocationSettings location = (*serverSettings)[directory];
-
-	//TODO: fix the way we handle uri's that end with a slash
-	if (std::filesystem::is_directory(parsedRequest.path))
-	{
-		LOG_INFO("Directory: {}", parsedRequest.path.string());
-	}
-	else if (std::filesystem::is_regular_file(parsedRequest.path))
-	{
-		LOG_INFO("File: {}", parsedRequest.path.string());
-	}
-	else
-	{
-		LOG_ERROR("Invalid path: {}", parsedRequest.path.string());
-	}
 
 	// parsedRequest.path = location.root / std::filesystem::relative(parsedRequest.path, "/");
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");

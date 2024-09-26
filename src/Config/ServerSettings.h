@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ServerSettings.h                                   :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/24 16:15:27 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ServerSettings.h                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
+/*   Updated: 2024/09/26 04:17:05 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@
 #include <map>
 #include <unordered_map>
 #include <iostream>
+
+#include "Core/Log.h"
 
 class ServerSettings
 {
@@ -52,7 +54,11 @@ class ServerSettings
 			std::map<std::filesystem::path, LocationSettings>::iterator	it = this->m_Locations.find(path);
 
 			if (it != this->m_Locations.end())
+			{
+				LOG_INFO("Location found: {}", path.string());
 				return it->second;
+			}
+			LOG_INFO("Location not found, returning global settings");
 			return this->m_GlobalSettings;
 		};
 		const LocationSettings&	operator[](const std::filesystem::path& path) const
