@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ConfigParser.cpp                                   :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/18 12:53:07 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/24 16:04:00 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ConfigParser.cpp                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/18 12:53:07 by kwchu             #+#    #+#             */
+/*   Updated: 2024/09/27 03:33:44 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@ Config	ConfigParser:: createDefaultConfig()
 	return config;
 }
 
-Config	ConfigParser:: createConfigFromFile(const std::filesystem::path& path)    
+Config	ConfigParser::createConfigFromFile(const std::filesystem::path& path)
 {
 	Config			config;
 	TokenVector		tokens;
@@ -62,22 +62,14 @@ void	ConfigParser::tokenMapToServerSettings(
 	}
 }
 
-void	ConfigParser::assignPortToServerSettings(
-	ServerMap& serverMap, 
-	Servers& servers)
+void ConfigParser::assignPortToServerSettings(ServerMap& serverMap, Servers& servers)
 {
-	for (Servers::const_iterator it = servers.begin(); it != servers.end(); it++)
+	for (auto& server : servers)
 	{
-		for (std::vector<uint64_t>::const_iterator itPort = it->m_Ports.begin(); itPort != it->m_Ports.end(); itPort++)
+		for (const auto& port : server.m_Ports)
 		{
-			serverMap[*itPort];
-		}
-	}
-	for (Servers::iterator it = servers.begin(); it != servers.end(); it++)
-	{
-		for (std::vector<uint64_t>::const_iterator itPort = it->m_Ports.begin(); itPort != it->m_Ports.end(); itPort++)
-		{
-			serverMap[*itPort].push_back(&(*it));
+			serverMap[port];                    // Create an entry for the port if it doesn't exist
+			serverMap[port].push_back(&server); // Add the server pointer to the corresponding port
 		}
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/26 04:17:05 by imisumi-wsl      ###   ########.fr       */
+/*   Updated: 2024/09/26 16:27:30 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,6 +75,12 @@ class ServerSettings
 		std::vector<uint64_t> getPorts() const { return m_Ports; };
 
 
+		bool hasLocationSettings(const std::filesystem::path& path) const
+		{
+			return m_Locations.find(path) != m_Locations.end();
+		}
+
+
 
 		uint8_t	GetAllowedMethods(const std::filesystem::path& path) const
 		{
@@ -109,8 +115,10 @@ class ServerSettings
 			auto it = m_Locations.find(path);
 			if (it != m_Locations.end())
 			{
+				LOG_DEBUG("Location found: {}", path.string());
 				return it->second;
 			}
+			LOG_DEBUG("Location not found, returning global settings");
 			return m_GlobalSettings;
 		}
 

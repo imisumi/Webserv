@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ConfigDirectiveHandlers.cpp                        :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/18 12:20:38 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/24 16:21:52 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ConfigDirectiveHandlers.cpp                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/18 12:20:38 by kwchu             #+#    #+#             */
+/*   Updated: 2024/09/27 03:31:51 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,6 @@ void	ConfigParser:: handlePort(
 	TokenVector	hostPort = tokenize(it->second, ":");
 	uint32_t	host;
 	uint16_t 	port;
-	uint64_t	result = 0;
 
 	if (hostPort.size() > 2)
 		throw std::invalid_argument("invalid host:port format: " + it->second);
@@ -42,7 +41,7 @@ void	ConfigParser:: handlePort(
 	}
 	if (port == 0)
 		throw std::invalid_argument("port cannot be 0");
-	result += (static_cast<uint64_t>(host) << 32) + static_cast<uint64_t>(port);
+	uint64_t result = (static_cast<uint64_t>(host) << 32) | static_cast<uint64_t>(port);
 	ports.emplace_back(result);
 }
 
