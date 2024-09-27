@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .gallery-item {
+            position: relative;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            text-align: center;
+            max-width: 200px;
+        }
+        .gallery-item img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .filename {
+            padding: 10px;
+            font-size: 14px;
+        }
+        .delete-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            width: 25px;
+            height: 25px;
+            text-align: center;
+            line-height: 22px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Image Gallery</h1>
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+        async function fetchImages() {
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/images');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const gallery = document.getElementById('gallery');
+                    gallery.innerHTML = ''; // Clear existing content
+
+                    for (const image of data.images) {
+                        const imgResponse = await fetch(image.url);
+                        if (imgResponse.ok) {
+                            const item = document.createElement('div');
+                            item.className = 'gallery-item';
+                            const imgUrl = image.url;
+
+                            // Create gallery item with delete button (cross)
+                            item.innerHTML = `
+                                <button class="delete-button" onclick="deleteImage('${image.filename}')">×</button>
+                                <img src="${imgUrl}" alt="${image.filename}">
+                                <div class="filename">${image.filename}</div>
+                            `;
+                            gallery.appendChild(item);
+                        } else {
+                            const item = document.createElement('div');
+                            item.className = 'gallery-item';
+                            item.innerHTML = `
+                                <div class="error">Error loading ${image.filename}</div>
+                                <div class="filename">${image.filename}</div>
+                            `;
+                            gallery.appendChild(item);
+                        }
+                    }
+                } else {
+                    console.error('Error fetching images:', data.status);
+                }
+            } catch (error) {
+                console.error('Error fetching images:', error);
+            }
+        }
+
+        // async function deleteImage(filename) {
+        //     try {
+        //         const response = await fetch(`http://localhost:8080/api/v1/images/${filename}`, {
+        //             method: 'DELETE',
+        //         });
+
+        //         if (response.ok) {
+        //             alert(`Image ${filename} deleted successfully!`);
+        //             fetchImages(); // Refresh the gallery after deletion
+        //         } else {
+        //             alert(`Error deleting image ${filename}`);
+        //         }
+        //     } catch (error) {
+        //         console.error('Error deleting image:', error);
+        //     }
+        // }
+
+        async function deleteImage(filename) {
+            try {
+                const projectRootDir = ''; // fill this with uri if u want specific one
+                const deleteURI = `${projectRootDir}/${filename}`;
+                const response = await fetch(deleteURI, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    alert(`Image ${filename} deleted successfully!`);
+                    fetchImages();
+                } else {
+                    alert(`Error deleting image ${filename}`);
+                }
+            } catch (error) {
+                console.error('Error deleting image:', error);
+            }
+        }
+        window.onload = fetchImages;
+    </script>
+
+    <button id="goBackButton">
+        Go Back
+    </button>
+
+    <script>
+        document.getElementById('goBackButton').addEventListener('click', function() {
+            window.history.back();
+        });
+    </script>
+</body>
+</html>
