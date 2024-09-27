@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <filesystem>
 
+#include "Constants.h"
+
 enum class ParserState
 {
 	Start,
@@ -20,7 +22,7 @@ enum class ParserState
 	Error
 };
 
-#define BIT(n) (1u << (n))
+// #define BIT(n) (1u << (n))
 
 enum class RequestMethod : uint8_t
 {

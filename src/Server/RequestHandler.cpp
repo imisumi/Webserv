@@ -41,14 +41,25 @@ const std::string RequestHandler::HandleRequest(Client& client, const std::strin
 	HttpRequest req = m_RequestParser.getRequest();
 	LOG_INFO("URI: {}", req.getUri().string());
 
-	ServerSettings* serverSettings = client.GetConfig();
-	// ServerSettings::LocationSettings location = (*serverSettings)[req.getUri()];
-	LOG_INFO("Directory: {}", parsedRequest.path.string());
-	// std::filesystem::path directory = parsedRequest.path.parent_path();
-	std::filesystem::path directory = parsedRequest.path;
-	LOG_INFO("Directory: {}", directory.string());
-	ServerSettings::LocationSettings location = (*serverSettings)[directory];
+	std::filesystem::path locationPrefix = parsedRequest.path;
+	LOG_INFO("Directory: {}", locationPrefix.string());
 
+	//? find the longest path prefix that has location settings
+	for (std::filesystem::path longestPathPrefix = parsedRequest.path; longestPathPrefix != "/"; longestPathPrefix = longestPathPrefix.parent_path())
+	{
+		LOG_INFO("Longest path prefix: {}", longestPathPrefix.string());
+		if (client.GetConfig()->hasLocationSettings(longestPathPrefix))
+		{
+			locationPrefix = longestPathPrefix;
+			LOG_DEBUG("Location settings found for: {}", locationPrefix.string());
+			break;
+		}
+	}
+
+	LOG_INFO("Location prefix: {}", locationPrefix.string());
+	const ServerSettings::LocationSettings& location = client.GetConfig()->GetLocationSettings(locationPrefix);
+	client.SetLocationSettings(location);
+	
 	// parsedRequest.path = location.root / std::filesystem::relative(parsedRequest.path, "/");
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
 	parsedRequest.print();

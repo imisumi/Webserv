@@ -2,6 +2,8 @@
 
 #include "Server.h"
 
+#include "Utils/Utils.h"
+
 // #include <
 #include <fcntl.h>
 
@@ -10,13 +12,7 @@
 
 #include <sys/socket.h>
 
-#define EPOLL_TYPE_SOCKET   BIT(0)
-#define EPOLL_TYPE_CGI      BIT(1)
-#define EPOLL_TYPE_STDIN    BIT(2)
-#define EPOLL_TYPE_STDOUT   BIT(3)
-
-#define PACK_U64(fd, metadata)   (((uint64_t)(fd) << 32) | (metadata))
-
+#include "Constants.h"
 
 static ConnectionManager* s_Instance = nullptr;
 
@@ -65,10 +61,10 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 		return Client();
 	}
 
-	client.Initialize(client_addr);
-	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}", 
-		client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort());
+	client.Initialize(client_addr, socket_fd);
 
+	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}, server address: {}", 
+		client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort(), client.GetServerAddress());
 
 	// make the socket non-blocking
 	int flags = fcntl((int)client, F_GETFL, 0);
@@ -105,7 +101,10 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	client.SetEpollInstance(Server::Get().GetEpollInstance());
 
 
-	uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
+	// uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
+	uint64_t packedIpPort = Utils::packIpAndPort(client.GetServerAddress(), client.GetServerPort());
+
+	std::cout << std::endl;
 
 	ServerSettings* settings = Server::GetServerSettings(packedIpPort);
 	client.SetConfig(settings);

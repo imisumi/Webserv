@@ -559,17 +559,23 @@ const std::string ResponseGenerator::generateDirectoryListingResponse(const std:
 /*
 	check wether the requested file has been modified based on the last-modified and etag headers
 */
-bool ResponseGenerator::isFileModified(const Client& client)
+bool ResponseGenerator::isFileModified(const NewHttpRequest& request)
 {
-	const std::string& ifNoneMatch = client.GetNewRequest().getHeaderValue("If-None-Match");
-	const std::string& ifModifiedSince = client.GetNewRequest().getHeaderValue("If-Modified-Since");
-	const std::string& etag = generateETagv2(client.GetNewRequest().mappedPath);
-	const std::string& lastModified = getFileModificationTime(client.GetNewRequest().mappedPath);
+	// const NewHttpRequest& request = client.GetNewRequest();
+	const std::string& ifNoneMatch = request.getHeaderValue("if-none-match");
+	const std::string& ifModifiedSince = request.getHeaderValue("if-modified-since");
+	const std::string& etag = generateETagv2(request.mappedPath);
+	const std::string& lastModified = getFileModificationTime(request.mappedPath);
 	if (ifNoneMatch == etag && ifModifiedSince == lastModified)
 	{
 		LOG_DEBUG("Resource has not been modified");
 		return false;
 	}
+	LOG_INFO("Resource has been modified");
+	LOG_INFO("If-None-Match    : {}", ifNoneMatch);
+	LOG_INFO("ETag             : {}", etag);
+	LOG_INFO("If-Modified-Since: {}", ifModifiedSince);
+	LOG_INFO("Last-Modified    : {}", lastModified);
 	return true;
 }
 
@@ -588,77 +594,29 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
 		return Api::getImages(databaseImagePath);
 	}
-
-
-	// very temporary
-	// std::string uri = client.GetNewRequest().uri;
-	// if (uri.find("/cgi-bin/") != std::string::npos)
-	// {
-	// 	LOG_DEBUG("Requested path is a CGI script");
-
-	// 	// if (!std::filesystem::is_regular_file(client.GetNewRequest().path))
-	// 	if (std::filesystem::is_directory(client.GetNewRequest().mappedPath))
-	// 	{
-	// 		LOG_ERROR("Requested path is not a file");
-	// 		return std::string(s_ForbiddenResponse);
-	// 	}
-
-	// 	LOG_INFO("Requested path is a file: {}" , client.GetNewRequest().mappedPath.string());
-
-	// 	// std::filesystem::path fileName = client.GetRequest().getUri().filename();
-	// 	std::filesystem::path fileName = client.GetNewRequest().mappedPath.filename();
-	// 	NewHttpRequest updatedRequest = client.GetNewRequest();
-
-	// 	//TODO: extract from config
-	// 	std::filesystem::path cgiPath = getenv("CGI_ROOT_DIR");
-	// 	// updatedRequest.setUri(cgiPath / fileName);
-	// 	updatedRequest.path = cgiPath / fileName;
-	// 	if (!std::filesystem::exists(updatedRequest.path))
-	// 	{
-	// 		LOG_ERROR("CGI script does not exist: {}", updatedRequest.path.string());
-	// 		return generateNotFoundResponse();
-	// 	}
-	// 	// LOG_INFO("CGI path: {}", updatedRequest.getUri().string());
-	// 	LOG_INFO("CGI path: {}", updatedRequest.path.string());
-	// 	// Cgi::executeCGI(client, updatedRequest);
-	// 	return Cgi::executeCGI(client, updatedRequest);
-	// }
-
 	//? Validate the requested path
 
 
-
-	// if (std::filesystem::exists(client.GetRequest().getUri()))
-	if (std::filesystem::exists(client.GetNewRequest().mappedPath))
+	const std::filesystem::path& path = client.GetNewRequest().mappedPath;
+	if (std::filesystem::exists(path))
 	{
 		//? Check if the requested path is a directory or a file
-		// if (std::filesystem::is_directory(client.GetNewRequest().path))
-		// if (std::filesystem::is_directory(client.GetRequest().getUri()))
-		if (std::filesystem::is_directory(client.GetNewRequest().mappedPath))
+		if (std::filesystem::is_directory(path))
 		{
 			LOG_DEBUG("Requested path is a directory");
 
-			const std::vector<std::string>& indexes = client.GetConfig()->GetIndexList(client.GetNewRequest().mappedPath);
+			const std::vector<std::string>& indexes = client.GetConfig()->GetIndexList(path);
 			LOG_INFO("Index: {}", indexes[0]);
 
 			for (const auto& index : indexes)
 			{
 				LOG_INFO("Looking for: {}", index);
-				std::filesystem::path indexPath = client.GetNewRequest().mappedPath / index;
+				std::filesystem::path indexPath = path / index;
 				if (std::filesystem::exists(indexPath))
 				{
 					LOG_INFO("Index found: {}", indexPath.string());
 
-					// const std::string& ifNoneMatch = client.GetNewRequest().getHeaderValue("If-None-Match");
-					// const std::string& ifModifiedSince = client.GetNewRequest().getHeaderValue("If-Modified-Since");
-					// const std::string& etag = generateETagv2(client.GetNewRequest().mappedPath);
-					// const std::string& lastModified = getFileModificationTime(client.GetNewRequest().mappedPath);
-					// if (ifNoneMatch == etag && ifModifiedSince == lastModified)
-					// {
-					// 	LOG_DEBUG("Resource has not been modified");
-					// 	return generateNotModifiedResponse();
-					// }
-					if (!isFileModified(client))
+					if (!isFileModified(client.GetNewRequest()))
 					{
 						return generateNotModifiedResponse();
 					}
@@ -673,25 +631,33 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 				}
 			}
 
-			return generateDirectoryListingResponse(client.GetNewRequest().mappedPath);
+			return generateDirectoryListingResponse(path);
 		}
-		else if (std::filesystem::is_regular_file(client.GetNewRequest().mappedPath))
+		else if (std::filesystem::is_regular_file(path))
 		{
-			//TODO: check if file is a CGI script
-
 			LOG_DEBUG("Requested path is a file");
+			const ServerSettings::LocationSettings& location = client.GetLocationSettings();
 
-			LOG_INFO("File: {}", client.GetNewRequest().mappedPath.string());
-			if (!isFileModified(client))
+			//? check if the file is a CGI script
+			if (location.cgi.size() > 0)
+			{
+				LOG_INFO("Requested path is a CGI script");
+				for (const auto& cgi : location.cgi)
+				{
+					LOG_INFO("CGI: {}", cgi);
+					if (path.extension() == cgi)
+					{
+						LOG_INFO("CGI script found: {}", path.string());
+						return Cgi::executeCGI(client, client.GetNewRequest());
+					}
+				}
+				return ResponseGenerator::generateForbiddenResponse();
+			}
+
+			if (!isFileModified(client.GetNewRequest()))
 			{
 				return generateNotModifiedResponse();
 			}
-
-			// if (client.GetNewRequest().getHeaderValue("If-None-Match") == generateETagv2(client.GetNewRequest().path) && 
-			// 	client.GetNewRequest().getHeaderValue("If-Modified-Since") == getFileModificationTime(client.GetNewRequest().path))
-			// {
-			// 	return generateNotModifiedResponse();
-			// }
 
 			return generateFileResponse(client.GetNewRequest());
 		}

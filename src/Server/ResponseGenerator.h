@@ -72,7 +72,7 @@ public:
 
 private:
 
-	static bool isFileModified(const Client& client);
+	static bool isFileModified(const NewHttpRequest& request);
 
 	static const std::string generateDirectoryListingResponse(const std::filesystem::path& path);
 

@@ -15,9 +15,7 @@ public:
 
 	static std::string executeCGI(const Client& client, const NewHttpRequest& request);
 
-	// file path should be the first argument in argv
-	static std::string RunCgi(const Client& client, char* argv[]);
 private:
-	static void handleChildProcess(const NewHttpRequest& request, int pipefd[]);
+	static void handleChildProcess(const Client& client, int pipefd[]);
 	static const std::string handleParentProcess(int pipefd[], pid_t pid);
 };

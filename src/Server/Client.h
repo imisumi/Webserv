@@ -21,43 +21,7 @@ public:
 	operator int() const { return m_Socket; }
 
 
-	bool Initialize(const struct sockaddr_in& clientAddress)
-	{
-		// Convert and store the client address and port
-		if (inet_ntop(AF_INET, &clientAddress.sin_addr, m_ClientAddress, INET_ADDRSTRLEN) == nullptr)
-		{
-			// Handle inet_ntop error
-			return false;
-		}
-		m_ClientPort = ntohs(clientAddress.sin_port);
-
-		// Retrieve and store the peer (remote end) address and port
-		struct sockaddr_in peerAddress;
-		socklen_t peerAddressLength = sizeof(peerAddress);
-		if (getpeername(m_Socket, (struct sockaddr*)&peerAddress, &peerAddressLength) == -1)
-		{
-			// Handle getpeername error
-			return false;
-		}
-		if (inet_ntop(AF_INET, &peerAddress.sin_addr, m_PeerAddress, INET_ADDRSTRLEN) == nullptr)
-		{
-			// Handle inet_ntop error
-			return false;
-		}
-		m_PeerPort = ntohs(peerAddress.sin_port);
-
-		// Retrieve and store the local (server) address and port
-		struct sockaddr_in localAddress;
-		socklen_t localAddressLength = sizeof(localAddress);
-		if (getsockname(m_Socket, (struct sockaddr*)&localAddress, &localAddressLength) == -1)
-		{
-			// Handle getsockname error
-			return false;
-		}
-		m_ServerPort = ntohs(localAddress.sin_port);
-
-		return true;
-	}
+	bool Initialize(const struct sockaddr_in& clientAddress, int socket_fd);
 
 
 	const char* GetClientAddress() const { return m_ClientAddress; }
@@ -67,6 +31,7 @@ public:
 	uint16_t GetPeerPort() const { return m_PeerPort; }
 
 	uint16_t GetServerPort() const { return m_ServerPort; }
+	const char* GetServerAddress() const { return m_ServerAddress; }
 
 	int GetEpollInstance() const { return m_EpollInstance; }
 	void SetEpollInstance(int epollInstance) { m_EpollInstance = epollInstance; }
@@ -81,6 +46,10 @@ public:
 
 	void SetNewRequest(const NewHttpRequest& request) { m_NewRequest = request; }
 	const NewHttpRequest& GetNewRequest() const { return m_NewRequest; }
+
+
+	void SetLocationSettings(const ServerSettings::LocationSettings& locationSettings) { m_LocationSettings = locationSettings; }
+	const ServerSettings::LocationSettings& GetLocationSettings() const { return m_LocationSettings; }
 private:
 	int m_Socket = -1;
 
@@ -89,7 +58,6 @@ private:
 
 	uint16_t m_ServerPort = -1;
 	char m_ServerAddress[INET_ADDRSTRLEN] = { 0 };
-
 
 	uint16_t m_PeerPort = -1;
 	char m_PeerAddress[INET_ADDRSTRLEN] = { 0 };
@@ -102,4 +70,6 @@ private:
 	HttpRequest m_Request;
 
 	NewHttpRequest m_NewRequest;
+
+	ServerSettings::LocationSettings m_LocationSettings;
 };

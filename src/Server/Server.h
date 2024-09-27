@@ -109,6 +109,8 @@ public:
 
 	static ServerSettings* GetServerSettings(uint64_t packedIpPort) { return Get().m_Config[packedIpPort][0]; }
 
+
+	const std::unordered_map<uint64_t, int>& GetServerSockets() const { return m_ServerSockets64; }
 private:
 	Server(const Config& config);
 	~Server();

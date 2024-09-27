@@ -6,7 +6,8 @@
 #include "ResponseGenerator.h"
 #include "ConnectionManager.h"
 
-
+#include "Utils/Utils.h"
+#include "Constants.h"
 
 
 #include <chrono>
@@ -27,15 +28,11 @@
 #include <cerrno>
 
 // Macros to pack and unpack the u64 field
-#define PACK_U64(fd, metadata)   (((uint64_t)(fd) << 32) | (metadata))
-#define UNPACK_FD(u64)           ((int)((u64) >> 32))          // Extracts the upper 32 bits (fd)
-#define UNPACK_METADATA(u64)     ((uint32_t)((u64) & 0xFFFFFFFF)) // Extracts the lower 32 bits (metadata)
+// #define PACK_U64(fd, metadata)   (((uint64_t)(fd) << 32) | (metadata))
+// #define UNPACK_FD(u64)           ((int)((u64) >> 32))          // Extracts the upper 32 bits (fd)
+// #define UNPACK_METADATA(u64)     ((uint32_t)((u64) & 0xFFFFFFFF)) // Extracts the lower 32 bits (metadata)
 
 // Define BIT(n) macro to get the value with the nth bit set
-#define EPOLL_TYPE_SOCKET   BIT(0)
-#define EPOLL_TYPE_CGI      BIT(1)
-#define EPOLL_TYPE_STDIN    BIT(2)
-#define EPOLL_TYPE_STDOUT   BIT(3)
 
 
 static Server* s_Instance = nullptr;
@@ -126,48 +123,6 @@ int Server::ListenOnSocket(int socket_fd, int backlog)
 	return listen(socket_fd, backlog);
 }
 
-uint64_t packIpAndPort(const std::string& ipStr, uint16_t port)
-{
-	struct in_addr ipAddr;
-
-	// Convert the IP string to a 32-bit integer (network byte order)
-	if (inet_pton(AF_INET, ipStr.c_str(), &ipAddr) != 1)
-	{
-		std::cerr << "Invalid IP address format" << std::endl;
-		return 0;
-	}
-
-	// Convert to host byte order (so we can work with it directly)
-	uint32_t ip = ntohl(ipAddr.s_addr);
-
-	// Combine IP (shifted by 32 bits) and the port into a uint64_t
-	uint64_t result = static_cast<uint64_t>(ip) << 32;	// Put IP in the upper 32 bits
-	result |= static_cast<uint64_t>(port);				// Put port in the lower 16 bits
-
-	return result;
-}
-
-std::pair<std::string, uint16_t> unpackIpAndPort(uint64_t packedValue)
-{
-	// Extract the port (lower 16 bits)
-	uint16_t port = packedValue & 0xFFFF;
-
-	// Extract the IP address (upper 32 bits)
-	uint32_t ip = (packedValue >> 32) & 0xFFFFFFFF;
-
-	// Convert the 32-bit IP back to string format
-	struct in_addr ipAddr;
-	ipAddr.s_addr = htonl(ip);  // Convert back to network byte order
-
-	char ipStr[INET_ADDRSTRLEN];
-	if (inet_ntop(AF_INET, &ipAddr, ipStr, INET_ADDRSTRLEN) == NULL) {
-		std::cerr << "Failed to convert IP to string format" << std::endl;
-		return {"", 0};
-	}
-
-	return {std::string(ipStr), port};
-}
-
 /**
  * @brief Redirects CGI output to a specified file descriptor.
  *
@@ -212,7 +167,6 @@ void Server::Init(const Config& config)
 
 	for (auto& [packedIPPort, serverSettings] : config)
 	{
-		ServerSettings* settings = serverSettings[0];
 		const uint32_t ip = static_cast<uint32_t>(packedIPPort >> 32);
 		const uint16_t port = static_cast<uint16_t>(packedIPPort & 0xFFFF);
 
@@ -227,14 +181,6 @@ void Server::Init(const Config& config)
 		}
 		LOG_INFO("Creating server socket on IP: {}, port: {}", ipStr, port);
 
-		// auto it = s_Instance->m_ServerSockets64.find(packedIPPort);
-		// if (it != s_Instance->m_ServerSockets64.end())
-		// {
-		// 	LOG_ERROR("Server socket already exists!");
-		// 	s_Instance->m_Running = false;
-		// 	return;
-		// }
-
 		//? Logic
 		int socketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 		if (socketFD == -1)
@@ -243,6 +189,7 @@ void Server::Init(const Config& config)
 			s_Instance->m_Running = false;
 			return;
 		}
+		LOG_ERROR("Packed IP: {}", packedIPPort);
 		s_Instance->m_ServerSockets64[packedIPPort] = socketFD;
 
 		int reuse = 1;
@@ -266,7 +213,6 @@ void Server::Init(const Config& config)
 		socketAddress.sin_family = AF_INET;
 		socketAddress.sin_port = htons(port);
 		socketAddress.sin_addr.s_addr = htonl(ip);
-		// socketAddress.sin_addr.s_addr = inet_addr("127.0.0.5");
 
 		if (bind(socketFD, (struct sockaddr*)&socketAddress, sizeof(socketAddress)) == -1)
 		{
