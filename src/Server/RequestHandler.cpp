@@ -30,7 +30,7 @@
 
 const std::string RequestHandler::HandleRequest(Client& client, const std::string& request)
 {
-	parseRequest(request);
+	// parseRequest(request);
 	NewHttpRequest parsedRequest;
 	if (parsedRequest.parse(request) == -1)
 	{
@@ -67,17 +67,62 @@ const std::string RequestHandler::HandleRequest(Client& client, const std::strin
 	req.setUri(location.root / std::filesystem::relative(req.getUri(), "/"));
 	LOG_INFO("URI: {}", req.getUri().string());
 
-	uint8_t allowedMethods = client.GetConfig()->GetAllowedMethods(req.getUri());
+	client.SetNewRequest(parsedRequest);
+	client.SetRequest(req);
 
-	LOG_INFO("Allowed methods: {}", allowedMethods);
+
+	//TODO: find better solution
+	const uint8_t allowedMethods = client.GetLocationSettings().httpMethods;
+
+	static const uint8_t GET = 1;
+	static const uint8_t POST = 1 << 1;
+	static const uint8_t DELETE = 1 << 2;
+
+	if (parsedRequest.method == "GET")
+	{
+		LOG_ERROR("GET request");
+		if ((allowedMethods & GET))
+		{
+			return ResponseGenerator::handleGetRequest(client);
+		}
+		LOG_ERROR("Method not allowed");
+		return ResponseGenerator::MethodNotAllowed();
+	}
+	else if (parsedRequest.method == "POST")
+	{
+		LOG_ERROR("POST request");
+		if (allowedMethods & POST)
+		{
+			return ResponseGenerator::handlePostRequest(client, req);
+		}
+		LOG_ERROR("Method not allowed");
+		return ResponseGenerator::MethodNotAllowed();
+	}
+	else if (parsedRequest.method == "DELETE")
+	{
+		LOG_ERROR("DELETE request");
+		if (allowedMethods & DELETE)
+		{
+			return ResponseGenerator::handleDeleteRequest(client);
+		}
+		LOG_ERROR("Method not allowed");
+		return ResponseGenerator::MethodNotAllowed();
+	}
+	else
+	{
+		LOG_ERROR("Unsupported method");
+		LOG_ERROR("Allowed methods: {}", parsedRequest.method);
+		return ResponseGenerator::MethodNotImplemented();
+	}
+
 
 
 	//only used to work for get
 	//TODO: this is not working correctly
 	// if (allowedMethods & static_cast<uint8_t>(req.method))
 	// {
-	client.SetNewRequest(parsedRequest);
-	client.SetRequest(req);
+	// client.SetNewRequest(parsedRequest);
+	// client.SetRequest(req);
 	// return ResponseGenerator::OkResponse();
  	return ResponseGenerator::generateResponse(client, req);
 	// }
@@ -111,7 +156,7 @@ void RequestHandler::parseRequest(const std::string& requestBuffer)
 		for (const auto& header : request.headers) {
 			std::cout << GREEN << header.first << ": " << WHITE << header.second << RESET << std::endl;
 		}
-		std::cout << GREEN << "Body: " << WHITE << request.body << RESET << std::endl;
+		// std::cout << GREEN << "Body: " << WHITE << request.body << RESET << std::endl;
 	}
 	else
 	{

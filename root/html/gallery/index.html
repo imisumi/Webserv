@@ -1,159 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Gallery</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .gallery {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .gallery-item {
-            position: relative;
-            margin: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            text-align: center;
-            max-width: 200px;
-        }
-        .gallery-item img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-        }
-        .filename {
-            padding: 10px;
-            font-size: 14px;
-        }
-        .delete-button {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background-color: red;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 16px;
-            width: 25px;
-            height: 25px;
-            text-align: center;
-            line-height: 22px;
-        }
-        .error {
-            color: red;
-            font-weight: bold;
-        }
-    </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Image Gallery</title>
+	<link rel="stylesheet" href="gallery/style.css"> <!-- Link to the CSS file -->
 </head>
 <body>
 
-    <h1>Image Gallery</h1>
-    <div class="gallery" id="gallery"></div>
+	<h1>Image Gallery</h1>
+	<div class="gallery" id="gallery"></div>
+	<button class="delete-button" id="deleteSelectedButton" onclick="toggleDeleteConfirmation()" style="display:none;">Delete Selected</button>
 
-    <script>
-        async function fetchImages() {
-            try {
-                const response = await fetch('http://localhost:8080/api/v1/images');
-                const data = await response.json();
+	<!-- Notification area -->
+	<div id="notification-container" class="notification-container"></div>
 
-                if (data.status === 'success') {
-                    const gallery = document.getElementById('gallery');
-                    gallery.innerHTML = ''; // Clear existing content
+	<script>
+		let selectedImages = [];
+		let deleteConfirmation = false; // Tracks delete confirmation state
 
-                    for (const image of data.images) {
-                        const imgResponse = await fetch(image.url);
-                        if (imgResponse.ok) {
-                            const item = document.createElement('div');
-                            item.className = 'gallery-item';
-                            const imgUrl = image.url;
+		async function fetchImages() {
+			try {
+				const response = await fetch('http://localhost:8080/api/v1/images'); // Fetch images via API call
+				const data = await response.json();
 
-                            // Create gallery item with delete button (cross)
-                            item.innerHTML = `
-                                <button class="delete-button" onclick="deleteImage('${image.filename}')">×</button>
-                                <img src="${imgUrl}" alt="${image.filename}">
-                                <div class="filename">${image.filename}</div>
-                            `;
-                            gallery.appendChild(item);
-                        } else {
-                            const item = document.createElement('div');
-                            item.className = 'gallery-item';
-                            item.innerHTML = `
-                                <div class="error">Error loading ${image.filename}</div>
-                                <div class="filename">${image.filename}</div>
-                            `;
-                            gallery.appendChild(item);
-                        }
-                    }
-                } else {
-                    console.error('Error fetching images:', data.status);
-                }
-            } catch (error) {
-                console.error('Error fetching images:', error);
-            }
-        }
+				if (data.status === 'success') {
+					const gallery = document.getElementById('gallery');
+					gallery.innerHTML = ''; // Clear existing content
 
-        // async function deleteImage(filename) {
-        //     try {
-        //         const response = await fetch(`http://localhost:8080/api/v1/images/${filename}`, {
-        //             method: 'DELETE',
-        //         });
+					for (const image of data.images) {
+						const imgUrl = image.url; // Assuming `image.url` holds the image source
 
-        //         if (response.ok) {
-        //             alert(`Image ${filename} deleted successfully!`);
-        //             fetchImages(); // Refresh the gallery after deletion
-        //         } else {
-        //             alert(`Error deleting image ${filename}`);
-        //         }
-        //     } catch (error) {
-        //         console.error('Error deleting image:', error);
-        //     }
-        // }
+						// Create gallery item with checkbox
+						const item = document.createElement('div');
+						item.className = 'gallery-item';
+						item.innerHTML = `
+							<input type="checkbox" class="checkbox" onchange="toggleImageSelection('${image.filename}', this)">
+							<img src="${imgUrl}" alt="${image.filename}">
+							<div class="filename">${image.filename}</div>
+						`;
+						gallery.appendChild(item);
+					}
+				} else {
+					console.error('Error fetching images:', data.status);
+				}
+			} catch (error) {
+				console.error('Error fetching images:', error);
+			}
+		}
 
-        async function deleteImage(filename) {
-            try {
-                const projectRootDir = ''; // fill this with uri if u want specific one
-                const deleteURI = `${projectRootDir}/${filename}`;
-                const response = await fetch(deleteURI, {
-                    method: 'DELETE',
-                });
+		function toggleImageSelection(filename, checkbox) {
+			if (checkbox.checked) {
+				selectedImages.push(filename);
+			} else {
+				selectedImages = selectedImages.filter(img => img !== filename);
+			}
 
-                if (response.ok) {
-                    alert(`Image ${filename} deleted successfully!`);
-                    fetchImages();
-                } else {
-                    alert(`Error deleting image ${filename}`);
-                }
-            } catch (error) {
-                console.error('Error deleting image:', error);
-            }
-        }
-        window.onload = fetchImages;
-    </script>
+			// Show or hide the delete button based on selection
+			document.getElementById('deleteSelectedButton').style.display = selectedImages.length > 0 ? 'block' : 'none';
 
-    <button id="goBackButton">
-        Go Back
-    </button>
+			// Reset the delete confirmation state whenever the selection changes
+			deleteConfirmation = false;
+			document.getElementById('deleteSelectedButton').innerText = 'Delete Selected';
+		}
 
-    <script>
-        document.getElementById('goBackButton').addEventListener('click', function() {
-            window.history.back();
-        });
-    </script>
+		function toggleDeleteConfirmation() {
+			const deleteButton = document.getElementById('deleteSelectedButton');
+			if (!deleteConfirmation) {
+				// First click, ask for confirmation
+				deleteButton.innerText = 'Confirm Delete';
+				deleteConfirmation = true;
+			} else {
+				// Second click, proceed with deletion
+				deleteSelectedImages();
+			}
+		}
+
+		async function deleteSelectedImages() {
+			if (selectedImages.length === 0) {
+				showNotification('No images selected for deletion.', true); // true for error
+				return;
+			}
+
+			try {
+				for (const filename of selectedImages) {
+					const deleteURI = `/images/${filename}`; // Send DELETE request to /images/filename
+					const response = await fetch(deleteURI, { method: 'DELETE' });
+
+					// Handle the response based on the status code
+					if (response.ok) {
+						showNotification(`Successfully deleted ${filename}.`, false); // false for success
+					} else {
+						let errorMessage = `Error deleting ${filename}: `;
+						if (response.status === 404) {
+							errorMessage += 'File not found.';
+						} else if (response.status === 403) {
+							errorMessage += 'Not allowed to delete.';
+						} else {
+							errorMessage += 'An unexpected error occurred.';
+						}
+						showNotification(errorMessage, true); // true for error
+					}
+				}
+				selectedImages = []; // Clear selection
+				document.getElementById('deleteSelectedButton').style.display = 'none'; // Hide delete button
+				deleteConfirmation = false; // Reset delete confirmation state
+				document.getElementById('deleteSelectedButton').innerText = 'Delete Selected'; // Reset button text
+				fetchImages(); // Refresh the gallery
+			} catch (error) {
+				console.error('Error deleting images:', error);
+				showNotification('An unexpected error occurred while deleting images.', true); // true for error
+			}
+		}
+
+		function showNotification(message, isError) {
+			const notificationContainer = document.getElementById('notification-container');
+
+			// Create a new notification div
+			const notification = document.createElement('div');
+			notification.className = 'notification';
+			notification.innerText = message;
+
+			// Set class based on error or success
+			notification.classList.add(isError ? 'error' : 'success');
+
+			// Append the new notification to the container
+			notificationContainer.appendChild(notification);
+
+			// Automatically remove the notification after 3 seconds
+			setTimeout(() => {
+				notificationContainer.removeChild(notification);
+			}, 3000); // Hide after 3 seconds
+		}
+
+		window.onload = fetchImages;
+	</script>
+
+	<button class="home-button" onclick="window.location.href='/'">Home</button>
+
 </body>
 </html>

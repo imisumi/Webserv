@@ -68,7 +68,14 @@ public:
 	static const std::string InternalServerError();
 	static const std::string MethodNotAllowed();
 	static const std::string OkResponse();
-	
+	static const std::string MethodNotImplemented();
+	static const std::string BadRequest();
+	static const std::string NotFound();
+
+
+	static const std::string handleGetRequest(const Client& client);
+	static const std::string handleDeleteRequest(const Client& client);
+	static const std::string handlePostRequest(const Client& client, const HttpRequest& request);
 
 private:
 
@@ -91,11 +98,11 @@ private:
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
-	static const std::string handleGetRequest(const Client& client);
+	// static const std::string handleGetRequest(const Client& client);
 	static std::string parseMultipartContentType(const std::string& body, const std::string& boundary, const std::string& fieldName);
-	static const std::string handlePostRequest(const Client& client, const HttpRequest& request);
+	// static const std::string handlePostRequest(const Client& client, const HttpRequest& request);
 
-	static const std::string handleDeleteRequest(const Client& client, const HttpRequest& request);
+	// static const std::string handleDeleteRequest(const Client& client, const HttpRequest& request);
 
 	static std::string generateOKResponse(const HttpRequest& request);
 	static std::string generateOKResponse(const std::filesystem::path& path, const NewHttpRequest& request);

@@ -1,5 +1,7 @@
 #include "NewHttpParser.h"
 
+#include "Core/Log.h"
+
 #define CR '\r'
 #define LF '\n'
 
@@ -79,12 +81,18 @@ int NewHttpRequest::parse(const std::string& data)
 					state = HttpParserState::Method;
 				}
 				else
+				{
+					LOG_ERROR("Invalid character in request line: {}", c);
 					return -1;
+				}
 			case HttpParserState::Method:
 				if (std::isspace(c))
 				{
 					if (!isValidMethod(method))
+					{
+						LOG_ERROR("Invalid method: {}", method);
 						return -1;
+					}
 					state = HttpParserState::URI;
 				}
 				else
@@ -95,6 +103,7 @@ int NewHttpRequest::parse(const std::string& data)
 					state = HttpParserState::URI_Path;
 				else
 				{
+					LOG_ERROR("Invalid character in URI: {}", c);
 					return -1;
 				}
 			case HttpParserState::URI_Path:
@@ -103,7 +112,10 @@ int NewHttpRequest::parse(const std::string& data)
 				else if (c == ' ')
 					state = HttpParserState::Version;
 				else if (c == CR || c == LF)
+				{
+					LOG_ERROR("Invalid character in URI path: {}", c);
 					return -1;
+				}
 				else
 				{
 					path += c;
@@ -126,10 +138,16 @@ int NewHttpRequest::parse(const std::string& data)
 				{
 					state = HttpParserState::EndOfLine;
 					if (!isValidVersion(httpVersion))
+					{
+						LOG_ERROR("Invalid HTTP version: {}", httpVersion);
 						return -1;
+					}
 				}
 				else if (c == LF)
+				{
+					LOG_ERROR("Invalid character in HTTP version: {}", c);
 					return -1;
+				}
 				else
 					httpVersion += c;
 				break;
@@ -140,7 +158,10 @@ int NewHttpRequest::parse(const std::string& data)
 					state = HttpParserState::HeaderName;
 				}
 				else
+				{
+					LOG_ERROR("Invalid character in end of line: {}", c);
 					return -1;
+				}
 				break;
 			case HttpParserState::HeaderName:
 				if (c == ':')
@@ -148,7 +169,10 @@ int NewHttpRequest::parse(const std::string& data)
 					if (isSingleValueHeader(headerName))
 					{
 						if (headers.find(headerName) != headers.end())
+						{
+							LOG_ERROR("Duplicate header: {}", headerName);
 							return -1;
+						}
 					}
 					// state = HttpParserState::HeaderValue;
 				}
@@ -159,7 +183,10 @@ int NewHttpRequest::parse(const std::string& data)
 				else if (c == CR)
 					state = HttpParserState::BodyBegin;
 				else if (c == LF)
+				{
+					LOG_ERROR("Invalid character in header name: {}", c);
 					return -1;
+				}
 				else
 					headerName += std::tolower(c);
 				break;
@@ -169,7 +196,10 @@ int NewHttpRequest::parse(const std::string& data)
 				if (c == CR)
 					state = HttpParserState::EndOfLine;
 				else if (c == LF)
+				{
+					LOG_ERROR("Invalid character in header value: {}", c);
 					return -1;
+				}
 				else
 					headers[headerName] += c;
 				break;
@@ -177,22 +207,34 @@ int NewHttpRequest::parse(const std::string& data)
 				if (c == LF)
 					state = HttpParserState::Body;
 				else
+				{
+					LOG_ERROR("Invalid character in body begin: {}", c);
 					return -1;
+				}
 				break;
 			case HttpParserState::Body:
 				body += c;
 				break;
 
 			case HttpParserState::Error:
+			{
+				LOG_ERROR("Error parsing request");
 				return -1;
+			}
 			case HttpParserState::Done:
 				return 0;
 		}
 	}
 	if (getHeaderValue("host").empty())
+	{
+		LOG_ERROR("Host header is missing");
 		return -1;
+	}
 	if (state != HttpParserState::Body && state != HttpParserState::HeaderName)
+	{
+		LOG_ERROR("Invalid end of request");
 		return -1;
+	}
 
 	path = normalizePath(path);
 	mappedPath = path;

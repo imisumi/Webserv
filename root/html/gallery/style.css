@@ -1,0 +1,131 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #181818; /* Dark background */
+    color: #f0f0f0; /* Light text color */
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #ffffff; /* Title color */
+}
+
+.gallery {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+}
+
+.gallery-item {
+    position: relative;
+    margin: 10px;
+    border: 1px solid #444; /* Darker border */
+    border-radius: 8px;
+    background-color: #292929; /* Item background color */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    text-align: center;
+    max-width: 220px;
+    transition: transform 0.3s;
+}
+
+.gallery-item:hover {
+    transform: scale(1.05); /* Scale effect on hover */
+}
+
+.gallery-item img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.filename {
+    padding: 10px;
+    font-size: 14px;
+    color: #d0d0d0; /* Light color for filename */
+}
+
+.checkbox {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    opacity: 0.5; /* Semi-transparent when not selected */
+    transition: opacity 0.2s;
+}
+
+.checkbox:checked {
+    opacity: 1; /* Fully opaque when checked */
+}
+
+.error {
+    color: #e74c3c; /* Red color for error messages */
+    font-weight: bold;
+}
+
+.delete-button {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 10px 20px;
+    background-color: #e74c3c; /* Red color for delete button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.delete-button:hover {
+    background-color: #c0392b; /* Darker red on hover */
+}
+
+.home-button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #3498db; /* Blue color for home button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    text-align: center;
+}
+
+.home-button:hover {
+    background-color: #2980b9; /* Darker blue on hover */
+}
+
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.notification {
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    margin-bottom: 10px; /* Space between notifications */
+    opacity: 1; /* Start fully visible */
+    transition: opacity 0.5s; /* Smooth transition for visibility */
+}
+
+.error {
+    background-color: #e74c3c; /* Red background for error messages */
+    color: white;
+}
+
+.success {
+    background-color: #28a745; /* Green background for success messages */
+    color: white;
+}

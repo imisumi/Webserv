@@ -49,6 +49,22 @@ static const char s_MethodNotAllowedResponse[] =
 		"\r\n"
 		"405 Method Not Allowed: Method Not Allowed"; //? body of the response
 
+static const char s_MethodNotImplementedResponse[] =
+		"HTTP/1.1 501 Not Implemented\r\n"
+		"Content-Length: 43\r\n" //? length has to match the length of the body
+		"Connection: close\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"501 Not Implemented: Method Not Implemented"; //? body of the response
+
+static const char s_BadRequestResponse[] =
+		"HTTP/1.1 400 Bad Request\r\n"
+		"Content-Length: 32\r\n" //? length has to match the length of the body
+		"Connection: close\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"400 Bad Request: Invalid Request"; //? body of the response
+
 
 //? Multipurpose Internet Mail Extensions (MIME) type
 static const std::unordered_map<std::string, std::string> s_SupportedMineTypes = {
@@ -205,7 +221,7 @@ const std::string ResponseGenerator::generateResponse(const Client& client, cons
 		case RequestMethod::POST:			return handlePostRequest(client, request);
 		case RequestMethod::PUT:			break;
 		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
-		case RequestMethod::DELETE:			return handleDeleteRequest(client, request);
+		case RequestMethod::DELETE:			return handleDeleteRequest(client);
 		case RequestMethod::HEAD:			break ;
 		case RequestMethod::OPTIONS:		return generateBadRequestResponse(); //TODO: this is just for testing, bad request in incase of a invalid request
 		default:							break;
@@ -805,11 +821,12 @@ std::string ResponseGenerator::parseMultipartContentType(const std::string& body
     return contentType;
 }
 
-const std::string ResponseGenerator::handlePostRequest(const Client& client, const HttpRequest& request) {
+const std::string ResponseGenerator::handlePostRequest(const Client& client, const HttpRequest& request)
+{
     Utils::Timer timer;
     LOG_INFO("Handling POST request");
 
-    std::string contentType = Client.GetNewRequest().getHeaderValue("Content-Type");
+    std::string contentType = client.GetNewRequest().getHeaderValue("content-type");
     if (contentType.empty()) {
         LOG_ERROR("Missing Content-Type header");
         return generateBadRequestResponse();
@@ -821,7 +838,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client, con
         return generateBadRequestResponse();
     }
 
-    std::string body = Client.GetNewRequest().body;
+    std::string body = client.GetNewRequest().body;
     if (body.empty()) {
         LOG_ERROR("Request body is empty");
         return generateBadRequestResponse();
@@ -866,32 +883,73 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client, con
 }
 
 
-const std::string ResponseGenerator::handleDeleteRequest(const Client& Client, const HttpRequest& request) 
+// const std::string ResponseGenerator::handleDeleteRequest(const Client& Client, const HttpRequest& request) 
+// {
+//     Utils::Timer timer;
+//     LOG_INFO("Handling DELETE request");
+// 	std::filesystem::path uri = request.getUri();
+// 	//CURRENTLY OUR SERVER ONLY DELETES FILES FROM /DATABASE/IMAGES nowhere else. and then takes the last arg from uri
+// 	//example /home/kaltevog/Desktop/Webserv(<-dynamic part)/database/images(<-hardcoded part)/webcopy.png(<-last arg of delete req uri)
+//     std::string basePath = getProjectRootDir() + "/database/images";
+//     std::filesystem::path fullPath = basePath / uri.filename();
+//     LOG_INFO("Attempting to delete file: {}", fullPath.string());
+//     if (std::filesystem::exists(fullPath) && std::filesystem::is_regular_file(fullPath))
+//     {
+//         try {
+//             std::filesystem::remove(fullPath);
+//             LOG_INFO("File deleted successfully: {}", fullPath.string());
+//             return buildHttpResponse(ContentType::TEXT, "File deleted successfully", HTTPStatusCode::OK);
+//         } catch (const std::filesystem::filesystem_error& e) {
+//             LOG_ERROR("Failed to delete file: {}", e.what());
+//             return generateInternalServerErrorResponse();
+//         }
+//     }
+//     else
+//     {
+//         LOG_ERROR("Requested file does not exist or is not a regular file: {}", fullPath.string());
+//         return generateNotFoundResponse();
+//     }
+// }
+
+void printPermissions(std::filesystem::perms p) {
+    std::cout << ((p & std::filesystem::perms::owner_read) != std::filesystem::perms::none ? "r" : "-")
+              << ((p & std::filesystem::perms::owner_write) != std::filesystem::perms::none ? "w" : "-")
+              << ((p & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ? "x" : "-")
+              << ((p & std::filesystem::perms::group_read) != std::filesystem::perms::none ? "r" : "-")
+              << ((p & std::filesystem::perms::group_write) != std::filesystem::perms::none ? "w" : "-")
+              << ((p & std::filesystem::perms::group_exec) != std::filesystem::perms::none ? "x" : "-")
+              << ((p & std::filesystem::perms::others_read) != std::filesystem::perms::none ? "r" : "-")
+              << ((p & std::filesystem::perms::others_write) != std::filesystem::perms::none ? "w" : "-")
+              << ((p & std::filesystem::perms::others_exec) != std::filesystem::perms::none ? "x" : "-")
+              << std::endl;
+}
+
+const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 {
-    Utils::Timer timer;
-    LOG_INFO("Handling DELETE request");
-	std::filesystem::path uri = request.getUri();
-	//CURRENTLY OUR SERVER ONLY DELETES FILES FROM /DATABASE/IMAGES nowhere else. and then takes the last arg from uri
-	//example /home/kaltevog/Desktop/Webserv(<-dynamic part)/database/images(<-hardcoded part)/webcopy.png(<-last arg of delete req uri)
-    std::string basePath = getProjectRootDir() + "/database/images";
-    std::filesystem::path fullPath = basePath / uri.filename();
-    LOG_INFO("Attempting to delete file: {}", fullPath.string());
-    if (std::filesystem::exists(fullPath) && std::filesystem::is_regular_file(fullPath))
-    {
-        try {
-            std::filesystem::remove(fullPath);
-            LOG_INFO("File deleted successfully: {}", fullPath.string());
-            return buildHttpResponse(ContentType::TEXT, "File deleted successfully", HTTPStatusCode::OK);
-        } catch (const std::filesystem::filesystem_error& e) {
-            LOG_ERROR("Failed to delete file: {}", e.what());
-            return generateInternalServerErrorResponse();
-        }
-    }
-    else
-    {
-        LOG_ERROR("Requested file does not exist or is not a regular file: {}", fullPath.string());
-        return generateNotFoundResponse();
-    }
+	const NewHttpRequest& request = Client.GetNewRequest();
+
+	// delete the file
+	if (std::filesystem::exists(request.mappedPath) && std::filesystem::is_regular_file(request.mappedPath))
+	{
+		if (std::filesystem::remove(request.mappedPath))
+		{
+			LOG_INFO("File deleted successfully: {}", request.mappedPath.string());
+			return OkResponse();
+		}
+		else
+		{
+			LOG_ERROR("Failed to delete file: {}", request.mappedPath.string());
+			return generateInternalServerErrorResponse();
+		}
+	}
+	else if (!std::filesystem::exists(request.mappedPath))
+	{
+		return NotFound();
+	}
+	else
+	{
+		return BadRequest();
+	}
 }
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest
@@ -1117,6 +1175,27 @@ const std::string ResponseGenerator::InternalServerError()
 const std::string ResponseGenerator::MethodNotAllowed()
 {
 	static std::string response = s_MethodNotAllowedResponse;
+
+	return response;
+}
+
+const std::string ResponseGenerator::MethodNotImplemented()
+{
+	static std::string response = s_MethodNotImplementedResponse;
+
+	return response;
+}
+
+const std::string ResponseGenerator::BadRequest()
+{
+	static std::string response = s_BadRequestResponse;
+
+	return response;
+}
+
+const std::string ResponseGenerator::NotFound()
+{
+	static std::string response = s_NotFoundResponse;
 
 	return response;
 }
