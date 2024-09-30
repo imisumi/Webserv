@@ -754,14 +754,19 @@ bool saveFormDataToFile(std::string &firstName, std::string lastName, std::strin
     file.close();
     return !file.fail();
 }
-
 bool saveUploadedFile(const std::string &body, const std::string &boundary, const std::string &fieldName, const std::string &uploadDir) {
     std::regex fileRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName + R"(\"; filename=\"([^\"]+)\")" +
-                         R"([\r\n]+Content-Type: ([^\r\n]+)[\r\n]+[\r\n]+([\s\S]+?)[\r\n]+)" + boundary);
+                         R"([\r\n]+Content-Type: ([^\r\n]+)[\r\n]+[\r\n]+)");
     std::smatch match;
     if (std::regex_search(body, match, fileRegex)) {
         std::string fileName = match[1].str();
-        std::string fileContent = match[3].str();
+        std::string contentType = match[2].str();
+
+        // Vind het begin van het bestand na de headers
+        size_t fileStartPos = body.find(match[0]) + match[0].length();
+        size_t fileEndPos = body.find(boundary, fileStartPos) - 4;  // -4 to remove preceding \r\n--
+
+        std::string fileContent = body.substr(fileStartPos, fileEndPos - fileStartPos);
 
         if (fileName.empty()) {
             std::cerr << "[INFO] No file uploaded." << std::endl;
@@ -787,6 +792,7 @@ bool saveUploadedFile(const std::string &body, const std::string &boundary, cons
     std::cerr << "[ERROR] Regex failed to match for file field: " << fieldName << std::endl;
     return false;
 }
+
 
 static const std::unordered_map<std::string, std::string> supportedFileTypes = {
     { ".html", "text/html" },
