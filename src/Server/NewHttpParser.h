@@ -14,9 +14,10 @@
 #include <sstream>
 #include <filesystem>
 
-enum class HttpParserState
+enum class HttpState : int
 {
-	Start,
+	Error = -1,
+	Start = 0,
 	Method,
 	URI,
 	URI_Path,
@@ -24,11 +25,10 @@ enum class HttpParserState
 	Version,
 	HeaderName,
 	HeaderValue,
-	Body,
-	Done,
 	EndOfLine,
 	BodyBegin,
-	Error
+	Body,
+	Done,
 };
 
 class NewHttpRequest
@@ -57,6 +57,7 @@ public:
 	NewHttpRequest() = default;
 
 	int parse(const std::string& data);
+	HttpState parseStream(const std::string& data);
 
 	const std::string getHeaderValue(const std::string& key) const
 	{
@@ -83,10 +84,11 @@ public:
 		{
 			std::cout << green << key << ": " << white << value << reset << std::endl;
 		}
-		std::cout << green << "Body: " << white << body << reset << std::endl;
+		// std::cout << green << "Body: " << white << body << reset << std::endl;
 	}
 
 private:
 	std::vector<std::string> stringSplit(const std::string& str, char delimiter);
 	std::string normalizePath(const std::string& uri);
+	HttpState m_State = HttpState::Start;
 };

@@ -28,15 +28,16 @@
 */
 #include "NewHttpParser.h"
 
-const std::string RequestHandler::HandleRequest(Client& client, const std::string& request)
+// const std::string RequestHandler::HandleRequest(Client& client, const std::string& request)
+const std::string RequestHandler::HandleRequest(Client& client)
 {
 	// parseRequest(request);
-	NewHttpRequest parsedRequest;
-	if (parsedRequest.parse(request) == -1)
-	{
-		LOG_ERROR("Failed to parse request");
-		return ResponseGenerator::InternalServerError();
-	}
+	NewHttpRequest parsedRequest = client.GetNewRequest();
+	// if (parsedRequest.parse(request) == -1)
+	// {
+	// 	LOG_ERROR("Failed to parse request");
+	// 	return ResponseGenerator::InternalServerError();
+	// }
 
 	HttpRequest req = m_RequestParser.getRequest();
 	LOG_INFO("URI: {}", req.getUri().string());

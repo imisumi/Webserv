@@ -46,6 +46,13 @@ public:
 
 	void SetNewRequest(const NewHttpRequest& request) { m_NewRequest = request; }
 	const NewHttpRequest& GetNewRequest() const { return m_NewRequest; }
+	NewHttpRequest& GetNewRequest() { return m_NewRequest; }
+
+
+	HttpState parseRequest(const std::string& requestBuffer)
+	{
+		return m_NewRequest.parseStream(requestBuffer);
+	}
 
 
 	void SetLocationSettings(const ServerSettings::LocationSettings& locationSettings) { m_LocationSettings = locationSettings; }

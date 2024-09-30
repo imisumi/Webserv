@@ -21,7 +21,9 @@
 
 #include "Core/Core.h"
 #define MAX_EVENTS 4096
-#define BUFFER_SIZE 12000 * 2
+// #define BUFFER_SIZE 12000 * 2
+// #define BUFFER_SIZE 4096
+#define BUFFER_SIZE 64 * 1024
 
 class Server
 {
