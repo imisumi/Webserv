@@ -27,16 +27,7 @@
 
 #include <cerrno>
 
-// Macros to pack and unpack the u64 field
-// #define PACK_U64(fd, metadata)   (((uint64_t)(fd) << 32) | (metadata))
-// #define UNPACK_FD(u64)           ((int)((u64) >> 32))          // Extracts the upper 32 bits (fd)
-// #define UNPACK_METADATA(u64)     ((uint32_t)((u64) & 0xFFFFFFFF)) // Extracts the lower 32 bits (metadata)
-
-// Define BIT(n) macro to get the value with the nth bit set
-
-
 static Server* s_Instance = nullptr;
-
 
 Server::Server(const Config& config)
 	: m_Config(config)
@@ -55,24 +46,21 @@ Server& Server::Get()
 	return *s_Instance;
 }
 
-int Server::CreateEpoll()
+int Server::CreateEpollInstance()
 {
-	//TODO: mabye pass flags as a parameter, or use epoll_create which takes no flags but is deprecated
-	return epoll_create1(EPOLL_CLOEXEC);
+	WEB_ASSERT(s_Instance, "Server does not exist!");
+
+	s_Instance->m_EpollInstance = epoll_create1(EPOLL_CLOEXEC);
+	return s_Instance->m_EpollInstance;
 }
 
-int Server::AddEpollEvent(int epollFD, int fd, int event, EpollData data)
+int Server::AddEpollEvent(int fd, int event, EpollData data)
 {
-	WEB_ASSERT(epollFD, "Invalid epoll file descriptor!");
-	WEB_ASSERT(fd, "Invalid file descriptor!");
-	// WEB_ASSERT(data, "Invalid data!");
-	WEB_ASSERT(event, "Invalid event!");
-
 	struct epoll_event ev;
 	ev.events = event;
 	ev.data.u64 = data;
 
-	return epoll_ctl(epollFD, EPOLL_CTL_ADD, fd, &ev);
+	return epoll_ctl(Get().GetEpollInstance(), EPOLL_CTL_ADD, fd, &ev);
 }
 
 
@@ -142,7 +130,66 @@ int Server::CgiRedirect(int cgi_fd, int redir_fd)
 		.type = EPOLL_TYPE_CGI
 	};
 
-	return AddEpollEvent(s_Instance->m_EpollInstance, cgi_fd, EPOLLIN | EPOLLET, ev_data);
+	return AddEpollEvent(cgi_fd, EPOLLIN | EPOLLET, ev_data);
+}
+
+int Server::EstablishServerSocket(uint32_t ip, uint16_t port)
+{
+	char ipStr[INET_ADDRSTRLEN];
+	struct in_addr ipAddr;
+	ipAddr.s_addr = htonl(ip);
+	if (inet_ntop(AF_INET, &ipAddr, ipStr, INET_ADDRSTRLEN) == NULL)
+	{
+		LOG_ERROR("Failed to convert IP to string format");
+		return -1;
+	}
+	LOG_INFO("Creating server socket on IP: {}, port: {}", ipStr, port);
+
+	//? Logic
+	int socketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	if (socketFD == -1)
+	{
+		LOG_ERROR("Failed to create server socket!");
+		return -1;
+	}
+
+	//? SO_REUSEADDR: allows other sockets to bind to an address even if it is already in use
+	//? SO_REUSEPORT: allows multiple sockets to bind to the same port and ip
+	{
+		int reuse = 1;
+		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == -1)
+		{
+			LOG_ERROR("Failed to set SO_REUSEADDR!");
+			return -1;
+		}
+	}
+	{
+		int reuse = 1;
+		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse)) == -1)
+		{
+			LOG_ERROR("Failed to set SO_REUSEPORT!");
+			return -1;
+		}
+	}
+
+	struct sockaddr_in socketAddress = {};
+	socketAddress.sin_family = AF_INET;
+	socketAddress.sin_port = htons(port);
+	socketAddress.sin_addr.s_addr = htonl(ip);
+
+	if (bind(socketFD, (struct sockaddr*)&socketAddress, sizeof(socketAddress)) == -1)
+	{
+		LOG_ERROR("Failed to bind server socket!");
+		return -1;
+	}
+
+	if (listen(socketFD, SOMAXCONN) == -1)
+	{
+		LOG_ERROR("Failed to listen on server socket!");
+		return -1;
+	}
+
+	return socketFD;
 }
 
 void Server::Init(const Config& config)
@@ -155,89 +202,39 @@ void Server::Init(const Config& config)
 	ConnectionManager::Init();
 
 	//? EPOLL_CLOEXEC: automatically close the file descriptor when calling exec
-	if ((s_Instance->m_EpollInstance = s_Instance->CreateEpoll()) == -1)
+	if (CreateEpollInstance() == -1)
 	{
 		LOG_ERROR("Failed to create epoll file descriptor!");
-		s_Instance->m_Running = false;
+		Stop();
 		return;
 	}
 
-	//TODO: replace int with server settings, also this is handled in the config
 	//? assuming that the config parser properly deals with duplicates
-
-	for (auto& [packedIPPort, serverSettings] : config)
+	for (const auto& [packedIPPort, serverSettings] : config)
 	{
 		const uint32_t ip = static_cast<uint32_t>(packedIPPort >> 32);
 		const uint16_t port = static_cast<uint16_t>(packedIPPort & 0xFFFF);
 
-		char ipStr[INET_ADDRSTRLEN];
-		struct in_addr ipAddr;
-		ipAddr.s_addr = htonl(ip);
-		if (inet_ntop(AF_INET, &ipAddr, ipStr, INET_ADDRSTRLEN) == NULL)
+		int socket_fd = EstablishServerSocket(ip, port);
+		if (socket_fd == -1)
 		{
-			LOG_ERROR("Failed to convert IP to string format");
-			s_Instance->m_Running = false;
-			return;
-		}
-		LOG_INFO("Creating server socket on IP: {}, port: {}", ipStr, port);
-
-		//? Logic
-		int socketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-		if (socketFD == -1)
-		{
-			LOG_ERROR("Failed to create server socket!");
-			s_Instance->m_Running = false;
+			LOG_ERROR("Failed to establish server socket!");
+			Stop();
 			return;
 		}
 		LOG_ERROR("Packed IP: {}", packedIPPort);
-		s_Instance->m_ServerSockets64[packedIPPort] = socketFD;
-
-		int reuse = 1;
-		//? SO_REUSEADDR: allows other sockets to bind to an address even if it is already in use
-		//? SO_REUSEPORT: allows multiple sockets to bind to the same port and ip
-		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == -1)
-		{
-			LOG_ERROR("Failed to set SO_REUSEADDR!");
-			s_Instance->m_Running = false;
-			return;
-		}
-		reuse = 1;
-		if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse)) == -1)
-		{
-			LOG_ERROR("Failed to set SO_REUSEPORT!");
-			s_Instance->m_Running = false;
-			return;
-		}
-
-		struct sockaddr_in socketAddress = {};
-		socketAddress.sin_family = AF_INET;
-		socketAddress.sin_port = htons(port);
-		socketAddress.sin_addr.s_addr = htonl(ip);
-
-		if (bind(socketFD, (struct sockaddr*)&socketAddress, sizeof(socketAddress)) == -1)
-		{
-			LOG_ERROR("Failed to bind server socket!");
-			s_Instance->m_Running = false;
-			return;
-		}
-
-		if (listen(socketFD, SOMAXCONN) == -1)
-		{
-			LOG_ERROR("Failed to listen on server socket!");
-			s_Instance->m_Running = false;
-			return;
-		}
+		s_Instance->m_ServerSockets64[packedIPPort] = socket_fd;
 
 		EpollData data{
-			.fd = static_cast<uint16_t>(socketFD),
+			.fd = static_cast<uint16_t>(socket_fd),
 			.cgi_fd = std::numeric_limits<uint16_t>::max(),
 			.type = EPOLL_TYPE_SOCKET
 		};
 
-		if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, socketFD, EPOLLIN | EPOLLET, data) == -1)
+		if (AddEpollEvent(socket_fd, EPOLLIN | EPOLLET, data) == -1)
 		{
 			LOG_ERROR("Failed to add server socket to epoll!");
-			s_Instance->m_Running = false;
+			Stop();
 			return;
 		}
 	}
@@ -248,13 +245,6 @@ void Server::Shutdown()
 {
 	WEB_ASSERT(s_Instance, "Server does not exist!");
 	LOG_INFO("Server is shutting down!");
-
-	// close(s_Instance->m_ServerSocket);
-
-	// for (auto& [port, socket] : s_Instance->m_ServerSockets)
-	// {
-	// 	close(socket);
-	// }
 
 	close(s_Instance->m_EpollInstance);
 
@@ -269,7 +259,6 @@ int Server::isServerSocket(int fd)
 	{
 		if (fd == socket)
 		{
-			// return ;
 			return static_cast<uint32_t>(packedIpPort >> 32);
 		}
 	}
@@ -285,10 +274,6 @@ void Server::Run()
 
 	struct epoll_event events[MAX_EVENTS];
 
-	std::string clientIP[MAX_EVENTS];
-	// int tempClient = -1;
-
-	
 	while (s_Instance->m_Running)
 	{
 		LOG_INFO("------------------------------------------------------------------------------------------");
@@ -403,7 +388,7 @@ void Server::HandleSocketInputEvent(Client& client)
 	{
 		ssize_t n = recv(client, vBuffer.data(), vBuffer.capacity(), 0);
 
-		LOG_INFO("Received {} bytes, itteration: {}", n, i++);
+		LOG_INFO("Received bytes: {},\titteration: {},\twith read size of: {}", n, i++, vBuffer.capacity());
 		totalBytes += n;
 		if (n == -1)
 		{
@@ -494,7 +479,6 @@ void Server::HandleSocketInputEvent(Client& client)
 		.type = EPOLL_TYPE_SOCKET
 	};
 
-	// if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
 	if (ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, data) == -1)
 	{
 		LOG_ERROR("Failed to modify client socket in epoll!");
@@ -580,21 +564,6 @@ void Server::HandleOutputEvent(int epoll_fd)
 	if (auto it = m_ClientResponses.find(epoll_fd); it != m_ClientResponses.end())
 	{
 		const std::string& response = it->second;
-
-
-		// if (response.find("image/x-icon") != std::string::npos || response.find("image/png") != std::string::npos)
-		// {
-		// 	// LOG_DEBUG("Sending favicon.ico to client: {}", epoll_fd);
-		// 	// LOG_TRACE("Sending favicon.ico to client: {}", epoll_fd);
-		// 	LOG_INFO("Sending image to client: {}", epoll_fd);
-		// }
-		// else
-		// {
-		// 	LOG_TRACE("Sending response to client:\n{}", response);
-		// }
-
-		// LOG_TRACE("Sending response to client:\n{}", response);
-		// LOG_INFO("Response:\n{}", response);
 
 		//TODO: bit in a loop till all data is sent
 		ssize_t bytes = send(epoll_fd, response.c_str(), response.size(), 0);

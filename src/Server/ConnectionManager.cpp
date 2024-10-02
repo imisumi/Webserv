@@ -89,8 +89,7 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 		.type = EPOLL_TYPE_SOCKET
 	};
 
-	// if (s_Instance->AddEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, EPOLL_TYPE_SOCKET) == -1)
-	if (Server::AddEpollEvent(Server::Get().GetEpollInstance(), (int)client, EPOLLIN | EPOLLET, data) == -1)
+	if (Server::AddEpollEvent((int)client, EPOLLIN | EPOLLET, data) == -1)
 	{
 		LOG_ERROR("Failed to add client socket to epoll!");
 		// m_Clients.erase(client);

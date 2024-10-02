@@ -48,21 +48,6 @@ int main()
 	// LOG_TRACE("This is a critical message {}: {}: {", 123, "Hello", 10.12f);
 	LOG_TRACE("trace: ", 123);
 
-	// {
-	// 	Config conf = Config::CreateDefaultConfig();
-	// 	conf.Print();
-	// 	return 0;
-	// }
-
-	// std::signal(SIGINT, SignalHandler);
-
-	//TODOl: get root for config
-
-	// WEB_ASSERT(false, "make sure correct path is set");
-
-	// print working directory
-
-
 
 	root += "/root/html";
 	

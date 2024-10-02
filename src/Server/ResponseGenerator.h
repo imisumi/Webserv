@@ -61,9 +61,6 @@ public:
 	ResponseGenerator() {};
 	~ResponseGenerator() {};
 
-	static const std::string generateResponse(const Client& client, const HttpRequest& request);
-
-
 	static const std::string InternalServerError(const Config& config);
 	static const std::string InternalServerError();
 	static const std::string MethodNotAllowed();
@@ -75,7 +72,7 @@ public:
 
 	static const std::string handleGetRequest(const Client& client);
 	static const std::string handleDeleteRequest(const Client& client);
-	static const std::string handlePostRequest(const Client& client, const HttpRequest& request);
+	static const std::string handlePostRequest(const Client& client);
 
 private:
 
@@ -98,13 +95,10 @@ private:
 
 	static std::string buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code);
 
-	// static const std::string handleGetRequest(const Client& client);
 	static std::string parseMultipartContentType(const std::string& body, const std::string& boundary, const std::string& fieldName);
-	// static const std::string handlePostRequest(const Client& client, const HttpRequest& request);
 
-	// static const std::string handleDeleteRequest(const Client& client, const HttpRequest& request);
 
-	static std::string generateOKResponse(const HttpRequest& request);
+	static std::string generateOKResponse(const Client& client);
 	static std::string generateOKResponse(const std::filesystem::path& path, const NewHttpRequest& request);
 
 	static std::string generateFileResponse(const HttpRequest& request);
@@ -120,10 +114,5 @@ private:
 	static std::string generateNotImplementedResponse();
 	static std::string generateBadRequestResponse();
 	static std::string generateInternalServerErrorResponse();
-
-
-
-
-
 
 };

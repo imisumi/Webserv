@@ -209,29 +209,6 @@ std::string generateDirectoryListing(const std::string& path)
 	// std::cout << html_content << std::endl;
 }
 
-const std::string ResponseGenerator::generateResponse(const Client& client, const HttpRequest& request)
-{
-	//TODO: validate request
-	//? fo now only GET is supported
-
-
-	switch (request.method)
-	{
-		case RequestMethod::GET:			return handleGetRequest(client);
-		case RequestMethod::POST:			return handlePostRequest(client, request);
-		case RequestMethod::PUT:			break;
-		case RequestMethod::PATCH:			return generateInternalServerErrorResponse(); //TODO: also temp
-		case RequestMethod::DELETE:			return handleDeleteRequest(client);
-		case RequestMethod::HEAD:			break ;
-		case RequestMethod::OPTIONS:		return generateBadRequestResponse(); //TODO: this is just for testing, bad request in incase of a invalid request
-		default:							break;
-	}
-
-	// return generateNotFoundResponse();
-	return generateNotImplementedResponse();
-}
-
-
 //? assume that the file exists
 //? return the contents of the file or nullopt if the file cannot be opened due to permissions
 std::optional<std::string> ResponseGenerator::readFileContents(const std::filesystem::path& path)
@@ -827,7 +804,7 @@ std::string ResponseGenerator::parseMultipartContentType(const std::string& body
     return contentType;
 }
 
-const std::string ResponseGenerator::handlePostRequest(const Client& client, const HttpRequest& request)
+const std::string ResponseGenerator::handlePostRequest(const Client& client)
 {
     Utils::Timer timer;
     LOG_INFO("Handling POST request");
@@ -885,7 +862,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client, con
     }
 
     LOG_INFO("Successfully handled POST request, saved form data, and saved file");
-    return generateOKResponse(request);
+    return generateOKResponse(client);
 }
 
 
@@ -959,14 +936,16 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 }
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest
-std::string ResponseGenerator::generateOKResponse(const HttpRequest& request)
+std::string ResponseGenerator::generateOKResponse(const Client& client)
 {
 	LOG_INFO("Generating 200 OK response");
 
-	auto fileContents = readFileContents(request.getUri());
+	const NewHttpRequest& request = client.GetNewRequest();
+
+	auto fileContents = readFileContents(request.mappedPath);
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());
+		LOG_CRITICAL("Failed to read file contents: {}", request.mappedPath.string());
 		return generateForbiddenResponse();
 	}
 	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);

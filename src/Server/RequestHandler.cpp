@@ -94,7 +94,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 		LOG_ERROR("POST request");
 		if (allowedMethods & POST)
 		{
-			return ResponseGenerator::handlePostRequest(client, req);
+			return ResponseGenerator::handlePostRequest(client);
 		}
 		LOG_ERROR("Method not allowed");
 		return ResponseGenerator::MethodNotAllowed();
@@ -115,19 +115,6 @@ const std::string RequestHandler::HandleRequest(Client& client)
 		LOG_ERROR("Allowed methods: {}", parsedRequest.method);
 		return ResponseGenerator::MethodNotImplemented();
 	}
-
-
-
-	//only used to work for get
-	//TODO: this is not working correctly
-	// if (allowedMethods & static_cast<uint8_t>(req.method))
-	// {
-	// client.SetNewRequest(parsedRequest);
-	// client.SetRequest(req);
-	// return ResponseGenerator::OkResponse();
- 	return ResponseGenerator::generateResponse(client, req);
-	// }
-	// return ResponseGenerator::MethodNotAllowed();
 }
 
 std::string RequestMethodToString(RequestMethod type)

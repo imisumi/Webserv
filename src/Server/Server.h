@@ -97,7 +97,7 @@ public:
 
 	int GetClientFromCgi(int cgi_fd) { return m_CgiToClientMap[cgi_fd]; }
 
-	static int AddEpollEvent(int epollFD, int fd, int event, EpollData data);
+	static int AddEpollEvent(int fd, int event, EpollData data);
 	static int ModifyEpollEvent(int epollFD, int fd, int event, EpollData data);
 	static int RemoveEpollEvent(int epollFD, int fd);
 
@@ -113,9 +113,16 @@ public:
 
 
 	const std::unordered_map<uint64_t, int>& GetServerSockets() const { return m_ServerSockets64; }
+
+
+
+
 private:
 	Server(const Config& config);
 	~Server();
+
+	static int CreateEpollInstance();
+	static int EstablishServerSocket(uint32_t ip, uint16_t port);
 
 	int isServerSocket(int fd);
 
@@ -124,7 +131,6 @@ private:
 
 	void HandleCgiInputEvent(int cgi_fd, int client_fd);
 
-	int CreateEpoll();
 
 	int CreateSocket(const SocketSettings& settings);
 	int SetSocketOptions(int fd, const SocketOptions& options);

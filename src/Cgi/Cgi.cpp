@@ -123,7 +123,6 @@ void sigchld_handler(int signo)
 					.cgi_fd = std::numeric_limits<uint16_t>::max(),
 					.type = EPOLL_TYPE_SOCKET
 				};
-				// Server::AddEpollEventStatic(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, ev_data);
 				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, data);
 
 				std::string response = s_TimeoutErrorResponse;
@@ -196,7 +195,7 @@ std::string Cgi::executeCGI(const Client& client, const NewHttpRequest& request)
 
 	LOG_INFO("Forwarding client FD: {} to CGI handler", (int)client);
 
-	Server::AddEpollEvent(client.GetEpollInstance(), pipefd[READ_END], EPOLLIN | EPOLLET, data);
+	Server::AddEpollEvent(pipefd[READ_END], EPOLLIN | EPOLLET, data);
 
 	struct sigaction sa;
 	sa.sa_handler = sigchld_handler;  // Assign the custom handler
