@@ -28,6 +28,20 @@
 */
 #include "NewHttpParser.h"
 
+std::string extractHeaders(const std::string& response) {
+    // Find the position of the "\r\n\r\n" which separates headers from the body
+    size_t headerEndPos = response.find("\r\n\r\n");
+    
+    if (headerEndPos != std::string::npos) {
+        // Extract everything up to and including the headers
+        return response.substr(0, headerEndPos + 4);
+    } else {
+        // If "\r\n\r\n" is not found, assume the response contains only headers
+        return response;
+    }
+}
+
+
 // const std::string RequestHandler::HandleRequest(Client& client, const std::string& request)
 const std::string RequestHandler::HandleRequest(Client& client)
 {
@@ -84,6 +98,21 @@ const std::string RequestHandler::HandleRequest(Client& client)
 		LOG_ERROR("GET request");
 		if ((allowedMethods & GET))
 		{
+			return ResponseGenerator::handleGetRequest(client);
+		}
+		LOG_ERROR("Method not allowed");
+		return ResponseGenerator::MethodNotAllowed();
+	}
+	else if (parsedRequest.method == "HEAD")
+	{
+		LOG_ERROR("GET request");
+		if ((allowedMethods & GET))
+		{
+			std::string response = ResponseGenerator::handleGetRequest(client);
+
+			response = extractHeaders(response);
+			return response;
+
 			return ResponseGenerator::handleGetRequest(client);
 		}
 		LOG_ERROR("Method not allowed");

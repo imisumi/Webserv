@@ -10,7 +10,7 @@ public:
 	ResponseSender() {};
 	~ResponseSender() {};
 
-	ssize_t sendResponse(const std::string& response, int epollFd);
+	static ssize_t sendResponse(const std::string& response, int epollFd);
 
 private:
 };

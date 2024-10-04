@@ -19,8 +19,8 @@ constexpr std::array<std::string_view, 3> supportedVersions = {
 	"HTTP/1.1"
 };
 
-constexpr std::array<std::string_view, 3> supportedMethods = {
-	"DELETE", "GET", "POST"
+constexpr std::array<std::string_view, 4> supportedMethods = {
+	"DELETE", "GET", "POST", "HEAD"
 };
 
 constexpr std::array<std::string_view, 11> singleValueHeaders = {

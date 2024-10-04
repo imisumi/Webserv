@@ -14,10 +14,11 @@ public:
 
 	static Client AcceptConnection(int socket_fd);
 
-	static void RegisterClient(int fd, Client client);
+	static void RegisterClient(int fd, Client& client);
 	static void UnregisterClient(int fd);
 
-	static Client GetClient(int fd);
+	static const Client& GetClient(int fd);
+	static Client& GetClientRef(int fd);
 
 	static uint32_t GetConnectedClients();
 

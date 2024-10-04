@@ -87,9 +87,8 @@ void sigchld_handler(int signo)
 
 				Server& server = Server::Get();
 				int client_fd = server.childProcesses[pid];
-				Client client = ConnectionManager::GetClient(client_fd);
+				const Client& client = ConnectionManager::GetClient(client_fd);
 				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
-
 
 				Server::EpollData data{
 					.fd = static_cast<uint16_t>(client_fd),
@@ -113,7 +112,7 @@ void sigchld_handler(int signo)
 
 				int client_fd = server.childProcesses[pid];
 				// Client client = server.GetClient(client_fd);
-				Client client = ConnectionManager::GetClient(client_fd);
+				const Client& client = ConnectionManager::GetClient(client_fd);
 				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
 
 				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);

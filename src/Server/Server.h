@@ -127,7 +127,7 @@ private:
 	int isServerSocket(int fd);
 
 	void HandleSocketInputEvent(Client& client);
-	void HandleOutputEvent(int fd);
+	void HandleOutputEvent(Client& client, int fd);
 
 	void HandleCgiInputEvent(int cgi_fd, int client_fd);
 

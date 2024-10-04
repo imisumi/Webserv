@@ -21,6 +21,8 @@ public:
 	operator int() const { return m_Socket; }
 
 
+	// delete copy constructor and assignment operator
+
 	bool Initialize(const struct sockaddr_in& clientAddress, int socket_fd);
 
 
@@ -55,8 +57,20 @@ public:
 	}
 
 
+	void reset()
+	{
+		m_NewRequest = NewHttpRequest();
+		m_Request = HttpRequest();
+	}
+
+
 	void SetLocationSettings(const ServerSettings::LocationSettings& locationSettings) { m_LocationSettings = locationSettings; }
 	const ServerSettings::LocationSettings& GetLocationSettings() const { return m_LocationSettings; }
+
+	void SetResponse(const std::string& response) { m_Response = response; }
+	const std::string& GetResponse() const { return m_Response; }
+
+
 private:
 	int m_Socket = -1;
 
@@ -68,6 +82,8 @@ private:
 
 	uint16_t m_PeerPort = -1;
 	char m_PeerAddress[INET_ADDRSTRLEN] = { 0 };
+
+	std::string m_Response;
 
 
 	int m_EpollInstance = -1;

@@ -111,7 +111,7 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	return client;
 }
 
-void ConnectionManager::RegisterClient(int fd, Client client)
+void ConnectionManager::RegisterClient(int fd, Client& client)
 {
 	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
 
@@ -125,7 +125,14 @@ void ConnectionManager::UnregisterClient(int fd)
 	s_Instance->m_ConnectedClients.erase(fd);
 }
 
-Client ConnectionManager::GetClient(int fd)
+const Client& ConnectionManager::GetClient(int fd)
+{
+	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
+
+	return s_Instance->m_ConnectedClients[fd];
+}
+
+Client& ConnectionManager::GetClientRef(int fd)
 {
 	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
 
