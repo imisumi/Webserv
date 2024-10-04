@@ -393,7 +393,7 @@ void Server::HandleSocketInputEvent(Client& client)
 		ssize_t n = recv((int)client, vBuffer.data(), vBuffer.capacity(), 0);
 
 
-		LOG_INFO("Raw data: {}\n", vBuffer.data());
+		// LOG_INFO("Raw data: {}\n", vBuffer.data());
 
 		LOG_INFO("Received bytes: {},\titteration: {},\twith read size of: {}", n, i++, vBuffer.capacity());
 		totalBytes += n;
@@ -470,7 +470,7 @@ void Server::HandleSocketInputEvent(Client& client)
 	LOG_DEBUG("Total bytes received: {}", totalBytes);
 
 	//TODO: get the correct sevrer config and pass it to the request handler
-	Config config = ConfigParser::createDefaultConfig();
+	// Config config = ConfigParser::createDefaultConfig();
 	const std::string response = s_Instance->m_RequestHandler.HandleRequest(client);
 	// const std::string response = ResponseGenerator::OkResponse();
 	if (response.empty())

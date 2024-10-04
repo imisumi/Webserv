@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   Config.cpp                                         :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: kwchu <kwchu@student.codam.nl>               +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/05 13:09:31 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/09/24 16:16:35 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   Config.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/05 13:09:31 by kwchu             #+#    #+#             */
+/*   Updated: 2024/10/04 15:53:57 by imisumi          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,43 +14,6 @@
 #include "ServerSettings.h"
 #include <iostream>
 #include <arpa/inet.h>
-
-Config:: Config()
-{
-
-};
-
-Config:: Config(const Config& copy)
-{
-	this->m_ServerMap = copy.m_ServerMap;
-	this->m_Servers = copy.m_Servers;
-};
-
-Config&	Config:: operator=(const Config& other)
-{
-	if (this != &other)
-	{
-		this->m_ServerMap = other.m_ServerMap;
-		this->m_Servers = other.m_Servers;
-	}
-	return *this;
-};
-
-Config:: Config(Config&& copy)
-{
-	this->m_ServerMap = copy.m_ServerMap;
-	this->m_Servers = copy.m_Servers;
-};
-
-Config&	Config:: operator=(Config&& other)
-{
-	if (this != &other)
-	{
-		this->m_ServerMap = other.m_ServerMap;
-		this->m_Servers = other.m_Servers;
-	}
-	return *this;
-};
 
 std::pair<std::string, uint32_t> ExtractIpAndPort(uint64_t input)
 {

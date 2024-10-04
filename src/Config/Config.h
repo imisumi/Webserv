@@ -6,7 +6,7 @@
 /*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/05 13:09:45 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/18 14:23:15 by imisumi          ###   ########.fr       */
+/*   Updated: 2024/10/04 17:40:46 by imisumi          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,9 +68,5 @@ class Config
 		auto end() const { return m_ServerMap.end(); }
 
 		void	print();
-		Config();
-		Config(const Config& copy);
-		Config& operator=(const Config& other);
-		Config(Config&& copy);
-		Config& operator=(Config&& other);
+		Config() = default;
 };

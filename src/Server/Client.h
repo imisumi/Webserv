@@ -39,12 +39,8 @@ public:
 	void SetEpollInstance(int epollInstance) { m_EpollInstance = epollInstance; }
 
 
-	void SetConfig(ServerSettings* config) { m_Config = config; }
-	ServerSettings* GetConfig() const { return m_Config; }
-
-	void SetRequest(const HttpRequest& request) { m_Request = request; }
-	const HttpRequest& GetRequest() const { return m_Request; }
-
+	void SetServerConfig(ServerSettings* config) { m_ServerConfig = config; }
+	ServerSettings* GetServerConfig() const { return m_ServerConfig; }
 
 	void SetNewRequest(const NewHttpRequest& request) { m_NewRequest = request; }
 	const NewHttpRequest& GetNewRequest() const { return m_NewRequest; }
@@ -60,7 +56,7 @@ public:
 	void reset()
 	{
 		m_NewRequest = NewHttpRequest();
-		m_Request = HttpRequest();
+		m_Response.clear();
 	}
 
 
@@ -89,10 +85,9 @@ private:
 	int m_EpollInstance = -1;
 
 
-	ServerSettings* m_Config;
-	HttpRequest m_Request;
-
 	NewHttpRequest m_NewRequest;
 
+
+	ServerSettings* m_ServerConfig;
 	ServerSettings::LocationSettings m_LocationSettings;
 };

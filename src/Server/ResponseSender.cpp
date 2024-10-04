@@ -18,8 +18,14 @@ ssize_t ResponseSender::sendResponse(const std::string& response, int epollFd)
 	while (bytesToSend > 0)
 	{
 		ssize_t bytesSent = send(epollFd, response.c_str() + byteOffset, bytesToSend, 0);
+		
+		if (bytesSent < bytesToSend)
+		{
+			return bytesSent;
+		}
 		if (bytesSent == -1)
 		{
+			//TODO: remove
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 			{
 				LOG_DEBUG("send: EAGAIN");
@@ -36,3 +42,9 @@ ssize_t ResponseSender::sendResponse(const std::string& response, int epollFd)
 	LOG_DEBUG("Total bytes sent: {}", byteOffset);
 	return byteOffset;
 }
+
+
+// if (bytesSent < bytesToSend)
+// 		{
+// 			return bytesSent;
+// 		}

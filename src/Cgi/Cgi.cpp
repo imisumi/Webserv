@@ -272,7 +272,7 @@ void Cgi::handleChildProcess(const Client& client, int pipefd[])
 	envpArray[9] = "SERVER_SOFTWARE=" + std::string(SERVER_SOFTWARE);
 	envpArray[10] = "SERVER_PORT=" + std::to_string(client.GetServerPort());
 	envpArray[11] = "SERVER_ADDR=" + std::string(client.GetServerAddress());
-	envpArray[12] = "SERVER_NAME=" + std::string(client.GetConfig()->GetServerName());
+	envpArray[12] = "SERVER_NAME=" + std::string(client.GetServerConfig()->GetServerName());
 	envpArray[13] = "REMOTE_ADDR=" + std::string(client.GetClientAddress());
 	envpArray[14] = "REMOTE_PORT=" + std::to_string(client.GetClientPort());
 	envpArray[15] = "HTTP_HOST=" + request.getHeaderValue("host");

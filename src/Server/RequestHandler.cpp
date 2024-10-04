@@ -47,14 +47,6 @@ const std::string RequestHandler::HandleRequest(Client& client)
 {
 	// parseRequest(request);
 	NewHttpRequest parsedRequest = client.GetNewRequest();
-	// if (parsedRequest.parse(request) == -1)
-	// {
-	// 	LOG_ERROR("Failed to parse request");
-	// 	return ResponseGenerator::InternalServerError();
-	// }
-
-	HttpRequest req = m_RequestParser.getRequest();
-	LOG_INFO("URI: {}", req.getUri().string());
 
 	std::filesystem::path locationPrefix = parsedRequest.path;
 	LOG_INFO("Directory: {}", locationPrefix.string());
@@ -63,7 +55,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	for (std::filesystem::path longestPathPrefix = parsedRequest.path; longestPathPrefix != "/"; longestPathPrefix = longestPathPrefix.parent_path())
 	{
 		LOG_INFO("Longest path prefix: {}", longestPathPrefix.string());
-		if (client.GetConfig()->hasLocationSettings(longestPathPrefix))
+		if (client.GetServerConfig()->hasLocationSettings(longestPathPrefix))
 		{
 			locationPrefix = longestPathPrefix;
 			LOG_DEBUG("Location settings found for: {}", locationPrefix.string());
@@ -72,19 +64,13 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	}
 
 	LOG_INFO("Location prefix: {}", locationPrefix.string());
-	const ServerSettings::LocationSettings& location = client.GetConfig()->GetLocationSettings(locationPrefix);
+	const ServerSettings::LocationSettings& location = client.GetServerConfig()->GetLocationSettings(locationPrefix);
 	client.SetLocationSettings(location);
-	
-	// parsedRequest.path = location.root / std::filesystem::relative(parsedRequest.path, "/");
+
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
 	parsedRequest.print();
 
-	req.setUri(location.root / std::filesystem::relative(req.getUri(), "/"));
-	LOG_INFO("URI: {}", req.getUri().string());
-
 	client.SetNewRequest(parsedRequest);
-	client.SetRequest(req);
-
 
 	//TODO: find better solution
 	const uint8_t allowedMethods = client.GetLocationSettings().httpMethods;

@@ -20,6 +20,7 @@ public:
 	// std::string handleRequest(const std::string& route);
 
 	static std::string getImages(const std::filesystem::path& path);
+	static std::string getFiles(const std::filesystem::path& path);
 
 private:
 	// std::string getFiles();

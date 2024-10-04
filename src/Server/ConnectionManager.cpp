@@ -106,7 +106,18 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	std::cout << std::endl;
 
 	ServerSettings* settings = Server::GetServerSettings(packedIpPort);
-	client.SetConfig(settings);
+	LOG_INFO("Server name: {}", settings->GetServerName());
+	std::filesystem::path path("/");
+	const std::vector<std::string>& indexes = settings->GetIndexList(path);
+	for (const auto& index : indexes)
+	{
+		LOG_INFO("Index: {}", index);
+	}
+	// LOG_INFO("Allowed methods: {}", settings->GetAllowedMethods(path));
+	client.SetServerConfig(settings);
+
+	// const std::vector<std::string>& indexes = client.GetServerConfig()->GetIndexList("/");
+
 
 	return client;
 }

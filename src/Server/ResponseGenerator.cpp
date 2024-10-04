@@ -580,11 +580,20 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 
 	Api api;
 	api.addApiRoute("/api/v1/images");
+	api.addApiRoute("/api/v1/files");
 
 	if (api.isApiRoute(client.GetNewRequest().path.string()))
 	{
-		std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
-		return Api::getImages(databaseImagePath);
+		if (client.GetNewRequest().path.string() == "/api/v1/images")
+		{
+			std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
+			return Api::getImages(databaseImagePath);
+		}
+		else if (client.GetNewRequest().path.string() == "/api/v1/files")
+		{
+			std::filesystem::path databaseFilePath = std::filesystem::current_path() / "database" / "files";
+			return Api::getFiles(databaseFilePath);
+		}
 	}
 	//? Validate the requested path
 
@@ -597,8 +606,10 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		{
 			LOG_DEBUG("Requested path is a directory");
 
-			const std::vector<std::string>& indexes = client.GetConfig()->GetIndexList(path);
+			const std::vector<std::string>& indexes = client.GetLocationSettings().index;
+			LOG_INFO("----------- {}", client.GetLocationSettings().index[0]);
 			LOG_INFO("Index: {}", indexes[0]);
+			LOG_INFO("Server name: {}", client.GetServerConfig()->GetServerName());
 
 			for (const auto& index : indexes)
 			{
@@ -622,8 +633,11 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 					return generateOKResponse(indexPath, updatedRequest);
 				}
 			}
-
-			return generateDirectoryListingResponse(path);
+			if (client.GetLocationSettings().autoindex)
+			{
+				return generateDirectoryListingResponse(path);
+			}
+			return generateNotFoundResponse();
 		}
 		else if (std::filesystem::is_regular_file(path))
 		{
@@ -646,10 +660,10 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 				return ResponseGenerator::generateForbiddenResponse();
 			}
 
-			if (!isFileModified(client.GetNewRequest()))
-			{
-				return generateNotModifiedResponse();
-			}
+			// if (!isFileModified(client.GetNewRequest()))
+			// {
+			// 	return generateNotModifiedResponse();
+			// }
 
 			return generateFileResponse(client.GetNewRequest());
 		}
