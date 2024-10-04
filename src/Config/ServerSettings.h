@@ -6,7 +6,7 @@
 /*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
-/*   Updated: 2024/10/04 17:34:36 by imisumi          ###   ########.fr       */
+/*   Updated: 2024/10/04 18:15:43 by imisumi          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,18 +116,18 @@ class ServerSettings
 
 		const LocationSettings& GetLocationSettings(std::filesystem::path path) const
 		{
-			LOG_DEBUG("Looking for location: {}", path.string());
+			// LOG_DEBUG("Looking for location: {}", path.string());
 
-			for (const auto& [location, settings] : m_Locations)
-			{
-				if (path.string().find(location.string()) == 0)
-				{
-					LOG_DEBUG("Location found: {}", location.string());
-					return settings;
-				}
-			}
-			LOG_DEBUG("Location not found, returning global settings");
-			return m_GlobalSettings;
+			// for (const auto& [location, settings] : m_Locations)
+			// {
+			// 	if (location == path)
+			// 	{
+			// 		LOG_DEBUG("Location found: {}", location.string());
+			// 		return settings;
+			// 	}
+			// }
+			// LOG_DEBUG("Location not found, returning global settings");
+			// return m_GlobalSettings;
 
 
 			auto it = m_Locations.find(path);

@@ -65,6 +65,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 
 	LOG_INFO("Location prefix: {}", locationPrefix.string());
 	const ServerSettings::LocationSettings& location = client.GetServerConfig()->GetLocationSettings(locationPrefix);
+	LOG_ERROR("ALLOWED METHODS: {}", location.httpMethods);
 	client.SetLocationSettings(location);
 
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
@@ -73,7 +74,12 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	client.SetNewRequest(parsedRequest);
 
 	//TODO: find better solution
+	// const uint32_t allowedMethods =  static_cast<uint32_t>(client.GetLocationSettings().httpMethods);
 	const uint8_t allowedMethods = client.GetLocationSettings().httpMethods;
+	// std::cerr << client.GetLocationSettings().root << '\n';
+	// std::cerr << client.GetLocationSettings().httpMethods << '\n';
+	// std::cerr << static_cast<int>(client.GetLocationSettings().httpMethods) << '\n';
+	// std::cerr << allowedMethods << '\n';
 
 	static const uint8_t GET = 1;
 	static const uint8_t POST = 1 << 1;
