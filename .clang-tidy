@@ -1,0 +1,11 @@
+---
+# Checks: '-*,performance-*,readability-*'
+# Checks: '-*,performance-*,readability-*,modernize-*,cppcoreguidelines-*,bugprone-*'
+# Checks: '-*,performance-*,readability-*,cppcoreguidelines-*,bugprone-*'
+Checks: '-*,performance-*,readability-*,cppcoreguidelines-*,bugprone-*,-readability-identifier-length'
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
+AnalyzeTemporaryDtors: false
+FormatStyle: none
+...

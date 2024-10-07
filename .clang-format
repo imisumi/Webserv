@@ -1,0 +1,33 @@
+BasedOnStyle: Google
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# Use tabs instead of spaces
+UseTab: Always
+TabWidth: 4  # Ensure that tabs are used for a width of 4 characters
+IndentWidth: 4  # Indent width matches tab width
+
+# Place opening brace on a new line (Allman style)
+BreakBeforeBraces: Allman
+SpacesInEmptyBraces: false  # Ensure no spaces in empty braces
+
+# Ensure that arguments or conditions split over multiple lines are properly aligned
+ContinuationIndentWidth: 4  # Indent for broken lines
+
+ColumnLimit: 120  # You can set this to a larger value, e.g., 100 or 120
+
+# Align access specifiers with the class indentation level
+AccessModifierOffset: -4  # Align access modifiers with class indentation (adjust if needed)
+
+# Control formatting of short functions
+AllowShortFunctionsOnASingleLine: Inline  # Allow only inline functions (typical for getters/setters) on a single line
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+# Set special rules for header files to allow short functions (like getters/setters) on a single line
+IndentPPDirectives: BeforeHash  # Ensures preprocessor directives are indented properly
+
+# This setting keeps setters/getters in header files single-line if possible
+SortIncludes: true
+IncludeBlocks: Preserve

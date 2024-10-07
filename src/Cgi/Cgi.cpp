@@ -87,7 +87,7 @@ void sigchld_handler(int signo)
 
 				Server& server = Server::Get();
 				int client_fd = server.childProcesses[pid];
-				const Client& client = ConnectionManager::GetClient(client_fd);
+				Client& client = ConnectionManager::GetClientRef(client_fd);
 				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
 
 				Server::EpollData data{
@@ -98,7 +98,8 @@ void sigchld_handler(int signo)
 
 				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, data);
 
-				server.m_ClientResponses[client_fd] = ResponseGenerator::InternalServerError();
+				// server.m_ClientResponses[client_fd] = ResponseGenerator::InternalServerError();
+				client.SetResponse(ResponseGenerator::InternalServerError());
 			}
 		}
 		else if (WIFSIGNALED(status))
@@ -112,7 +113,7 @@ void sigchld_handler(int signo)
 
 				int client_fd = server.childProcesses[pid];
 				// Client client = server.GetClient(client_fd);
-				const Client& client = ConnectionManager::GetClient(client_fd);
+				Client& client = ConnectionManager::GetClientRef(client_fd);
 				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
 
 				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);
@@ -125,7 +126,8 @@ void sigchld_handler(int signo)
 				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, data);
 
 				std::string response = s_TimeoutErrorResponse;
-				server.m_ClientResponses[client_fd] = response;
+				// server.m_ClientResponses[client_fd] = response;
+				client.SetResponse(response);
 
 				// Handle CGI timeout here
 				// Send timeout error page to client

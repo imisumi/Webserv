@@ -243,7 +243,7 @@ int NewHttpRequest::parse(const std::string& data)
 
 HttpState NewHttpRequest::parseStream(const std::string& data)
 {
-	std::string headerName;
+	static std::string headerName;
 	for (char c : data)
 	{
 		switch (m_State)
@@ -411,16 +411,6 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 				return HttpState::Done;
 		}
 	}
-	// if (getHeaderValue("host").empty())
-	// {
-	// 	LOG_ERROR("Host header is missing");
-	// 	return HttpState::Error;
-	// }
-	// if (m_State != HttpState::Body && m_State != HttpState::HeaderName)
-	// {
-	// 	LOG_ERROR("Invalid end of request");
-	// 	return HttpState::Error;
-	// }
 
 	if (m_State >= HttpState::BodyBegin)
 	{

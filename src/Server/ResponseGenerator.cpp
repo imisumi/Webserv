@@ -879,48 +879,6 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
     return generateOKResponse(client);
 }
 
-
-// const std::string ResponseGenerator::handleDeleteRequest(const Client& Client, const HttpRequest& request) 
-// {
-//     Utils::Timer timer;
-//     LOG_INFO("Handling DELETE request");
-// 	std::filesystem::path uri = request.getUri();
-// 	//CURRENTLY OUR SERVER ONLY DELETES FILES FROM /DATABASE/IMAGES nowhere else. and then takes the last arg from uri
-// 	//example /home/kaltevog/Desktop/Webserv(<-dynamic part)/database/images(<-hardcoded part)/webcopy.png(<-last arg of delete req uri)
-//     std::string basePath = getProjectRootDir() + "/database/images";
-//     std::filesystem::path fullPath = basePath / uri.filename();
-//     LOG_INFO("Attempting to delete file: {}", fullPath.string());
-//     if (std::filesystem::exists(fullPath) && std::filesystem::is_regular_file(fullPath))
-//     {
-//         try {
-//             std::filesystem::remove(fullPath);
-//             LOG_INFO("File deleted successfully: {}", fullPath.string());
-//             return buildHttpResponse(ContentType::TEXT, "File deleted successfully", HTTPStatusCode::OK);
-//         } catch (const std::filesystem::filesystem_error& e) {
-//             LOG_ERROR("Failed to delete file: {}", e.what());
-//             return generateInternalServerErrorResponse();
-//         }
-//     }
-//     else
-//     {
-//         LOG_ERROR("Requested file does not exist or is not a regular file: {}", fullPath.string());
-//         return generateNotFoundResponse();
-//     }
-// }
-
-void printPermissions(std::filesystem::perms p) {
-    std::cout << ((p & std::filesystem::perms::owner_read) != std::filesystem::perms::none ? "r" : "-")
-              << ((p & std::filesystem::perms::owner_write) != std::filesystem::perms::none ? "w" : "-")
-              << ((p & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ? "x" : "-")
-              << ((p & std::filesystem::perms::group_read) != std::filesystem::perms::none ? "r" : "-")
-              << ((p & std::filesystem::perms::group_write) != std::filesystem::perms::none ? "w" : "-")
-              << ((p & std::filesystem::perms::group_exec) != std::filesystem::perms::none ? "x" : "-")
-              << ((p & std::filesystem::perms::others_read) != std::filesystem::perms::none ? "r" : "-")
-              << ((p & std::filesystem::perms::others_write) != std::filesystem::perms::none ? "w" : "-")
-              << ((p & std::filesystem::perms::others_exec) != std::filesystem::perms::none ? "x" : "-")
-              << std::endl;
-}
-
 const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 {
 	const NewHttpRequest& request = Client.GetNewRequest();

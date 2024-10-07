@@ -7,8 +7,8 @@
 // #include <
 #include <fcntl.h>
 
-#include "Core/Core.h"
 #include <unistd.h>
+#include "Core/Core.h"
 
 #include <sys/socket.h>
 
@@ -16,14 +16,9 @@
 
 static ConnectionManager* s_Instance = nullptr;
 
+ConnectionManager::ConnectionManager() {}
 
-ConnectionManager::ConnectionManager()
-{
-}
-
-ConnectionManager::~ConnectionManager()
-{
-}
+ConnectionManager::~ConnectionManager() {}
 
 ConnectionManager& ConnectionManager::Get()
 {
@@ -57,14 +52,14 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	Client client = accept(socket_fd, (struct sockaddr*)&client_addr, &client_addr_len);
 	if ((int)client == -1)
 	{
-		// LOG_ERROR("Failed to accept connection!");
 		return Client();
 	}
 
 	client.Initialize(client_addr, socket_fd);
 
-	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}, server address: {}", 
-		client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort(), client.GetServerAddress());
+	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}, server address: {}",
+			 client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort(),
+			 client.GetServerAddress());
 
 	// make the socket non-blocking
 	int flags = fcntl((int)client, F_GETFL, 0);
@@ -82,12 +77,8 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 		return -1;
 	}
 
-
 	Server::EpollData data{
-		.fd = static_cast<uint16_t>(client),
-		.cgi_fd = std::numeric_limits<uint16_t>::max(),
-		.type = EPOLL_TYPE_SOCKET
-	};
+		.fd = static_cast<uint16_t>(client), .cgi_fd = std::numeric_limits<uint16_t>::max(), .type = EPOLL_TYPE_SOCKET};
 
 	if (Server::AddEpollEvent((int)client, EPOLLIN | EPOLLET, data) == -1)
 	{
@@ -98,7 +89,6 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	}
 
 	client.SetEpollInstance(Server::Get().GetEpollInstance());
-
 
 	// uint64_t packedIpPort = PACK_U64(client.GetClientAddress(), client.GetServerPort());
 	uint64_t packedIpPort = Utils::packIpAndPort(client.GetServerAddress(), client.GetServerPort());
@@ -113,11 +103,7 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	{
 		LOG_INFO("Index: {}", index);
 	}
-	// LOG_INFO("Allowed methods: {}", settings->GetAllowedMethods(path));
 	client.SetServerConfig(settings);
-
-	// const std::vector<std::string>& indexes = client.GetServerConfig()->GetIndexList("/");
-
 
 	return client;
 }
@@ -126,6 +112,8 @@ void ConnectionManager::RegisterClient(int fd, Client& client)
 {
 	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
 
+	LOG_DEBUG("Registering client: {}", fd);
+
 	s_Instance->m_ConnectedClients[fd] = client;
 }
 
@@ -133,6 +121,7 @@ void ConnectionManager::UnregisterClient(int fd)
 {
 	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
 
+	LOG_DEBUG("Unregistering client: {}", fd);
 	s_Instance->m_ConnectedClients.erase(fd);
 }
 

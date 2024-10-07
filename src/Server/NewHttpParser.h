@@ -59,13 +59,16 @@ public:
 	int parse(const std::string& data);
 	HttpState parseStream(const std::string& data);
 
-	const std::string getHeaderValue(const std::string& key) const
+	const std::string getHeaderValue(const std::string& _key) const
 	{
-		auto it = headers.find(key);
-		if (it != headers.end())
-			return it->second;
-		else
-			return std::string();
+		for (const auto& [key, value] : headers)
+		{
+			if (key == _key)
+			{
+				return value;
+			}
+		}
+		return std::string();
 	}
 
 	void print()
