@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <iostream>
+#include <arpa/inet.h>
+#include <array>
 
 namespace Utils
 {

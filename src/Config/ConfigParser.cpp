@@ -1,37 +1,38 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ConfigParser.cpp                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/18 12:53:07 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/27 03:33:44 by imisumi-wsl      ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ConfigParser.cpp                                   :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/18 12:53:07 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/10/08 15:53:43 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ConfigParser.h"
 #include "Config.h"
+#include "Utils/Utils.h"
 
+#include <cstdint>
 #include <filesystem>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <cstdint>
-#include <string>
 
-Config	ConfigParser:: createDefaultConfig()
+Config ConfigParser::createDefaultConfig()
 {
-	Config	config = createConfigFromFile(DEFAULT_PATH);
+	Config config = createConfigFromFile(DEFAULT_PATH);
 
 	return config;
 }
 
-Config	ConfigParser::createConfigFromFile(const std::filesystem::path& path)
+Config ConfigParser::createConfigFromFile(const std::filesystem::path& path)
 {
-	Config			config;
-	TokenVector		tokens;
-	TokenMap		tokenMap;
-	std::string		buffer;
+	Config config;
+	TokenVector tokens;
+	TokenMap tokenMap;
+	std::string buffer;
 
 	if (path.extension() != ".conf")
 		throw std::runtime_error(path.string() + ": invalid extension");
@@ -50,9 +51,7 @@ Config	ConfigParser::createConfigFromFile(const std::filesystem::path& path)
 	return config;
 }
 
-void	ConfigParser::tokenMapToServerSettings(
-	const TokenMap& tokenMap,
-	Servers& servers)
+void ConfigParser::tokenMapToServerSettings(const TokenMap& tokenMap, Servers& servers)
 {
 	for (TokenMap::const_iterator it = tokenMap.begin(); it != tokenMap.end(); it++)
 	{
@@ -68,16 +67,30 @@ void ConfigParser::assignPortToServerSettings(ServerMap& serverMap, Servers& ser
 	{
 		for (const auto& port : server.m_Ports)
 		{
-			serverMap[port];                    // Create an entry for the port if it doesn't exist
-			serverMap[port].push_back(&server); // Add the server pointer to the corresponding port
+			serverMap[port];
+			if (serverMap[port].empty())
+				serverMap[port].push_back(&server);
+			else
+			{
+				for (const auto& serverSettings : serverMap[port])
+				{
+					if (serverSettings->m_ServerName != server.m_ServerName)
+					{
+						serverMap[port].push_back(&server);
+					}
+					else
+					{
+						auto [ip, port2] = Utils::unpackIpAndPort(port);
+						LOG_WARN("Ignored server block on port {}:{} with same server_name {}", ip, port2, server.m_ServerName);
+					}
+				}
+			}
 		}
 	}
 }
 
-inline void	ConfigParser:: expectNextToken(
-	const TokenMap::const_iterator& end, 
-	TokenMap::const_iterator& it, 
-	TokenIdentifier expected)
+inline void ConfigParser::expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it,
+										  TokenIdentifier expected)
 {
 	it++;
 	if (it == end)
@@ -86,14 +99,12 @@ inline void	ConfigParser:: expectNextToken(
 		throw std::invalid_argument("expected " + identifierToString(expected) + ": found \"" + it->second + '\"');
 }
 
-ServerSettings	ConfigParser:: createServerSettings(
-	const TokenMap::const_iterator& end,
-	TokenMap::const_iterator& it)
+ServerSettings ConfigParser::createServerSettings(const TokenMap::const_iterator& end, TokenMap::const_iterator& it)
 {
-	ServerSettings	server;
-	bool			expectDirective = true;
-	uint16_t		repeatDirective = 0;
-	std::vector<TokenMap::const_iterator>	locationStart;
+	ServerSettings server;
+	bool expectDirective = true;
+	uint16_t repeatDirective = 0;
+	std::vector<TokenMap::const_iterator> locationStart;
 
 	expectNextToken(end, it, BRACKET_OPEN);
 	it++;
@@ -104,17 +115,17 @@ ServerSettings	ConfigParser:: createServerSettings(
 		if (it->first == LOCATION)
 		{
 			locationStart.push_back(it);
-			ServerSettings::LocationSettings	dummyLocation;
+			ServerSettings::LocationSettings dummyLocation;
 			expectNextToken(end, it, ARGUMENT);
 			handleLocationSettings(dummyLocation, end, it);
-			continue ;
+			continue;
 		}
 		else if (it->first == LIMIT_EXCEPT && !(repeatDirective & (1 << LIMIT_EXCEPT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
 			handleLimitExcept(server.m_GlobalSettings.httpMethods, end, it);
 			repeatDirective |= (1 << LIMIT_EXCEPT);
-			continue ;
+			continue;
 		}
 
 		if (expectDirective && it->first == ARGUMENT)
@@ -184,7 +195,7 @@ ServerSettings	ConfigParser:: createServerSettings(
 		}
 		else if (it->first == BRACKET_CLOSE)
 		{
-			break ;
+			break;
 		}
 
 		if (it->first == DIRECTIVE_END)
@@ -193,8 +204,8 @@ ServerSettings	ConfigParser:: createServerSettings(
 	for (TokenMap::const_iterator loc : locationStart)
 	{
 		expectNextToken(end, loc, ARGUMENT);
-		ServerSettings::LocationSettings	location = server.m_GlobalSettings;
-		const std::filesystem::path			locationPath = loc->second;
+		ServerSettings::LocationSettings location = server.m_GlobalSettings;
+		const std::filesystem::path locationPath = loc->second;
 		handleLocationSettings(location, end, loc);
 		server.m_Locations.emplace(locationPath, location);
 	}
@@ -205,13 +216,11 @@ ServerSettings	ConfigParser:: createServerSettings(
 	return server;
 }
 
-void	ConfigParser:: handleLocationSettings(
-	ServerSettings::LocationSettings& location,
-	const TokenMap::const_iterator& end,
-	TokenMap::const_iterator& it)
+void ConfigParser::handleLocationSettings(ServerSettings::LocationSettings& location,
+										  const TokenMap::const_iterator& end, TokenMap::const_iterator& it)
 {
-	bool		expectDirective = true;
-	uint16_t	repeatDirective = 0;
+	bool expectDirective = true;
+	uint16_t repeatDirective = 0;
 
 	expectNextToken(end, it, BRACKET_OPEN);
 	it++;
@@ -228,7 +237,7 @@ void	ConfigParser:: handleLocationSettings(
 			expectNextToken(end, it, ARGUMENT);
 			handleLimitExcept(location.httpMethods, end, it);
 			repeatDirective |= (1 << LIMIT_EXCEPT);
-			continue ;
+			continue;
 		}
 
 		if (expectDirective && it->first == ARGUMENT)
@@ -292,11 +301,10 @@ void	ConfigParser:: handleLocationSettings(
 		}
 		else if (it->first == BRACKET_CLOSE)
 		{
-			break ;
+			break;
 		}
 
 		if (it->first == DIRECTIVE_END)
 			expectDirective = true;
 	}
 }
-

@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Config.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/05 13:09:31 by kwchu             #+#    #+#             */
-/*   Updated: 2024/10/04 15:53:57 by imisumi          ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   Config.cpp                                         :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/05 13:09:31 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/10/08 15:43:43 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,12 +48,12 @@ void	Config:: print()
     for (const auto& [key, value] : m_ServerMap)
     {
         // std::cout << "Server: " << key << std::endl;
-        auto [ip, port] = ExtractIpAndPort(key);
-        std::cout << "Server\n{\n";
-        std::cout << "\tServer name: " << value[0]->GetServerName() << '\n';
-        std::cout << "\tListening on: " << ip << ":" << port << '\n';
         for (const auto& server : value)
         {
+			auto [ip, port] = ExtractIpAndPort(key);
+			std::cout << "Server\n{\n";
+			std::cout << "\tListening on: " << ip << ":" << port << '\n';
+			std::cout << "\tServer name: " << server->GetServerName() << '\n';
             std::cout << "\tRoot: " << server->GetGlobalSettings().root << '\n';
 			for (auto& i : server->GetGlobalSettings().index)
 				std::cout << "\tIndex: " << i << '\n';
@@ -83,7 +83,7 @@ void	Config:: print()
                 std::cout << "\t\tMethods: " << MethodToString(location.httpMethods) << '\n';
                 std::cout << "\t}\n";
             }
+			std::cout << "}\n\n";
         }
-        std::cout << "}\n";
     }
 }
