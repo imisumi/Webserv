@@ -22,7 +22,7 @@ static const std::unordered_set<std::string> supportedFileExtensions = {
 */
 std::string Api::getImages(const std::filesystem::path& path)
 {
-	LOG_ERROR("API images request");
+	Log::error("API images request");
 	std::string httpResponse;
 	std::string json = "{\n";
 	
@@ -69,7 +69,7 @@ std::string Api::getImages(const std::filesystem::path& path)
 
 std::string Api::getFiles(const std::filesystem::path& path)
 {
-	LOG_ERROR("API files request");
+	Log::error("API files request");
 	std::string httpResponse;
 	std::string json = "{\n";
 	

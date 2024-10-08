@@ -81,7 +81,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 				}
 				else
 				{
-					LOG_ERROR("Invalid character in request line: {}", c);
+					Log::error("Invalid character in request line: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -90,7 +90,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 				{
 					if (!isValidMethod(method))
 					{
-						LOG_ERROR("Invalid method: {}", method);
+						Log::error("Invalid method: {}", method);
 						m_State = HttpState::Error;
 					break;
 					}
@@ -104,7 +104,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					m_State = HttpState::URI_Path;
 				else
 				{
-					LOG_ERROR("Invalid character in URI: {}", c);
+					Log::error("Invalid character in URI: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -115,7 +115,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					m_State = HttpState::Version;
 				else if (c == CR || c == LF)
 				{
-					LOG_ERROR("Invalid character in URI path: {}", c);
+					Log::error("Invalid character in URI path: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -145,14 +145,14 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					m_State = HttpState::EndOfLine;
 					if (!isValidVersion(httpVersion))
 					{
-						LOG_ERROR("Invalid HTTP version: {}", httpVersion);
+						Log::error("Invalid HTTP version: {}", httpVersion);
 						m_State = HttpState::Error;
 					break;
 					}
 				}
 				else if (c == LF)
 				{
-					LOG_ERROR("Invalid character in HTTP version: {}", c);
+					Log::error("Invalid character in HTTP version: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -167,7 +167,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 				}
 				else
 				{
-					LOG_ERROR("Invalid character in end of line: {}", c);
+					Log::error("Invalid character in end of line: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -179,7 +179,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					{
 						if (headers.find(headerName) != headers.end())
 						{
-							LOG_ERROR("Duplicate header: {}", headerName);
+							Log::error("Duplicate header: {}", headerName);
 							m_State = HttpState::Error;
 					break;
 						}
@@ -194,7 +194,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					m_State = HttpState::BodyBegin;
 				else if (c == LF)
 				{
-					LOG_ERROR("Invalid character in header name: {}", c);
+					Log::error("Invalid character in header name: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -208,7 +208,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					m_State = HttpState::EndOfLine;
 				else if (c == LF)
 				{
-					LOG_ERROR("Invalid character in header value: {}", c);
+					Log::error("Invalid character in header value: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -220,7 +220,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					m_State = HttpState::Body;
 				else
 				{
-					LOG_ERROR("Invalid character in body begin: {}", c);
+					Log::error("Invalid character in body begin: {}", c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -230,7 +230,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 				break;
 			case HttpState::Error:
 			{
-				LOG_ERROR("Error parsing request");
+				Log::error("Error parsing request");
 				return HttpState::Error;
 			}
 			case HttpState::Done:
@@ -242,7 +242,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 	{
 		if (getHeaderValue("host").empty())
 		{
-			LOG_ERROR("Host header is missing");
+			Log::error("Host header is missing");
 			return HttpState::Error;
 		}
 		path = normalizePath(path);

@@ -57,7 +57,7 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 
 	client.Initialize(client_addr, socket_fd);
 
-	LOG_INFO("New connection from: {}, client socket: {}, client port: {}, server port: {}, server address: {}",
+	Log::info("New connection from: {}, client socket: {}, client port: {}, server port: {}, server address: {}",
 			 client.GetClientAddress(), (int)client, client.GetClientPort(), client.GetServerPort(),
 			 client.GetServerAddress());
 
@@ -65,14 +65,14 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	int flags = fcntl((int)client, F_GETFL, 0);
 	if (flags == -1)
 	{
-		LOG_ERROR("Failed to get socket flags!");
+		Log::error("Failed to get socket flags!");
 		close((int)client);
 		return -1;
 	}
 
 	if (fcntl((int)client, F_SETFL, flags | O_NONBLOCK) == -1)
 	{
-		LOG_ERROR("Failed to set socket flags!");
+		Log::error("Failed to set socket flags!");
 		close((int)client);
 		return -1;
 	}
@@ -82,7 +82,7 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 
 	if (Server::AddEpollEvent((int)client, EPOLLIN | EPOLLET, data) == -1)
 	{
-		LOG_ERROR("Failed to add client socket to epoll!");
+		Log::error("Failed to add client socket to epoll!");
 		// m_Clients.erase(client);
 		close((int)client);
 		return -1;
@@ -96,12 +96,12 @@ Client ConnectionManager::AcceptConnection(int socket_fd)
 	std::cout << std::endl;
 
 	ServerSettings* settings = Server::GetServerSettings(packedIpPort);
-	LOG_INFO("Server name: {}", settings->GetServerName());
+	Log::info("Server name: {}", settings->GetServerName());
 	std::filesystem::path path("/");
 	const std::vector<std::string>& indexes = settings->GetIndexList(path);
 	for (const auto& index : indexes)
 	{
-		LOG_INFO("Index: {}", index);
+		Log::info("Index: {}", index);
 	}
 	client.SetServerConfig(settings);
 
@@ -112,7 +112,7 @@ void ConnectionManager::RegisterClient(int fd, Client& client)
 {
 	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
 
-	LOG_DEBUG("Registering client: {}", fd);
+	Log::debug("Registering client: {}", fd);
 
 	s_Instance->m_ConnectedClients[fd] = client;
 }
@@ -121,7 +121,7 @@ void ConnectionManager::UnregisterClient(int fd)
 {
 	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
 
-	LOG_DEBUG("Unregistering client: {}", fd);
+	Log::debug("Unregistering client: {}", fd);
 	s_Instance->m_ConnectedClients.erase(fd);
 }
 

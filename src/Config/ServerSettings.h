@@ -6,7 +6,7 @@
 /*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
-/*   Updated: 2024/10/04 18:15:43 by imisumi          ###   ########.fr       */
+/*   Updated: 2024/10/08 15:19:46 by imisumi          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ class ServerSettings
 	private:
 		friend class ConfigParser;
 		std::vector<uint64_t>	m_Ports;
-		std::string				m_ServerName;
+		std::string				m_ServerName = "";
 		LocationSettings		m_GlobalSettings;
 		std::map<std::filesystem::path, LocationSettings> m_Locations;
 		// std::unordered_map<std::filesystem::path, LocationSettings> m_Locations;
@@ -53,10 +53,10 @@ class ServerSettings
 
 			if (it != this->m_Locations.end())
 			{
-				LOG_INFO("Location found: {}", path.string());
+				Log::info("Location found: {}", path.string());
 				return it->second;
 			}
-			LOG_INFO("Location not found, returning global settings");
+			Log::info("Location not found, returning global settings");
 			return this->m_GlobalSettings;
 		};
 		const LocationSettings&	operator[](const std::filesystem::path& path) const
@@ -103,8 +103,8 @@ class ServerSettings
 		{
 			for (const auto & [path, settings] : m_Locations)
 			{
-				LOG_INFO("Looking for index: {}", path.string());
-				LOG_INFO("Looking for index: {}", _path.string());
+				Log::info("Looking for index: {}", path.string());
+				Log::info("Looking for index: {}", _path.string());
 				if (path == _path)
 				{
 					return settings.index;
@@ -116,27 +116,27 @@ class ServerSettings
 
 		const LocationSettings& GetLocationSettings(std::filesystem::path path) const
 		{
-			// LOG_DEBUG("Looking for location: {}", path.string());
+			// Log::debug("Looking for location: {}", path.string());
 
 			// for (const auto& [location, settings] : m_Locations)
 			// {
 			// 	if (location == path)
 			// 	{
-			// 		LOG_DEBUG("Location found: {}", location.string());
+			// 		Log::debug("Location found: {}", location.string());
 			// 		return settings;
 			// 	}
 			// }
-			// LOG_DEBUG("Location not found, returning global settings");
+			// Log::debug("Location not found, returning global settings");
 			// return m_GlobalSettings;
 
 
 			auto it = m_Locations.find(path);
 			if (it != m_Locations.end())
 			{
-				LOG_DEBUG("Location found: {}", path.string());
+				Log::debug("Location found: {}", path.string());
 				return it->second;
 			}
-			LOG_DEBUG("Location not found, returning global settings");
+			Log::debug("Location not found, returning global settings");
 			return m_GlobalSettings;
 		}
 

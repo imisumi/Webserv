@@ -213,11 +213,11 @@ std::string generateDirectoryListing(const std::string& path)
 //? return the contents of the file or nullopt if the file cannot be opened due to permissions
 std::optional<std::string> ResponseGenerator::readFileContents(const std::filesystem::path& path)
 {
-	LOG_DEBUG("Reading file contents: {}", path.string());
+	Log::debug("Reading file contents: {}", path.string());
 	std::ifstream file(path);
 	if (!file.is_open())
 	{
-		LOG_ERROR("Failed to open file: {}", path.string());
+		Log::error("Failed to open file: {}", path.string());
 		return std::nullopt;
 	}
 
@@ -229,14 +229,14 @@ std::optional<std::string> ResponseGenerator::readFileContents(const std::filesy
 std::string ResponseGenerator::determineContentType(const std::filesystem::path& file)
 {
 	// log file
-	// LOG_INFO("File: {}", file.string());
+	// Log::info("File: {}", file.string());
 	std::string extension = file.extension().string();
-	LOG_INFO("Extension: {}", extension);
+	Log::info("Extension: {}", extension);
 	auto it = s_SupportedMineTypes.find(extension);
 
 	if (it != s_SupportedMineTypes.end())
 	{
-		LOG_INFO("Content-Type: {}", it->second);
+		Log::info("Content-Type: {}", it->second);
 		return it->second;
 	}
 	return std::string();
@@ -275,7 +275,7 @@ std::string getProjectRootDir() {
 	return std::filesystem::current_path();
 	const char* rootDir = std::getenv("WEBSERV_ROOT");
 	if (!rootDir) {
-		LOG_ERROR("WEBSERV_ROOT environment variable not set!");
+		Log::error("WEBSERV_ROOT environment variable not set!");
 		throw std::runtime_error("WEBSERV_ROOT environment variable is not set.");
 	}
 	return std::string(rootDir);
@@ -334,7 +334,7 @@ static std::string generateETagv2(const std::filesystem::path& path)
 
 	if (stat(path.c_str(), &fileStat) != 0)
 	{
-		LOG_ERROR("Failed to get file stats: {}", path.string());
+		Log::error("Failed to get file stats: {}", path.string());
 		return std::string();
 	}
 
@@ -521,7 +521,7 @@ std::string ReadImageFile(const std::filesystem::path& path)
 	std::ifstream file(path, std::ios::binary);
 	if (!file.is_open())
 	{
-		LOG_ERROR("Failed to open file: {}", path.string());
+		Log::error("Failed to open file: {}", path.string());
 		return std::string();
 	}
 	// Read the file content into a string
@@ -560,21 +560,21 @@ bool ResponseGenerator::isFileModified(const NewHttpRequest& request)
 	const std::string& lastModified = getFileModificationTime(request.mappedPath);
 	if (ifNoneMatch == etag && ifModifiedSince == lastModified)
 	{
-		LOG_DEBUG("Resource has not been modified");
+		Log::debug("Resource has not been modified");
 		return false;
 	}
-	LOG_INFO("Resource has been modified");
-	LOG_INFO("If-None-Match    : {}", ifNoneMatch);
-	LOG_INFO("ETag             : {}", etag);
-	LOG_INFO("If-Modified-Since: {}", ifModifiedSince);
-	LOG_INFO("Last-Modified    : {}", lastModified);
+	Log::info("Resource has been modified");
+	Log::info("If-None-Match    : {}", ifNoneMatch);
+	Log::info("ETag             : {}", etag);
+	Log::info("If-Modified-Since: {}", ifModifiedSince);
+	Log::info("Last-Modified    : {}", lastModified);
 	return true;
 }
 
 const std::string ResponseGenerator::handleGetRequest(const Client& client)
 {
 	Utils::Timer timer;
-	LOG_INFO("Handling GET request");
+	Log::info("Handling GET request");
 
 
 
@@ -604,20 +604,20 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		//? Check if the requested path is a directory or a file
 		if (std::filesystem::is_directory(path))
 		{
-			LOG_DEBUG("Requested path is a directory");
+			Log::debug("Requested path is a directory");
 
 			const std::vector<std::string>& indexes = client.GetLocationSettings().index;
-			LOG_INFO("----------- {}", client.GetLocationSettings().index[0]);
-			LOG_INFO("Index: {}", indexes[0]);
-			LOG_INFO("Server name: {}", client.GetServerConfig()->GetServerName());
+			Log::info("----------- {}", client.GetLocationSettings().index[0]);
+			Log::info("Index: {}", indexes[0]);
+			Log::info("Server name: {}", client.GetServerConfig()->GetServerName());
 
 			for (const auto& index : indexes)
 			{
-				LOG_INFO("Looking for: {}", index);
+				Log::info("Looking for: {}", index);
 				std::filesystem::path indexPath = path / index;
 				if (std::filesystem::exists(indexPath))
 				{
-					LOG_INFO("Index found: {}", indexPath.string());
+					Log::info("Index found: {}", indexPath.string());
 
 					if (!isFileModified(client.GetNewRequest()))
 					{
@@ -641,19 +641,19 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		}
 		else if (std::filesystem::is_regular_file(path))
 		{
-			LOG_DEBUG("Requested path is a file");
+			Log::debug("Requested path is a file");
 			const ServerSettings::LocationSettings& location = client.GetLocationSettings();
 
 			//? check if the file is a CGI script
 			if (location.cgi.size() > 0)
 			{
-				LOG_INFO("Requested path is a CGI script");
+				Log::info("Requested path is a CGI script");
 				for (const auto& cgi : location.cgi)
 				{
-					LOG_INFO("CGI: {}", cgi);
+					Log::info("CGI: {}", cgi);
 					if (path.extension() == cgi)
 					{
-						LOG_INFO("CGI script found: {}", path.string());
+						Log::info("CGI script found: {}", path.string());
 						return Cgi::executeCGI(client, client.GetNewRequest());
 					}
 				}
@@ -670,12 +670,12 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		else
 		{
 			//TODO: send 405 response???
-			LOG_ERROR("Requested path is not a file or directory");
+			Log::error("Requested path is not a file or directory");
 
 			return generateNotFoundResponse();
 		}
 	}
-	LOG_DEBUG("Requested path does not exist");
+	Log::debug("Requested path does not exist");
 	return generateNotFoundResponse();
 }
 
@@ -821,23 +821,23 @@ std::string ResponseGenerator::parseMultipartContentType(const std::string& body
 const std::string ResponseGenerator::handlePostRequest(const Client& client)
 {
     Utils::Timer timer;
-    LOG_INFO("Handling POST request");
+    Log::info("Handling POST request");
 
     std::string contentType = client.GetNewRequest().getHeaderValue("content-type");
     if (contentType.empty()) {
-        LOG_ERROR("Missing Content-Type header");
+        Log::error("Missing Content-Type header");
         return generateBadRequestResponse();
     }
 
     std::string boundary = extractBoundary(contentType);
     if (boundary.empty()) {
-        LOG_ERROR("Boundary missing in Content-Type header");
+        Log::error("Boundary missing in Content-Type header");
         return generateBadRequestResponse();
     }
 
     std::string body = client.GetNewRequest().body;
     if (body.empty()) {
-        LOG_ERROR("Request body is empty");
+        Log::error("Request body is empty");
         return generateBadRequestResponse();
     }
 
@@ -847,19 +847,19 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
     std::string email = parseMultipartData(body, boundary, "email");
 
     if (!saveFormDataToFile(firstName, lastName, email)) {
-        LOG_ERROR("Failed to save form data to file");
+        Log::error("Failed to save form data to file");
         return generateInternalServerErrorResponse();
     }
 
     // Parse file data and content type
     std::string fileContentType = parseMultipartContentType(body, boundary, "file");
     if (fileContentType.empty()) {
-        LOG_ERROR("File content type missing");
+        Log::error("File content type missing");
         return generateBadRequestResponse();
     }
 
     // Log the detected content type for debugging
-    LOG_INFO("Detected file content type: " + fileContentType);
+    Log::info("Detected file content type: " + fileContentType);
 
     // Check if the file's content type matches one of the supported image types
     std::string uploadDir;
@@ -871,11 +871,11 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
 
     // Save the uploaded file
     if (!saveUploadedFile(body, boundary, "file", uploadDir)) {
-        LOG_ERROR("Failed to save uploaded file");
+        Log::error("Failed to save uploaded file");
         return generateInternalServerErrorResponse();
     }
 
-    LOG_INFO("Successfully handled POST request, saved form data, and saved file");
+    Log::info("Successfully handled POST request, saved form data, and saved file");
     return generateOKResponse(client);
 }
 
@@ -888,12 +888,12 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 	{
 		if (std::filesystem::remove(request.mappedPath))
 		{
-			LOG_INFO("File deleted successfully: {}", request.mappedPath.string());
+			Log::info("File deleted successfully: {}", request.mappedPath.string());
 			return OkResponse();
 		}
 		else
 		{
-			LOG_ERROR("Failed to delete file: {}", request.mappedPath.string());
+			Log::error("Failed to delete file: {}", request.mappedPath.string());
 			return generateInternalServerErrorResponse();
 		}
 	}
@@ -910,14 +910,14 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 //TODO: instead of sending path maybe update the path in the HrrpRequest
 std::string ResponseGenerator::generateOKResponse(const Client& client)
 {
-	LOG_INFO("Generating 200 OK response");
+	Log::info("Generating 200 OK response");
 
 	const NewHttpRequest& request = client.GetNewRequest();
 
 	auto fileContents = readFileContents(request.mappedPath);
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", request.mappedPath.string());
+		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
 		return generateForbiddenResponse();
 	}
 	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
@@ -928,12 +928,12 @@ std::string ResponseGenerator::generateOKResponse(const Client& client)
 
 std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const NewHttpRequest& request)
 {
-	LOG_INFO("Generating 200 OK response");
+	Log::info("Generating 200 OK response");
 
 	auto fileContents = readFileContents(path);
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", request.mappedPath.string());
+		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
 		return generateForbiddenResponse();
 	}
 	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
@@ -942,7 +942,7 @@ std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& p
 
 std::string ResponseGenerator::generateForbiddenResponse()
 {
-	LOG_INFO("Generating 403 Forbidden response");
+	Log::info("Generating 403 Forbidden response");
 
 	const char* root = std::getenv("HTML_ROOT_DIR");
 	if (root == nullptr)
@@ -956,7 +956,7 @@ std::string ResponseGenerator::generateForbiddenResponse()
 	auto fileContents = readFileContents(std::filesystem::path(value / "403-Forbidden.html"));
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}",  "403-Forbidden.html");
+		Log::critical("Failed to read file contents: {}",  "403-Forbidden.html");
 		return std::string(s_ForbiddenResponse);
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::Forbidden);
@@ -964,12 +964,12 @@ std::string ResponseGenerator::generateForbiddenResponse()
 
 std::string ResponseGenerator::generateFileResponse(const HttpRequest& request)
 {
-	LOG_TRACE("Generating file response");
-	LOG_TRACE("Request URI: {}", request.getUri().string());
+	Log::trace("Generating file response");
+	Log::trace("Request URI: {}", request.getUri().string());
 	std::string fileContents = ReadImageFile(request.getUri());
 	if (fileContents.empty())
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", request.getUri().string());
+		Log::critical("Failed to read file contents: {}", request.getUri().string());
 		// return generateForbiddenResponse(path);
 		return generateForbiddenResponse();
 	}
@@ -979,12 +979,12 @@ std::string ResponseGenerator::generateFileResponse(const HttpRequest& request)
 
 std::string ResponseGenerator::generateFileResponse(const NewHttpRequest& request)
 {
-	LOG_TRACE("Generating file response");
-	LOG_TRACE("Request URI: {}", request.mappedPath.string());
+	Log::trace("Generating file response");
+	Log::trace("Request URI: {}", request.mappedPath.string());
 	std::string fileContents = ReadImageFile(request.mappedPath);
 	if (fileContents.empty())
 	{
-		LOG_CRITICAL("Failed to read file contents: {}", request.mappedPath.string());
+		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
 		// return generateForbiddenResponse(path);
 		return generateForbiddenResponse();
 	}
@@ -994,7 +994,7 @@ std::string ResponseGenerator::generateFileResponse(const NewHttpRequest& reques
 
 std::string ResponseGenerator::generateNotFoundResponse()
 {
-	LOG_INFO("Generating 404 Not Found response");
+	Log::info("Generating 404 Not Found response");
 
 	const char* root = std::getenv("HTML_ROOT_DIR");
 	if (root == nullptr)
@@ -1008,7 +1008,7 @@ std::string ResponseGenerator::generateNotFoundResponse()
 	auto fileContents = readFileContents(std::filesystem::path(value / "404-NotFound.html"));
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}",  "404-NotFound.html");
+		Log::critical("Failed to read file contents: {}",  "404-NotFound.html");
 		return std::string(s_NotFoundResponse);
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
@@ -1017,7 +1017,7 @@ std::string ResponseGenerator::generateNotFoundResponse()
 
 std::string ResponseGenerator::generateNotModifiedResponse()
 {
-	LOG_INFO("Generating 304 Not Modified response");
+	Log::info("Generating 304 Not Modified response");
 
 	std::ostringstream res;
 
@@ -1032,7 +1032,7 @@ std::string ResponseGenerator::generateNotModifiedResponse()
 
 std::string ResponseGenerator::generateNotImplementedResponse()
 {
-	LOG_INFO("Generating 404 Not Found response");
+	Log::info("Generating 404 Not Found response");
 
 	const char* root = std::getenv("HTML_ROOT_DIR");
 	if (root == nullptr)
@@ -1046,7 +1046,7 @@ std::string ResponseGenerator::generateNotImplementedResponse()
 	auto fileContents = readFileContents(std::filesystem::path(value / "501-NotImplemented.html"));
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}",  "501-NotImplemented.html");
+		Log::critical("Failed to read file contents: {}",  "501-NotImplemented.html");
 		return std::string(s_NotFoundResponse);
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
@@ -1054,7 +1054,7 @@ std::string ResponseGenerator::generateNotImplementedResponse()
 
 std::string ResponseGenerator::generateBadRequestResponse()
 {
-	LOG_INFO("Generating 400 Bad Request response");
+	Log::info("Generating 400 Bad Request response");
 
 	const char* root = std::getenv("HTML_ROOT_DIR");
 	if (root == nullptr)
@@ -1068,7 +1068,7 @@ std::string ResponseGenerator::generateBadRequestResponse()
 	auto fileContents = readFileContents(std::filesystem::path(value / "400-BadRequest.html"));
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}",  "400-BadRequest.html");
+		Log::critical("Failed to read file contents: {}",  "400-BadRequest.html");
 		return std::string(s_NotFoundResponse);
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
@@ -1076,7 +1076,7 @@ std::string ResponseGenerator::generateBadRequestResponse()
 
 std::string ResponseGenerator::generateInternalServerErrorResponse()
 {
-	LOG_INFO("Generating 500 Internal Server Error response");
+	Log::info("Generating 500 Internal Server Error response");
 
 	const char* root = std::getenv("HTML_ROOT_DIR");
 	if (root == nullptr)
@@ -1090,7 +1090,7 @@ std::string ResponseGenerator::generateInternalServerErrorResponse()
 	auto fileContents = readFileContents(std::filesystem::path(value / "500-InternalServerError.html"));
 	if (fileContents == std::nullopt)
 	{
-		LOG_CRITICAL("Failed to read file contents: {}",  "500-InternalServerError.html");
+		Log::critical("Failed to read file contents: {}",  "500-InternalServerError.html");
 		return std::string(s_NotFoundResponse);
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);

@@ -88,7 +88,7 @@ void sigchld_handler(int signo)
 				Server& server = Server::Get();
 				int client_fd = server.childProcesses[pid];
 				Client& client = ConnectionManager::GetClientRef(client_fd);
-				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
+				Log::info("Child process: {}, Client FD: {}", pid, client_fd);
 
 				Server::EpollData data{
 					.fd = static_cast<uint16_t>(client_fd),
@@ -114,10 +114,10 @@ void sigchld_handler(int signo)
 				int client_fd = server.childProcesses[pid];
 				// Client client = server.GetClient(client_fd);
 				Client& client = ConnectionManager::GetClientRef(client_fd);
-				LOG_INFO("Child process: {}, Client FD: {}", pid, client_fd);
+				Log::info("Child process: {}, Client FD: {}", pid, client_fd);
 
 				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);
-				LOG_INFO("Client FD: {}", client_fd);
+				Log::info("Client FD: {}", client_fd);
 				Server::EpollData data{
 					.fd = static_cast<uint16_t>(client_fd),
 					.cgi_fd = std::numeric_limits<uint16_t>::max(),
@@ -170,7 +170,7 @@ std::string Cgi::executeCGI(const Client& client, const NewHttpRequest& request)
 	// std::string path = request.path.string();
 	// std::string path = request.mappedPath.string();
 	std::string path = client.GetNewRequest().mappedPath.string();
-	LOG_INFO("Executing CGI script: {}", path);
+	Log::info("Executing CGI script: {}", path);
 	int pipefd[2];
 		
 	if (pipe(pipefd) == -1)
@@ -194,7 +194,7 @@ std::string Cgi::executeCGI(const Client& client, const NewHttpRequest& request)
 			.type = EPOLL_TYPE_CGI
 	};
 
-	LOG_INFO("Forwarding client FD: {} to CGI handler", (int)client);
+	Log::info("Forwarding client FD: {} to CGI handler", (int)client);
 
 	Server::AddEpollEvent(pipefd[READ_END], EPOLLIN | EPOLLET, data);
 
@@ -226,7 +226,7 @@ std::string Cgi::executeCGI(const Client& client, const NewHttpRequest& request)
 		handleChildProcess(client, pipefd);
 	}
 	Server::RegisterCgiProcess(pid, (int)client);
-	LOG_INFO("Child process (PID: {}) created for client FD: {}", pid, (int)client);
+	Log::info("Child process (PID: {}) created for client FD: {}", pid, (int)client);
 	close(pipefd[WRITE_END]); // Close the write end of the pipe
 
 	return "";

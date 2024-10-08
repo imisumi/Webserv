@@ -2,6 +2,8 @@
 #include "Server.h"
 #include "Utils/Utils.h"
 
+#include <cstring>
+
 bool Client::Initialize(const struct sockaddr_in& clientAddress, int socket_fd)
 {
 	// Convert and store the client address and port

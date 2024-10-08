@@ -49,23 +49,23 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	NewHttpRequest parsedRequest = client.GetNewRequest();
 
 	std::filesystem::path locationPrefix = parsedRequest.path;
-	LOG_INFO("Directory: {}", locationPrefix.string());
+	Log::info("Directory: {}", locationPrefix.string());
 
 	//? find the longest path prefix that has location settings
 	for (std::filesystem::path longestPathPrefix = parsedRequest.path; longestPathPrefix != "/"; longestPathPrefix = longestPathPrefix.parent_path())
 	{
-		LOG_INFO("Longest path prefix: {}", longestPathPrefix.string());
+		Log::info("Longest path prefix: {}", longestPathPrefix.string());
 		if (client.GetServerConfig()->hasLocationSettings(longestPathPrefix))
 		{
 			locationPrefix = longestPathPrefix;
-			LOG_DEBUG("Location settings found for: {}", locationPrefix.string());
+			Log::debug("Location settings found for: {}", locationPrefix.string());
 			break;
 		}
 	}
 
-	LOG_INFO("Location prefix: {}", locationPrefix.string());
+	Log::info("Location prefix: {}", locationPrefix.string());
 	const ServerSettings::LocationSettings& location = client.GetServerConfig()->GetLocationSettings(locationPrefix);
-	LOG_ERROR("ALLOWED METHODS: {}", location.httpMethods);
+	Log::error("ALLOWED METHODS: {}", location.httpMethods);
 	client.SetLocationSettings(location);
 
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
@@ -87,17 +87,17 @@ const std::string RequestHandler::HandleRequest(Client& client)
 
 	if (parsedRequest.method == "GET")
 	{
-		LOG_ERROR("GET request");
+		Log::error("GET request");
 		if ((allowedMethods & GET))
 		{
 			return ResponseGenerator::handleGetRequest(client);
 		}
-		LOG_ERROR("Method not allowed");
+		Log::error("Method not allowed");
 		return ResponseGenerator::MethodNotAllowed();
 	}
 	else if (parsedRequest.method == "HEAD")
 	{
-		LOG_ERROR("GET request");
+		Log::error("GET request");
 		if ((allowedMethods & GET))
 		{
 			std::string response = ResponseGenerator::handleGetRequest(client);
@@ -107,33 +107,33 @@ const std::string RequestHandler::HandleRequest(Client& client)
 
 			return ResponseGenerator::handleGetRequest(client);
 		}
-		LOG_ERROR("Method not allowed");
+		Log::error("Method not allowed");
 		return ResponseGenerator::MethodNotAllowed();
 	}
 	else if (parsedRequest.method == "POST")
 	{
-		LOG_ERROR("POST request");
+		Log::error("POST request");
 		if (allowedMethods & POST)
 		{
 			return ResponseGenerator::handlePostRequest(client);
 		}
-		LOG_ERROR("Method not allowed");
+		Log::error("Method not allowed");
 		return ResponseGenerator::MethodNotAllowed();
 	}
 	else if (parsedRequest.method == "DELETE")
 	{
-		LOG_ERROR("DELETE request");
+		Log::error("DELETE request");
 		if (allowedMethods & DELETE)
 		{
 			return ResponseGenerator::handleDeleteRequest(client);
 		}
-		LOG_ERROR("Method not allowed");
+		Log::error("Method not allowed");
 		return ResponseGenerator::MethodNotAllowed();
 	}
 	else
 	{
-		LOG_ERROR("Unsupported method");
-		LOG_ERROR("Allowed methods: {}", parsedRequest.method);
+		Log::error("Unsupported method");
+		Log::error("Allowed methods: {}", parsedRequest.method);
 		return ResponseGenerator::MethodNotImplemented();
 	}
 }
