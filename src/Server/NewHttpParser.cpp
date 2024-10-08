@@ -69,7 +69,7 @@ constexpr bool isSingleValueHeader(std::string_view header)
 
 HttpState NewHttpRequest::parseStream(const std::string& data)
 {
-	static std::string headerName;
+	// static std::string m_CurrentHeaderName;
 	for (char c : data)
 	{
 		switch (m_State)
@@ -81,7 +81,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 				}
 				else
 				{
-					Log::error("Invalid character in request line: {}", c);
+					Log::error("Invalid character in request line: {}", (int)c);
 					m_State = HttpState::Error;
 					break;
 				}
@@ -162,7 +162,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 			case HttpState::EndOfLine:
 				if (c == LF)
 				{
-					headerName.clear();
+					m_CurrentHeaderName.clear();
 					m_State = HttpState::HeaderName;
 				}
 				else
@@ -175,11 +175,11 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 			case HttpState::HeaderName:
 				if (c == ':')
 				{
-					if (isSingleValueHeader(headerName))
+					if (isSingleValueHeader(m_CurrentHeaderName))
 					{
-						if (headers.find(headerName) != headers.end())
+						if (headers.find(m_CurrentHeaderName) != headers.end())
 						{
-							Log::error("Duplicate header: {}", headerName);
+							Log::error("Duplicate header: {}", m_CurrentHeaderName);
 							m_State = HttpState::Error;
 					break;
 						}
@@ -199,7 +199,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					break;
 				}
 				else
-					headerName += std::tolower(c);
+					m_CurrentHeaderName += std::tolower(c);
 				break;
 			case HttpState::HeaderValue:
 				// if (c == ' ')
@@ -213,7 +213,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 					break;
 				}
 				else
-					headers[headerName] += c;
+					headers[m_CurrentHeaderName] += c;
 				break;
 			case HttpState::BodyBegin:
 				if (c == LF)

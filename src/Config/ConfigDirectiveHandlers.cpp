@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ConfigDirectiveHandlers.cpp                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/18 12:20:38 by kwchu             #+#    #+#             */
-/*   Updated: 2024/09/27 03:31:51 by imisumi-wsl      ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ConfigDirectiveHandlers.cpp                        :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/18 12:20:38 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/10/08 15:28:19 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -146,7 +146,7 @@ void	ConfigParser:: handleCgi(
 }
 
 void	ConfigParser:: handleRedirect(
-	std::pair<uint16_t, std::filesystem::path>& redirect,
+	std::pair<uint16_t, std::string>& redirect,
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
@@ -169,8 +169,8 @@ void	ConfigParser:: handleErrorPage(
 	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
-	std::vector<uint16_t>	returnCodes;
-	std::vector<uint16_t>	replaceReturnCodes;
+	std::vector<uint16_t>	errorCodes;
+	std::vector<uint16_t>	replaceErrorCodes;
 	bool					replace = false;
 
 	if (!errorPageMap.empty())
@@ -184,13 +184,13 @@ void	ConfigParser:: handleErrorPage(
 		if (stringContainsDigitsExclusively(it->second))
 		{
 			const uint16_t currentReturnCode = stringToUInt16(it->second);
-			if (currentReturnCode < 100 || currentReturnCode > 399)
+			if (currentReturnCode < 400 || currentReturnCode > 451)
 				throw std::invalid_argument("invalid error page redirect code");
 			if (replace && errorPageMap.find(currentReturnCode) != errorPageMap.end())
-				replaceReturnCodes.push_back(currentReturnCode);
+				replaceErrorCodes.push_back(currentReturnCode);
 			auto result = errorPageMap.insert({currentReturnCode, std::filesystem::path()});
 			if (result.second)
-				returnCodes.push_back(currentReturnCode);
+				errorCodes.push_back(currentReturnCode);
 		}
 		else
 		{
@@ -201,11 +201,11 @@ void	ConfigParser:: handleErrorPage(
 		throw std::invalid_argument("invalid error page format");
 	if (it->first != ARGUMENT)
 		throw std::invalid_argument("invalid error page argument: " + it->second);
-	for (const uint16_t& code : replaceReturnCodes)
+	for (const uint16_t& code : replaceErrorCodes)
 	{
 		errorPageMap[code] = it->second;
 	}
-	for (const uint16_t& code : returnCodes)
+	for (const uint16_t& code : errorCodes)
 	{
 		errorPageMap[code] = it->second;
 	}

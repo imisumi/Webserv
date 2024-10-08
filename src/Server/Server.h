@@ -22,8 +22,8 @@ constexpr int MAX_EVENTS = 4096;
 // #define BUFFER_SIZE 12000 * 2
 // #define BUFFER_SIZE 4096
 // #define BUFFER_SIZE (64 * 1024)
-constexpr size_t BUFFER_SIZE = static_cast<size_t>(64 * 1024);
-// constexpr size_t BUFFER_SIZE = static_cast<size_t>(2);
+// constexpr size_t BUFFER_SIZE = static_cast<size_t>(64 * 1024);
+constexpr size_t BUFFER_SIZE = static_cast<size_t>(2);
 static_assert(BUFFER_SIZE > 1, "BUFFER_SIZE must be greater than 1");
 
 class Server

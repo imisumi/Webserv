@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ServerSettings.h                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi <imisumi@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/05 16:25:36 by kwchu             #+#    #+#             */
-/*   Updated: 2024/10/08 15:19:46 by imisumi          ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ServerSettings.h                                   :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/05 16:25:36 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/10/08 16:01:29 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,7 @@ class ServerSettings
 			std::vector<std::string>							index = {"index.html", "index.htm", "index.php"};
 			bool												autoindex = false;
 			std::vector<std::string>							cgi;
-			std::pair<uint16_t, std::filesystem::path>			redirect;
+			std::pair<uint16_t, std::string>					redirect = {0, ""};
 			std::unordered_map<uint16_t, std::filesystem::path>	errorPageMap;
 			uint64_t											maxBodySize = 1024;
 			uint8_t												httpMethods = 1;
@@ -114,7 +114,7 @@ class ServerSettings
 		}
 
 
-		const LocationSettings& GetLocationSettings(std::filesystem::path path) const
+		const LocationSettings& GetLocationSettings(const std::filesystem::path& path) const
 		{
 			// Log::debug("Looking for location: {}", path.string());
 

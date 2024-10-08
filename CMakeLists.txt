@@ -18,6 +18,7 @@ file(GLOB_RECURSE ALL_SOURCES
 "${CMAKE_SOURCE_DIR}/src/**/**/*.cpp"
 )
 
+list(REMOVE_ITEM ALL_SOURCES "${CMAKE_SOURCE_DIR}/src/Config/test.cpp")
 # Add the spdlog submodule to the project
 
 # Create the executable

@@ -411,7 +411,7 @@ void Server::HandleSocketInputEvent(Client& client)
 	if (state == HttpState::Error)
 	{
 		close(client);
-		Log::error("HandleInputEvent read: {}", strerror(errno));
+		Log::error("HttpParser state Error");
 		client.reset();
 		ConnectionManager::UnregisterClient(client);
 		return;

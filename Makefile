@@ -1,7 +1,7 @@
 NAME = Webserv
 
 # CFLAGS = -Wall -Wextra -Werror
-CFLAGS += --std=c++17 -Ofast
+CFLAGS += --std=c++20 -Ofast
 
 INCLUDE = -I./src
 
@@ -25,7 +25,7 @@ SRC_CORE =
 SRC_SERVER = ConnectionManager.cpp HttpRequestParser.cpp \
 	RequestHandler.cpp ResponseGenerator.cpp \
 	ResponseSender.cpp Server.cpp \
-	NewHttpParser.cpp
+	NewHttpParser.cpp Client.cpp
 SRC_API = Api.cpp
 
 SRC_CONFIG := ${addprefix ${DIR_CONFIG}/, ${SRC_CONFIG}}

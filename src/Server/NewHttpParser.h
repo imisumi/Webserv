@@ -87,11 +87,12 @@ public:
 		{
 			std::cout << green << key << ": " << white << value << reset << std::endl;
 		}
-		// std::cout << green << "Body: " << white << body << reset << std::endl;
+		std::cout << green << "Body: " << white << body << reset << std::endl;
 	}
 
 private:
 	std::vector<std::string> stringSplit(const std::string& str, char delimiter);
 	std::string normalizePath(const std::string& uri);
 	HttpState m_State = HttpState::Start;
+	std::string m_CurrentHeaderName;
 };
