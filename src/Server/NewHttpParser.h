@@ -56,7 +56,7 @@ public:
 
 	NewHttpRequest() = default;
 
-	int parse(const std::string& data);
+	// int parse(const std::string& data);
 	HttpState parseStream(const std::string& data);
 
 	const std::string getHeaderValue(const std::string& _key) const

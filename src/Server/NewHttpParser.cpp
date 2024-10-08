@@ -67,180 +67,6 @@ constexpr bool isSingleValueHeader(std::string_view header)
 	return false;
 }
 
-int NewHttpRequest::parse(const std::string& data)
-{
-	std::string headerName;
-	HttpState state = HttpState::Start;
-	for (char c : data)
-	{
-		switch (state)
-		{
-			case HttpState::Start:
-				if (std::isalpha(c))
-				{
-					state = HttpState::Method;
-				}
-				else
-				{
-					LOG_ERROR("Invalid character in request line: {}", c);
-					return -1;
-				}
-			case HttpState::Method:
-				if (std::isspace(c))
-				{
-					if (!isValidMethod(method))
-					{
-						LOG_ERROR("Invalid method: {}", method);
-						return -1;
-					}
-					state = HttpState::URI;
-				}
-				else
-					method += c;
-				break;
-			case HttpState::URI:
-				if (c == '/')
-					state = HttpState::URI_Path;
-				else
-				{
-					LOG_ERROR("Invalid character in URI: {}", c);
-					return -1;
-				}
-			case HttpState::URI_Path:
-				if (c == '?')
-					state = HttpState::URI_Query;
-				else if (c == ' ')
-					state = HttpState::Version;
-				else if (c == CR || c == LF)
-				{
-					LOG_ERROR("Invalid character in URI path: {}", c);
-					return -1;
-				}
-				else
-				{
-					path += c;
-					uri += c;
-				}
-				break;
-			case HttpState::URI_Query:
-				if (c == ' ')
-					state = HttpState::Version;
-				else if (c == CR || c == LF)
-					return -1;
-				else
-				{
-					query += c;
-					uri += c;
-				}
-				break;
-			case HttpState::Version:
-				if (c == CR)
-				{
-					state = HttpState::EndOfLine;
-					if (!isValidVersion(httpVersion))
-					{
-						LOG_ERROR("Invalid HTTP version: {}", httpVersion);
-						return -1;
-					}
-				}
-				else if (c == LF)
-				{
-					LOG_ERROR("Invalid character in HTTP version: {}", c);
-					return -1;
-				}
-				else
-					httpVersion += c;
-				break;
-			case HttpState::EndOfLine:
-				if (c == LF)
-				{
-					headerName.clear();
-					state = HttpState::HeaderName;
-				}
-				else
-				{
-					LOG_ERROR("Invalid character in end of line: {}", c);
-					return -1;
-				}
-				break;
-			case HttpState::HeaderName:
-				if (c == ':')
-				{
-					if (isSingleValueHeader(headerName))
-					{
-						if (headers.find(headerName) != headers.end())
-						{
-							LOG_ERROR("Duplicate header: {}", headerName);
-							return -1;
-						}
-					}
-					// state = HttpState::HeaderValue;
-				}
-				else if (c == ' ')
-				{
-					state = HttpState::HeaderValue;
-				}
-				else if (c == CR)
-					state = HttpState::BodyBegin;
-				else if (c == LF)
-				{
-					LOG_ERROR("Invalid character in header name: {}", c);
-					return -1;
-				}
-				else
-					headerName += std::tolower(c);
-				break;
-			case HttpState::HeaderValue:
-				// if (c == ' ')
-				// 	continue;
-				if (c == CR)
-					state = HttpState::EndOfLine;
-				else if (c == LF)
-				{
-					LOG_ERROR("Invalid character in header value: {}", c);
-					return -1;
-				}
-				else
-					headers[headerName] += c;
-				break;
-			case HttpState::BodyBegin:
-				if (c == LF)
-					state = HttpState::Body;
-				else
-				{
-					LOG_ERROR("Invalid character in body begin: {}", c);
-					return -1;
-				}
-				break;
-			case HttpState::Body:
-				body += c;
-				break;
-
-			case HttpState::Error:
-			{
-				LOG_ERROR("Error parsing request");
-				return -1;
-			}
-			case HttpState::Done:
-				return 0;
-		}
-	}
-	if (getHeaderValue("host").empty())
-	{
-		LOG_ERROR("Host header is missing");
-		return -1;
-	}
-	if (state != HttpState::Body && state != HttpState::HeaderName)
-	{
-		LOG_ERROR("Invalid end of request");
-		return -1;
-	}
-
-	path = normalizePath(path);
-	mappedPath = path;
-	return 0;
-}
-
 HttpState NewHttpRequest::parseStream(const std::string& data)
 {
 	static std::string headerName;
@@ -501,146 +327,146 @@ std::string NewHttpRequest::normalizePath(const std::string& uri)
 }
 
 
-void test1()
-{
-	const char* data = "POST /index.html?query=example&sort=asc HTTP/1.1\r\n"
-					"Host: localhost\r\n"
-					"Connection: close\r\n";
+// void test1()
+// {
+// 	const char* data = "POST /index.html?query=example&sort=asc HTTP/1.1\r\n"
+// 					"Host: localhost\r\n"
+// 					"Connection: close\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result == 0) {
-		std::cout << "Test 1 Passed: Valid POST request with query parameters" << std::endl;
-	} else {
-		std::cout << "Test 1 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result == 0) {
+// 		std::cout << "Test 1 Passed: Valid POST request with query parameters" << std::endl;
+// 	} else {
+// 		std::cout << "Test 1 Failed" << std::endl;
+// 	}
+// }
 
-void test2()
-{
-	const char* data = "GET /home.html HTTP/1.1\r\n"
-					"Host: localhost\r\n"
-					"Connection: keep-alive\r\n";
+// void test2()
+// {
+// 	const char* data = "GET /home.html HTTP/1.1\r\n"
+// 					"Host: localhost\r\n"
+// 					"Connection: keep-alive\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result == 0) {
-		std::cout << "Test 2 Passed: Valid GET request without query parameters" << std::endl;
-	} else {
-		std::cout << "Test 2 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result == 0) {
+// 		std::cout << "Test 2 Passed: Valid GET request without query parameters" << std::endl;
+// 	} else {
+// 		std::cout << "Test 2 Failed" << std::endl;
+// 	}
+// }
 
-void test3()
-{
-	const char* data = "POST /submit HTTP/1.1\r\n"
-					"Host: example.com\r\n"
-					"User-Agent: TestAgent/1.0\r\n"
-					"Connection: close\r\n";
+// void test3()
+// {
+// 	const char* data = "POST /submit HTTP/1.1\r\n"
+// 					"Host: example.com\r\n"
+// 					"User-Agent: TestAgent/1.0\r\n"
+// 					"Connection: close\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result == 0) {
-		std::cout << "Test 3 Passed: Valid POST request with multiple headers" << std::endl;
-	} else {
-		std::cout << "Test 3 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result == 0) {
+// 		std::cout << "Test 3 Passed: Valid POST request with multiple headers" << std::endl;
+// 	} else {
+// 		std::cout << "Test 3 Failed" << std::endl;
+// 	}
+// }
 
-void test4()
-{
-	const char* data = "GET /home.html HTTP/1.1\r\n";
+// void test4()
+// {
+// 	const char* data = "GET /home.html HTTP/1.1\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result != 0) {
-		std::cout << "Test 4 Passed: Malformed request with missing headers" << std::endl;
-	} else {
-		std::cout << "Test 4 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result != 0) {
+// 		std::cout << "Test 4 Passed: Malformed request with missing headers" << std::endl;
+// 	} else {
+// 		std::cout << "Test 4 Failed" << std::endl;
+// 	}
+// }
 
-void test5()
-{
-	const char* data = "GET /home.html HTTP/1.5\r\n"
-					"Host: localhost\r\n"
-					"Connection: close\r\n";
+// void test5()
+// {
+// 	const char* data = "GET /home.html HTTP/1.5\r\n"
+// 					"Host: localhost\r\n"
+// 					"Connection: close\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result != 0) {
-		std::cout << "Test 5 Passed: Malformed request with invalid HTTP version" << std::endl;
-	} else {
-		std::cout << "Test 5 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result != 0) {
+// 		std::cout << "Test 5 Passed: Malformed request with invalid HTTP version" << std::endl;
+// 	} else {
+// 		std::cout << "Test 5 Failed" << std::endl;
+// 	}
+// }
 
-void test6()
-{
-	const char* data = "POST /submit? HTTP/1.1\r\n"
-					"Host: localhost\r\n"
-					"Connection: close\r\n";
+// void test6()
+// {
+// 	const char* data = "POST /submit? HTTP/1.1\r\n"
+// 					"Host: localhost\r\n"
+// 					"Connection: close\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result == 0) {
-		std::cout << "Test 6 Passed: Valid POST request with empty query string" << std::endl;
-	} else {
-		std::cout << "Test 6 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result == 0) {
+// 		std::cout << "Test 6 Passed: Valid POST request with empty query string" << std::endl;
+// 	} else {
+// 		std::cout << "Test 6 Failed" << std::endl;
+// 	}
+// }
 
 
-// According to RFC 7230, Section 3.2:
+// // According to RFC 7230, Section 3.2:
 
-// "Each header field consists of a case-insensitive field name followed by a colon (:),
-// optional leading whitespace, the field value, and optional trailing whitespace."
-void test7()
-{
-	const char* data = "GET /about HTTP/1.1\r\n"
-					"HOST: example.com\r\n"
-					"CONNECTION: keep-alive\r\n";
+// // "Each header field consists of a case-insensitive field name followed by a colon (:),
+// // optional leading whitespace, the field value, and optional trailing whitespace."
+// void test7()
+// {
+// 	const char* data = "GET /about HTTP/1.1\r\n"
+// 					"HOST: example.com\r\n"
+// 					"CONNECTION: keep-alive\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result == 0) {
-		std::cout << "Test 7 Passed: Valid GET request with uppercase headers" << std::endl;
-	} else {
-		std::cout << "Test 7 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result == 0) {
+// 		std::cout << "Test 7 Passed: Valid GET request with uppercase headers" << std::endl;
+// 	} else {
+// 		std::cout << "Test 7 Failed" << std::endl;
+// 	}
+// }
 
-// Host Header: In HTTP/1.1, the Host header is mandatory for all requests. 
-// A request without it is technically non-compliant with the HTTP/1.1 standard. 
-// According to RFC 7230, Section 5.4:
-void test8()
-{
-	const char* data = "GET /home.html HTTP/1.1\r\n"
-						"Connection: keep-alive\r\n";
+// // Host Header: In HTTP/1.1, the Host header is mandatory for all requests. 
+// // A request without it is technically non-compliant with the HTTP/1.1 standard. 
+// // According to RFC 7230, Section 5.4:
+// void test8()
+// {
+// 	const char* data = "GET /home.html HTTP/1.1\r\n"
+// 						"Connection: keep-alive\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result != 0) {
-		std::cout << "Test 8 Passed: Malformed request with missing headers" << std::endl;
-	} else {
-		std::cout << "Test 8 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result != 0) {
+// 		std::cout << "Test 8 Passed: Malformed request with missing headers" << std::endl;
+// 	} else {
+// 		std::cout << "Test 8 Failed" << std::endl;
+// 	}
+// }
 
-void test9()
-{
-	const char* data = "GET /home.html HTTP/1.1\r\n"
-						"Host: example.com\r\n"
-						"Host: example.com\r\n";
+// void test9()
+// {
+// 	const char* data = "GET /home.html HTTP/1.1\r\n"
+// 						"Host: example.com\r\n"
+// 						"Host: example.com\r\n";
 
-	NewHttpRequest request;
-	int result = request.parse(data);
-	if (result != 0) {
-		std::cout << "Test 9 Passed: Malformed request with duplicate single header" << std::endl;
-	} else {
-		std::cout << "Test 9 Failed" << std::endl;
-	}
-}
+// 	NewHttpRequest request;
+// 	int result = request.parse(data);
+// 	if (result != 0) {
+// 		std::cout << "Test 9 Passed: Malformed request with duplicate single header" << std::endl;
+// 	} else {
+// 		std::cout << "Test 9 Failed" << std::endl;
+// 	}
+// }
 
 
 

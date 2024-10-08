@@ -49,6 +49,7 @@ public:
 	{
 		m_NewRequest = NewHttpRequest();
 		m_Response.clear();
+		m_BytesSent = 0;
 	}
 
 	void SetLocationSettings(const ServerSettings::LocationSettings& locationSettings)
@@ -59,6 +60,9 @@ public:
 
 	void SetResponse(const std::string& response) { m_Response = response; }
 	const std::string& GetResponse() const { return m_Response; }
+
+	size_t GetBytesSent() const { return m_BytesSent; }
+	void SetBytesSent(size_t bytesSent) { m_BytesSent = bytesSent; }
 
 private:
 	int m_Socket = -1;
@@ -73,6 +77,7 @@ private:
 	std::array<char, INET_ADDRSTRLEN> m_PeerAddress = {};
 
 	std::string m_Response;
+	size_t m_BytesSent = 0;
 
 	int m_EpollInstance = -1;
 
