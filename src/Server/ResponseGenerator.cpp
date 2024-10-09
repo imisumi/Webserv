@@ -2,12 +2,30 @@
 
 #include "Core/Core.h"
 
-
+#include <unordered_map>
 #include <sys/stat.h>
 
 
 #include "Cgi/Cgi.h"
 
+
+static const std::unordered_map<uint16_t, std::string> s_RedirectResponseMap = {
+	{301,	"HTTP/1.1 301 Moved Permanently\r\n"
+			"Content-Length: 0\r\n"
+			"Connection: close\r\n"},
+	{302,	"HTTP/1.1 302 Found\r\n"
+			"Content-Length: 0\r\n"
+			"Connection: close\r\n"},
+	{303, 	"HTTP/1.1 303 See Other\r\n"
+			"Content-Length: 0\r\n"
+			"Connection: close\r\n"},
+	{307, 	"HTTP/1.1 307 Temporary Redirect\r\n"
+			"Content-Length: 0\r\n"
+			"Connection: close\r\n"},
+	{308, 	"HTTP/1.1 308 Permanent Redirect\r\n"
+			"Content-Length: 0\r\n"
+			"Connection: close\r\n"},
+};
 
 static const char s_ForbiddenResponse[] = 
 		"HTTP/1.1 403 Forbidden\r\n"
@@ -576,7 +594,8 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 	Utils::Timer timer;
 	Log::info("Handling GET request");
 
-
+	if (client.GetLocationSettings().redirect.first != 0)
+		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first, client.GetLocationSettings().redirect.second);
 
 	Api api;
 	api.addApiRoute("/api/v1/images");
@@ -822,6 +841,9 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
 {
     Utils::Timer timer;
     Log::info("Handling POST request");
+
+	if (client.GetLocationSettings().redirect.first != 0)
+		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first, client.GetLocationSettings().redirect.second);
 
     std::string contentType = client.GetNewRequest().getHeaderValue("content-type");
     if (contentType.empty()) {
@@ -1107,6 +1129,17 @@ std::string ResponseGenerator::generateInternalServerErrorResponse()
 
 
 
+
+std::string ResponseGenerator::GenerateRedirectResponse(const uint16_t redirectCode, const std::string& location)
+{
+	std::string response;
+	auto	it = s_RedirectResponseMap.find(redirectCode);
+
+	if (it == s_RedirectResponseMap.end())
+		return InternalServerError();
+	response = it->second + "Location: " + location + "\r\n\r\n";
+	return response;
+}
 
 const std::string ResponseGenerator::InternalServerError(const Config& config)
 {

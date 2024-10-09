@@ -82,6 +82,7 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 				else
 				{
 					Log::error("Invalid character in request line: {}", (int)c);
+					Log::error("data: {}", data);
 					m_State = HttpState::Error;
 					break;
 				}

@@ -2,7 +2,7 @@ NAME = Parser
 
 # CFLAGS = -Wall -Wextra -Werror
 INCLUDE = -I../
-CFLAGS += --std=c++17
+CFLAGS += --std=c++20
 
 MFLAGS = -MMD
 

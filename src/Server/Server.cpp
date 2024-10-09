@@ -416,7 +416,7 @@ void Server::HandleSocketInputEvent(Client& client)
 		ConnectionManager::UnregisterClient(client);
 		return;
 	}
-	if (state < HttpState::BodyBegin)
+	if (state < HttpState::Body)
 	{
 		Log::error("Failed to read entire request at once, reregister client with epoll");
 
@@ -474,7 +474,6 @@ void Server::HandleSocketInputEvent(Client& client)
 		ConnectionManager::UnregisterClient(client);
 		return;
 	}
-
 	const std::string response = s_Instance->m_RequestHandler.HandleRequest(client);
 	if (response.empty())
 	{
@@ -568,6 +567,7 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 
 	const std::string& response = client.GetResponse();
 
+	Log::info("response:\n{}", response);
 	ssize_t bytes = ResponseSender::sendResponse(client);
 	if (bytes == -1)
 	{

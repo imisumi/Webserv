@@ -98,6 +98,7 @@ private:
 	static std::string parseMultipartContentType(const std::string& body, const std::string& boundary, const std::string& fieldName);
 
 
+	static std::string GenerateRedirectResponse(const uint16_t redirectCode, const std::string& location);
 	static std::string generateOKResponse(const Client& client);
 	static std::string generateOKResponse(const std::filesystem::path& path, const NewHttpRequest& request);
 
