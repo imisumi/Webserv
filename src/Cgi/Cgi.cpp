@@ -23,7 +23,7 @@ bool Cgi::isValidCGI(const Config& config, const std::filesystem::path& path)
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "Server/ResponseGenerator.h"
+#include "Server/Response/ResponseGenerator.h"
 
 
 #include "Constants.h"
@@ -96,7 +96,7 @@ void sigchld_handler(int signo)
 					.type = EPOLL_TYPE_SOCKET
 				};
 
-				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, data);
+				Server::ModifyEpollEvent(client_fd, EPOLLOUT | EPOLLET, data);
 
 				// server.m_ClientResponses[client_fd] = ResponseGenerator::InternalServerError();
 				client.SetResponse(ResponseGenerator::InternalServerError());
@@ -123,7 +123,7 @@ void sigchld_handler(int signo)
 					.cgi_fd = std::numeric_limits<uint16_t>::max(),
 					.type = EPOLL_TYPE_SOCKET
 				};
-				Server::ModifyEpollEvent(client.GetEpollInstance(), client_fd, EPOLLOUT | EPOLLET, data);
+				Server::ModifyEpollEvent(client_fd, EPOLLOUT | EPOLLET, data);
 
 				std::string response = s_TimeoutErrorResponse;
 				// server.m_ClientResponses[client_fd] = response;
@@ -164,12 +164,12 @@ void sigchld_handler(int signo)
 
 
 
-std::string Cgi::executeCGI(const Client& client, const NewHttpRequest& request)
+std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 {
 	// std::string path = request.getUri().string();
 	// std::string path = request.path.string();
 	// std::string path = request.mappedPath.string();
-	std::string path = client.GetNewRequest().mappedPath.string();
+	std::string path = client.GetRequest().mappedPath.string();
 	Log::info("Executing CGI script: {}", path);
 	int pipefd[2];
 		
@@ -260,7 +260,7 @@ constexpr std::array<const char*, 22> headers = {
 
 void Cgi::handleChildProcess(const Client& client, int pipefd[])
 {
-	const NewHttpRequest& request = client.GetNewRequest();
+	const HttpRequest& request = client.GetRequest();
 	std::array<std::string, 21> envpArray;
 	envpArray[0] = "CONTENT_LENGTH=" + std::to_string(request.body.size());
 	envpArray[1] = "QUERY_STRING=" + request.query;

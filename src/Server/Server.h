@@ -17,14 +17,9 @@
 #include "Client.h"
 #include "Config/Config.h"
 #include "Core/Core.h"
-// #define MAX_EVENTS 4096
-constexpr int MAX_EVENTS = 4096;
-// #define BUFFER_SIZE 12000 * 2
-// #define BUFFER_SIZE 4096
-// #define BUFFER_SIZE (64 * 1024)
-constexpr size_t BUFFER_SIZE = static_cast<size_t>(64 * 1024);
-// constexpr size_t BUFFER_SIZE = static_cast<size_t>(2);
-static_assert(BUFFER_SIZE > 1, "BUFFER_SIZE must be greater than 1");
+
+#include "Constants.h"
+
 
 class Server
 {
@@ -98,8 +93,8 @@ public:
 	int GetClientFromCgi(int cgi_fd) { return m_CgiToClientMap[cgi_fd]; }
 
 	static int AddEpollEvent(int fd, int event, EpollData data);
-	static int ModifyEpollEvent(int epollFD, int fd, int event, EpollData data);
-	static int RemoveEpollEvent(int epollFD, int fd);
+	static int ModifyEpollEvent(int fd, int event, EpollData data);
+	static int RemoveEpollEvent(int fd);
 
 	std::unordered_map<pid_t, int> childProcesses;
 	// std::unordered_map<int, std::string> m_ClientResponses; // Maps client socket to response data

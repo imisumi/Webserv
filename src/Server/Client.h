@@ -5,8 +5,10 @@
 #include <cstdint>
 
 #include "Config/Config.h"
-#include "HttpRequestParser.h"
-#include "NewHttpParser.h"
+// #include "HttpRequestParser.h"
+#include "HttpParser.h"
+
+#include "Constants.h"
 
 class Client
 {
@@ -39,15 +41,16 @@ public:
 	void SetServerConfig(ServerSettings* config) { m_ServerConfig = config; }
 	ServerSettings* GetServerConfig() const { return m_ServerConfig; }
 
-	void SetNewRequest(const NewHttpRequest& request) { m_NewRequest = request; }
-	const NewHttpRequest& GetNewRequest() const { return m_NewRequest; }
-	NewHttpRequest& GetNewRequest() { return m_NewRequest; }
+	void SetRequest(const HttpRequest& request) { m_Request = request; }
+	const HttpRequest& GetRequest() const { return m_Request; }
+	HttpRequest& GetRequest() { return m_Request; }
 
-	HttpState parseRequest(const std::string& requestBuffer) { return m_NewRequest.parseStream(requestBuffer); }
+	HttpState parseRequest(const std::string& requestBuffer) { return m_Request.parseStream(requestBuffer); }
+	// HttpState parseRequest(const std::array<char, BUFFER_SIZE>& requestBuffer) { return m_Request.parseStream(requestBuffer); }
 
 	void reset()
 	{
-		m_NewRequest = NewHttpRequest();
+		m_Request = HttpRequest();
 		m_Response.clear();
 		m_BytesSent = 0;
 	}
@@ -81,7 +84,7 @@ private:
 
 	int m_EpollInstance = -1;
 
-	NewHttpRequest m_NewRequest;
+	HttpRequest m_Request;
 
 	ServerSettings* m_ServerConfig;
 	ServerSettings::LocationSettings m_LocationSettings;

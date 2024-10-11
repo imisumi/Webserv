@@ -10,7 +10,7 @@
 #include "ConnectionManager.h"
 #include "Constants.h"
 #include "Core/Core.h"
-#include "ResponseGenerator.h"
+#include "Response/ResponseGenerator.h"
 #include "ResponseSender.h"
 #include "Utils/Utils.h"
 
@@ -54,19 +54,19 @@ int Server::AddEpollEvent(int fd, int event, EpollData data)
 	ev.events = event;
 	ev.data.u64 = data;
 
-	return epoll_ctl(Get().GetEpollInstance(), EPOLL_CTL_ADD, fd, &ev);
+	return epoll_ctl(s_Instance->m_EpollInstance, EPOLL_CTL_ADD, fd, &ev);
 }
 
-int Server::RemoveEpollEvent(int epollFD, int fd)
+int Server::RemoveEpollEvent(int fd)
 {
 	s_Instance->m_FdEventMap.erase(fd);
 
-	return epoll_ctl(epollFD, EPOLL_CTL_DEL, fd, nullptr);
+	return epoll_ctl(s_Instance->m_EpollInstance, EPOLL_CTL_DEL, fd, nullptr);
 }
 
-int Server::ModifyEpollEvent(int epollFD, int fd, int event, EpollData data)
+int Server::ModifyEpollEvent(int fd, int event, EpollData data)
 {
-	WEB_ASSERT(epollFD, "Invalid epoll file descriptor!");
+	WEB_ASSERT(s_Instance->m_EpollInstance, "Invalid epoll file descriptor!");
 	WEB_ASSERT(fd, "Invalid file descriptor!");
 	// WEB_ASSERT(data, "Invalid data!");
 	WEB_ASSERT(event, "Invalid event!");
@@ -75,7 +75,7 @@ int Server::ModifyEpollEvent(int epollFD, int fd, int event, EpollData data)
 	ev.events = event;
 	ev.data.u64 = data;
 
-	return epoll_ctl(epollFD, EPOLL_CTL_MOD, fd, &ev);
+	return epoll_ctl(s_Instance->m_EpollInstance, EPOLL_CTL_MOD, fd, &ev);
 }
 
 // return socket file descriptor
@@ -379,7 +379,7 @@ void Server::HandleSocketInputEvent(Client& client)
 
 	std::array<char, BUFFER_SIZE> buffer = {};
 
-	ssize_t n = recv((int)client, buffer.data(), BUFFER_SIZE - 1, 0);
+	ssize_t n = recv((int)client, buffer.data(), BUFFER_SIZE, 0);
 	if (n == -1)
 	{
 		close(client);
@@ -392,7 +392,7 @@ void Server::HandleSocketInputEvent(Client& client)
 	if (n == 0)
 	{
 		Log::debug("Client closed connection.");
-		if (RemoveEpollEvent(s_Instance->m_EpollInstance, client) == -1)
+		if (RemoveEpollEvent(client) == -1)
 		{
 			Log::error("Failed to remove client socket from epoll!");
 			s_Instance->Stop();
@@ -405,9 +405,9 @@ void Server::HandleSocketInputEvent(Client& client)
 
 	// TODO: find way to avoid this copy
 	const std::string bufferStr(buffer.data(), n);
-	// std::cout << bufferStr << std::endl;
 	HttpState state = client.parseRequest(bufferStr);
 
+	// HttpState state = client.parseRequest(buffer);
 	if (state == HttpState::Error)
 	{
 		close(client);
@@ -424,7 +424,7 @@ void Server::HandleSocketInputEvent(Client& client)
 					   .cgi_fd = std::numeric_limits<uint16_t>::max(),
 					   .type = EPOLL_TYPE_SOCKET};
 
-		if (ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, data) == -1)
+		if (ModifyEpollEvent(client, EPOLLIN | EPOLLET, data) == -1)
 		{
 			Log::error("Failed to modify client socket in epoll!");
 			s_Instance->Stop();
@@ -432,14 +432,14 @@ void Server::HandleSocketInputEvent(Client& client)
 		return;
 	}
 
-	if (client.GetNewRequest().method == "GET" || client.GetNewRequest().method == "DELETE" ||
-		client.GetNewRequest().method == "HEAD")
+	if (client.GetRequest().method == "GET" || client.GetRequest().method == "DELETE" ||
+		client.GetRequest().method == "HEAD")
 	{
 		Log::info("GET/DELETE/HEAD request received, no body expected");
 	}
-	else if (client.GetNewRequest().method == "POST")
+	else if (client.GetRequest().method == "POST")
 	{
-		if (client.GetNewRequest().getHeaderValue("content-length").empty())
+		if (client.GetRequest().getHeaderValue("content-length").empty())
 		{
 			Log::error("Content-Length header is missing");
 			close(client);
@@ -447,28 +447,28 @@ void Server::HandleSocketInputEvent(Client& client)
 			ConnectionManager::UnregisterClient(client);
 			return;
 		}
-		ssize_t contentLength = std::stoll(client.GetNewRequest().getHeaderValue("content-length"));
-		if (client.GetNewRequest().body.size() < contentLength)
+		ssize_t contentLength = std::stoll(client.GetRequest().getHeaderValue("content-length"));
+		if (client.GetRequest().body.size() < contentLength)
 		{
 			Log::error("Failed to read entire request at once, reregister client with epoll");
 
-			client.GetNewRequest().body.reserve(contentLength);
+			client.GetRequest().body.reserve(contentLength);
 
 			EpollData data{.fd = static_cast<uint16_t>(client),
 						   .cgi_fd = std::numeric_limits<uint16_t>::max(),
 						   .type = EPOLL_TYPE_SOCKET};
 
-			if (ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLIN | EPOLLET, data) == -1)
+			if (ModifyEpollEvent(client, EPOLLIN | EPOLLET, data) == -1)
 			{
 				Log::error("Failed to modify client socket in epoll!");
-				s_Instance->Stop();
+				Stop();
 			}
 			return;
 		}
 	}
 	else
 	{
-		Log::error("Unsupported HTTP method: {}", client.GetNewRequest().method);
+		Log::error("Unsupported HTTP method: {}", client.GetRequest().method);
 		close(client);
 		client.reset();
 		ConnectionManager::UnregisterClient(client);
@@ -486,11 +486,11 @@ void Server::HandleSocketInputEvent(Client& client)
 	EpollData data{
 		.fd = static_cast<uint16_t>(client), .cgi_fd = std::numeric_limits<uint16_t>::max(), .type = EPOLL_TYPE_SOCKET};
 
-	if (ModifyEpollEvent(s_Instance->m_EpollInstance, client, EPOLLOUT | EPOLLET, data) == -1)
+	if (ModifyEpollEvent(client, EPOLLOUT | EPOLLET, data) == -1)
 	{
 		Log::error("Failed to modify client socket in epoll!");
 		// s_Instance->m_Running = false;
-		s_Instance->Stop();
+		Stop();
 		return;
 	}
 }
@@ -528,20 +528,20 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd, Client& client)
 					   .cgi_fd = std::numeric_limits<uint16_t>::max(),
 					   .type = EPOLL_TYPE_SOCKET};
 
-		if (s_Instance->ModifyEpollEvent(s_Instance->m_EpollInstance, client_fd, EPOLLOUT | EPOLLET, data) == -1)
+		if (s_Instance->ModifyEpollEvent(client_fd, EPOLLOUT | EPOLLET, data) == -1)
 		{
 			Log::error("Failed to modify client socket in epoll!");
 			s_Instance->Stop();
 		}
 
-		RemoveEpollEvent(s_Instance->m_EpollInstance, cgi_fd);
+		RemoveEpollEvent(cgi_fd);
 		close(cgi_fd);
 	}
 	else if (n == 0)
 	{
 		Log::debug("Client closed connection.");
 
-		if (RemoveEpollEvent(s_Instance->m_EpollInstance, client_fd) == -1)
+		if (RemoveEpollEvent(client_fd) == -1)
 		{
 			Log::error("Failed to remove client socket from epoll!");
 			s_Instance->Stop();
@@ -572,7 +572,7 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 	if (bytes == -1)
 	{
 		Log::error("send: {}", strerror(errno));
-		if (RemoveEpollEvent(s_Instance->m_EpollInstance, epoll_fd) == -1)
+		if (RemoveEpollEvent(epoll_fd) == -1)
 		{
 			Log::error("Failed to remove client socket from epoll!");
 			Stop();
@@ -591,7 +591,7 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 					   .cgi_fd = std::numeric_limits<uint16_t>::max(),
 					   .type = EPOLL_TYPE_SOCKET};
 
-		if (ModifyEpollEvent(s_Instance->m_EpollInstance, epoll_fd, EPOLLOUT | EPOLLET, data) == -1)
+		if (ModifyEpollEvent(epoll_fd, EPOLLOUT | EPOLLET, data) == -1)
 		{
 			Log::error("Failed to modify client socket in epoll!");
 			Stop();
@@ -608,14 +608,14 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 	if (response.find("connection: close") != std::string::npos)
 	{
 		Log::debug("Closing connection for client socket: {}", epoll_fd);
-		if (RemoveEpollEvent(s_Instance->m_EpollInstance, epoll_fd) == -1)
+		if (RemoveEpollEvent(epoll_fd) == -1)
 		{
 			Log::error("Failed to remove client socket from epoll!");
 			s_Instance->m_Running = false;
 		}
 		close(epoll_fd);
 	}
-	else if (ModifyEpollEvent(s_Instance->m_EpollInstance, epoll_fd, EPOLLIN | EPOLLET, data) == -1)
+	else if (ModifyEpollEvent(epoll_fd, EPOLLIN | EPOLLET, data) == -1)
 	{
 		Log::error("Failed to modify client socket in epoll!");
 		s_Instance->m_Running = false;

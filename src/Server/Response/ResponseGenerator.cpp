@@ -188,23 +188,6 @@ std::string generateDirectoryListing(const std::string& path)
 		// Add the row to the vector
 		rows.push_back(row);
 	}
-	// for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    //     std::string item_name = entry.path().filename().string();
-    //     std::string item_type = entry.is_directory() ? "Directory" : "File";
-    //     std::string item_size = entry.is_regular_file() ? std::to_string(std::filesystem::file_size(entry.path())) : "-";
-
-    //     // Generate a row for each item, prepending the path to the link
-    //     std::string row = R"(
-    //     <tr>
-    //         <td><a href=")" + path + "/" + item_name + R"(">)" + item_name + R"(</a></td>
-    //         <td>)" + item_type + R"(</td>
-    //         <td>)" + item_size + R"(</td>
-    //     </tr>
-    //     )";
-
-    //     // Add the row to the vector
-    //     rows.push_back(row);
-    // }
 
 	// Combine all rows into a single string
 	std::string rows_html;
@@ -219,12 +202,7 @@ std::string generateDirectoryListing(const std::string& path)
 	pos = html_content.find("{rows}");
 	html_content.replace(pos, 6, rows_html);
 
-	// return "Content-Type: text/html\r\n\r\n" + html_content;
 	return html_content;
-
-	// Output the HTML content
-	// std::cout << "Content-Type: text/html\r\n\r\n";
-	// std::cout << html_content << std::endl;
 }
 
 //? assume that the file exists
@@ -287,16 +265,6 @@ std::string ResponseGenerator::ContentTypeToString(ContentType type)
 		case ContentType::IMAGE:	return "image/x-icon";
 		default:					return "";
 	}
-}
-
-std::string getProjectRootDir() {
-	return std::filesystem::current_path();
-	const char* rootDir = std::getenv("WEBSERV_ROOT");
-	if (!rootDir) {
-		Log::error("WEBSERV_ROOT environment variable not set!");
-		throw std::runtime_error("WEBSERV_ROOT environment variable is not set.");
-	}
-	return std::string(rootDir);
 }
 
 std::string ResponseGenerator::getCurrentDateAndTime()
@@ -369,54 +337,6 @@ static std::string generateETagv2(const std::filesystem::path& path)
 }
 
 std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPStatusCode code, const HttpRequest& request)
-{
-	std::ostringstream response;
-
-	std::string contentType = determineContentType(request.getUri());
-	if (contentType.empty())
-	{
-		return generateForbiddenResponse();
-	}
-
-	const std::string statusCode = HTTPStatusCodeToString(code);
-
-	WEB_ASSERT(!statusCode.empty(), "Invalid HTTP status code! (add a custom code or use a valid one)");
-
-	std::string connection = request.getHeader("Connection");
-	if (connection != "keep-alive")
-	{
-		// connection = "keep-alive";
-		// connection = "close";
-	}
-	//tofix hardcoded not kept alive
-	// connection = "close";
-	// connection = "keep-alive";
-
-
-	// response << "HTTP/1.1 200 OK\r\n"
-	response << "HTTP/1.1 " << statusCode << "\r\n"
-			<< "Server: Webserv/1.0\r\n"
-			<< "Date: " << getCurrentDateAndTime() << "\r\n"
-			<< "Content-Type: " << contentType << "\r\n"
-			<< "Content-Length: " << body.size() << "\r\n"
-			<< "Last-Modified: " << getFileModificationTime(request.getUri()) << "\r\n"
-			//TODO: hard coded values should check this
-			// << "Connection: keep-alive\r\n"
-			<< "Connection: " << connection << "\r\n"
-			// << "Connection: close\r\n"
-			// << "ETag: \"" << generateETag(body) << "\"\r\n"
-			<< "ETag: " << generateETagv2(request.getUri()) << "\r\n"
-			<< "Accept-Ranges: bytes\r\n"
-			// << "Cache-Control: max-age=3600\r\n"  // Cache for 1 hour
-			<< "\r\n";  // End of headers
-
-	if (!body.empty())
-		response << body;
-
-	return response.str();
-}
-
-std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPStatusCode code, const NewHttpRequest& request)
 {
 	std::ostringstream response;
 
@@ -499,39 +419,6 @@ std::string ResponseGenerator::buildHttpResponse(ContentType type, const std::st
 	return response.str();
 }
 
-// std::string ResponseGenerator::buildHttpResponse(ContentType type, const std::string& body, HTTPStatusCode code)
-// {
-// 	std::ostringstream response;
-
-// 	// response << "HTTP/1.1 200 OK\r\n"
-// 	response << "HTTP/1.1 " << HTTPStatusCodeToString(code) << "\r\n"
-// 			<< "Server: Webserv/1.0\r\n"
-// 			<< "Date: " << getCurrentDateAndTime() << "\r\n"
-
-
-
-// 			<< "Content-Type: " << ContentTypeToString(type) << "\r\n"
-// 			// << "Content-Type: text/html\r\n"
-// 			// << "Content-Type: image/x-icon\r\n"
-
-
-// 			<< "Content-Length: " << body.size() << "\r\n"
-// 			// << "Last-Modified: " << getFileModifigit push --set-upstream origin merged-postandmaincationTime(path) << "\r\n"
-// 			//TODO: hard coded values should check this
-// 			<< "Connection: keep-alive\r\n"
-// 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
-// 			// << "Accept-Ranges: bytes\r\n"
-// 			// Disable caching
-// 			// << "Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0\r\n"
-// 			// << "Pragma: no-cache\r\n"
-// 			// << "Expires: 0\r\n"
-// 			<< "\r\n";  // End of headers
-
-// 	if (!body.empty())
-// 		response << body;
-
-// 	return response.str();
-// }
 
 
 std::string ReadImageFile(const std::filesystem::path& path)
@@ -569,9 +456,9 @@ const std::string ResponseGenerator::generateDirectoryListingResponse(const std:
 /*
 	check wether the requested file has been modified based on the last-modified and etag headers
 */
-bool ResponseGenerator::isFileModified(const NewHttpRequest& request)
+bool ResponseGenerator::isFileModified(const HttpRequest& request)
 {
-	// const NewHttpRequest& request = client.GetNewRequest();
+	// const NewHttpRequest& request = client.GetRequest();
 	const std::string& ifNoneMatch = request.getHeaderValue("if-none-match");
 	const std::string& ifModifiedSince = request.getHeaderValue("if-modified-since");
 	const std::string& etag = generateETagv2(request.mappedPath);
@@ -589,352 +476,13 @@ bool ResponseGenerator::isFileModified(const NewHttpRequest& request)
 	return true;
 }
 
-const std::string ResponseGenerator::handleGetRequest(const Client& client)
-{
-	Utils::Timer timer;
-	Log::info("Handling GET request");
-
-	if (client.GetLocationSettings().redirect.first != 0)
-		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first, client.GetLocationSettings().redirect.second);
-
-	Api api;
-	api.addApiRoute("/api/v1/images");
-	api.addApiRoute("/api/v1/files");
-
-	if (api.isApiRoute(client.GetNewRequest().path.string()))
-	{
-		if (client.GetNewRequest().path.string() == "/api/v1/images")
-		{
-			std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
-			return Api::getImages(databaseImagePath);
-		}
-		else if (client.GetNewRequest().path.string() == "/api/v1/files")
-		{
-			std::filesystem::path databaseFilePath = std::filesystem::current_path() / "database" / "files";
-			return Api::getFiles(databaseFilePath);
-		}
-	}
-	//? Validate the requested path
-
-
-	const std::filesystem::path& path = client.GetNewRequest().mappedPath;
-	if (std::filesystem::exists(path))
-	{
-		//? Check if the requested path is a directory or a file
-		if (std::filesystem::is_directory(path))
-		{
-			Log::debug("Requested path is a directory");
-
-			const std::vector<std::string>& indexes = client.GetLocationSettings().index;
-			Log::info("----------- {}", client.GetLocationSettings().index[0]);
-			Log::info("Index: {}", indexes[0]);
-			Log::info("Server name: {}", client.GetServerConfig()->GetServerName());
-
-			for (const auto& index : indexes)
-			{
-				Log::info("Looking for: {}", index);
-				std::filesystem::path indexPath = path / index;
-				if (std::filesystem::exists(indexPath))
-				{
-					Log::info("Index found: {}", indexPath.string());
-
-					if (!isFileModified(client.GetNewRequest()))
-					{
-						return generateNotModifiedResponse();
-					}
-
-					// client.GetRequest().setUri(indexPath);
-					// HttpRequest updatedRequest = client.GetRequest();
-					// updatedRequest.setUri(indexPath);
-
-					NewHttpRequest updatedRequest = client.GetNewRequest();
-					updatedRequest.mappedPath = indexPath;
-					return generateOKResponse(indexPath, updatedRequest);
-				}
-			}
-			if (client.GetLocationSettings().autoindex)
-			{
-				return generateDirectoryListingResponse(path);
-			}
-			return generateNotFoundResponse();
-		}
-		else if (std::filesystem::is_regular_file(path))
-		{
-			Log::debug("Requested path is a file");
-			const ServerSettings::LocationSettings& location = client.GetLocationSettings();
-
-			//? check if the file is a CGI script
-			if (location.cgi.size() > 0)
-			{
-				Log::info("Requested path is a CGI script");
-				for (const auto& cgi : location.cgi)
-				{
-					Log::info("CGI: {}", cgi);
-					if (path.extension() == cgi)
-					{
-						Log::info("CGI script found: {}", path.string());
-						return Cgi::executeCGI(client, client.GetNewRequest());
-					}
-				}
-				return ResponseGenerator::generateForbiddenResponse();
-			}
-
-			// if (!isFileModified(client.GetNewRequest()))
-			// {
-			// 	return generateNotModifiedResponse();
-			// }
-
-			return generateFileResponse(client.GetNewRequest());
-		}
-		else
-		{
-			//TODO: send 405 response???
-			Log::error("Requested path is not a file or directory");
-
-			return generateNotFoundResponse();
-		}
-	}
-	Log::debug("Requested path does not exist");
-	return generateNotFoundResponse();
-}
-
-#include <regex>
-
-bool isBoundaryString(const std::string &value) {
-    return value.find("-----------------------------") != std::string::npos;
-}
-
-std::string extractBoundary(const std::string &contentType) {
-    std::regex boundaryRegex("boundary=(.*)");
-    std::smatch match;
-    if (std::regex_search(contentType, match, boundaryRegex)) {
-        return "--" + match[1].str();
-    }
-    return "";
-}
-
-std::string parseMultipartData(const std::string &body, const std::string &boundary, const std::string &fieldName) {
-    std::regex fieldRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName + R"(\"[\r\n]+[\r\n]+([^\r\n]*)[\r\n]+)");
-    std::smatch match;
-    if (std::regex_search(body, match, fieldRegex)) {
-        return match[1].str();
-    }
-    return "";
-}
-
-bool saveFormDataToFile(std::string &firstName, std::string lastName, std::string email) {
-	if (isBoundaryString(firstName)) {
-        firstName = "EMPTY";
-    }
-    if (isBoundaryString(lastName)) {
-        lastName = "EMPTY";
-    }
-    if (isBoundaryString(email)) {
-        email = "EMPTY";
-    }
-
-    std::string filePath = getProjectRootDir() + "/database/text.txt";
-	std::ofstream file(filePath, std::ios_base::app);
-	if (!file.is_open()) {
-		std::cerr << "[ERROR] Failed to open file: " << filePath << std::endl;
-		return false;
-	}
-    file << "Last Name: " << (firstName.empty() ? "EMPTY" : firstName) << "\n";
-    file << "Last Name: " << (lastName.empty() ? "EMPTY" : lastName) << "\n";
-    file << "Email: " << (email.empty() ? "EMPTY" : email) << "\n\n";
-
-    file.close();
-    return !file.fail();
-}
-bool saveUploadedFile(const std::string &body, const std::string &boundary, const std::string &fieldName, const std::string &uploadDir) {
-    std::regex fileRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName + R"(\"; filename=\"([^\"]+)\")" +
-                         R"([\r\n]+Content-Type: ([^\r\n]+)[\r\n]+[\r\n]+)");
-    std::smatch match;
-    if (std::regex_search(body, match, fileRegex)) {
-        std::string fileName = match[1].str();
-        std::string contentType = match[2].str();
-
-        // Vind het begin van het bestand na de headers
-        size_t fileStartPos = body.find(match[0]) + match[0].length();
-        size_t fileEndPos = body.find(boundary, fileStartPos) - 4;  // -4 to remove preceding \r\n--
-
-        std::string fileContent = body.substr(fileStartPos, fileEndPos - fileStartPos);
-
-        if (fileName.empty()) {
-            std::cerr << "[INFO] No file uploaded." << std::endl;
-            return true;
-        }
-
-        std::string filePath = uploadDir + "/" + fileName;
-        std::ofstream file(filePath, std::ios::binary);
-        if (!file.is_open()) {
-            std::cerr << "[ERROR] Failed to open file: " << filePath << std::endl;
-            return false;
-        }
-
-        file.write(fileContent.c_str(), fileContent.size());
-        file.close();
-        if (file.fail()) {
-            std::cerr << "[ERROR] Failed to write to file: " << filePath << std::endl;
-            return false;
-        }
-        return true;
-    }
-
-    std::cerr << "[ERROR] Regex failed to match for file field: " << fieldName << std::endl;
-    return false;
-}
-
-
-static const std::unordered_map<std::string, std::string> supportedFileTypes = {
-    { ".html", "text/html" },
-    { ".css", "text/css" },
-    { ".ico", "image/x-icon" },
-    { ".jpg", "image/jpeg" },
-    { ".jpeg", "image/jpeg" },
-    { ".png", "image/png" }
-};
-
-
-#include <algorithm>
-#include <cctype>
-
-// Function to trim whitespace from both ends of a string
-std::string trim(const std::string& str) {
-    size_t first = str.find_first_not_of(' ');
-    size_t last = str.find_last_not_of(' ');
-    return (first == std::string::npos) ? "" : str.substr(first, last - first + 1);
-}
-
-// Function to convert string to lowercase
-std::string toLowerCase(const std::string& str) {
-    std::string lowerStr = str;
-    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
-    return lowerStr;
-}
-
-bool isSupportedFileType(const std::string& contentType) {
-    std::string trimmedContentType = trim(contentType);   // Trim whitespace
-    std::string lowerContentType = toLowerCase(trimmedContentType); // Convert to lowercase for case-insensitive comparison
-
-    for (const auto& [extension, mimeType] : supportedFileTypes) {
-        if (lowerContentType == mimeType) {
-            return true;
-        }
-    }
-    return false;
-}
-
-std::string ResponseGenerator::parseMultipartContentType(const std::string& body, const std::string& boundary, const std::string& fieldName) {
-    size_t pos = body.find("Content-Disposition: form-data; name=\"" + fieldName + "\"");
-    if (pos == std::string::npos) return "";
-
-    pos = body.find("Content-Type:", pos);
-    if (pos == std::string::npos) return "";
-
-    size_t endPos = body.find("\r\n", pos);
-    std::string contentType = body.substr(pos + 13, endPos - (pos + 13)); // Extract Content-Type value
-    return contentType;
-}
-
-const std::string ResponseGenerator::handlePostRequest(const Client& client)
-{
-    Utils::Timer timer;
-    Log::info("Handling POST request");
-
-	if (client.GetLocationSettings().redirect.first != 0)
-		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first, client.GetLocationSettings().redirect.second);
-
-    std::string contentType = client.GetNewRequest().getHeaderValue("content-type");
-    if (contentType.empty()) {
-        Log::error("Missing Content-Type header");
-        return generateBadRequestResponse();
-    }
-
-    std::string boundary = extractBoundary(contentType);
-    if (boundary.empty()) {
-        Log::error("Boundary missing in Content-Type header");
-        return generateBadRequestResponse();
-    }
-
-    std::string body = client.GetNewRequest().body;
-    if (body.empty()) {
-        Log::error("Request body is empty");
-        return generateBadRequestResponse();
-    }
-
-    // Parse form data fields
-    std::string firstName = parseMultipartData(body, boundary, "firstname");
-    std::string lastName = parseMultipartData(body, boundary, "lastname");
-    std::string email = parseMultipartData(body, boundary, "email");
-
-    if (!saveFormDataToFile(firstName, lastName, email)) {
-        Log::error("Failed to save form data to file");
-        return generateInternalServerErrorResponse();
-    }
-
-    // Parse file data and content type
-    std::string fileContentType = parseMultipartContentType(body, boundary, "file");
-    if (fileContentType.empty()) {
-        Log::error("File content type missing");
-        return generateBadRequestResponse();
-    }
-
-    // Log the detected content type for debugging
-    Log::info("Detected file content type: " + fileContentType);
-
-    // Check if the file's content type matches one of the supported image types
-    std::string uploadDir;
-    if (isSupportedFileType(fileContentType)) {
-        uploadDir = getProjectRootDir() + "/database/images";
-    } else {
-        uploadDir = getProjectRootDir() + "/database/files";
-    }
-
-    // Save the uploaded file
-    if (!saveUploadedFile(body, boundary, "file", uploadDir)) {
-        Log::error("Failed to save uploaded file");
-        return generateInternalServerErrorResponse();
-    }
-
-    Log::info("Successfully handled POST request, saved form data, and saved file");
-    return generateOKResponse(client);
-}
-
-const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
-{
-	const NewHttpRequest& request = Client.GetNewRequest();
-
-	// delete the file
-	if (std::filesystem::exists(request.mappedPath) && std::filesystem::is_regular_file(request.mappedPath))
-	{
-		if (std::filesystem::remove(request.mappedPath))
-		{
-			Log::info("File deleted successfully: {}", request.mappedPath.string());
-			return OkResponse();
-		}
-		else
-		{
-			Log::error("Failed to delete file: {}", request.mappedPath.string());
-			return generateInternalServerErrorResponse();
-		}
-	}
-	else if (!std::filesystem::exists(request.mappedPath))
-	{
-		return NotFound();
-	}
-	else
-	{
-		return BadRequest();
-	}
-}
 
 //TODO: instead of sending path maybe update the path in the HrrpRequest
 std::string ResponseGenerator::generateOKResponse(const Client& client)
 {
 	Log::info("Generating 200 OK response");
 
-	const NewHttpRequest& request = client.GetNewRequest();
+	const HttpRequest& request = client.GetRequest();
 
 	auto fileContents = readFileContents(request.mappedPath);
 	if (fileContents == std::nullopt)
@@ -948,7 +496,7 @@ std::string ResponseGenerator::generateOKResponse(const Client& client)
 	return "";
 }
 
-std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const NewHttpRequest& request)
+std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
 {
 	Log::info("Generating 200 OK response");
 
@@ -985,21 +533,6 @@ std::string ResponseGenerator::generateForbiddenResponse()
 }
 
 std::string ResponseGenerator::generateFileResponse(const HttpRequest& request)
-{
-	Log::trace("Generating file response");
-	Log::trace("Request URI: {}", request.getUri().string());
-	std::string fileContents = ReadImageFile(request.getUri());
-	if (fileContents.empty())
-	{
-		Log::critical("Failed to read file contents: {}", request.getUri().string());
-		// return generateForbiddenResponse(path);
-		return generateForbiddenResponse();
-	}
-	// return buildHttpResponse(request.getUri(), fileContents, HTTPStatusCode::OK, request);
-	return buildHttpResponse(fileContents, HTTPStatusCode::OK, request);
-}
-
-std::string ResponseGenerator::generateFileResponse(const NewHttpRequest& request)
 {
 	Log::trace("Generating file response");
 	Log::trace("Request URI: {}", request.mappedPath.string());
@@ -1117,16 +650,6 @@ std::string ResponseGenerator::generateInternalServerErrorResponse()
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
 }
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -1,6 +1,6 @@
 #include "RequestHandler.h"
 
-#include "ResponseGenerator.h"
+#include "Response/ResponseGenerator.h"
 
 #include "Core/Log.h"
 
@@ -26,7 +26,7 @@
 	- not okay to cache
 	- can change the server
 */
-#include "NewHttpParser.h"
+#include "HttpParser.h"
 
 std::string extractHeaders(const std::string& response) {
     // Find the position of the "\r\n\r\n" which separates headers from the body
@@ -46,7 +46,7 @@ std::string extractHeaders(const std::string& response) {
 const std::string RequestHandler::HandleRequest(Client& client)
 {
 	// parseRequest(request);
-	NewHttpRequest parsedRequest = client.GetNewRequest();
+	HttpRequest parsedRequest = client.GetRequest();
 
 	std::filesystem::path locationPrefix = parsedRequest.path;
 	Log::info("Directory: {}", locationPrefix.string());
@@ -71,7 +71,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
 	parsedRequest.print();
 
-	client.SetNewRequest(parsedRequest);
+	client.SetRequest(parsedRequest);
 
 	//TODO: find better solution
 	// const uint32_t allowedMethods =  static_cast<uint32_t>(client.GetLocationSettings().httpMethods);
@@ -138,37 +138,37 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	}
 }
 
-std::string RequestMethodToString(RequestMethod type)
-{
-	switch (type)
-	{
-	case RequestMethod::GET:		return "GET";
-	case RequestMethod::POST:		return "POST";
-	case RequestMethod::PUT:		return "PUT";
-	case RequestMethod::PATCH:		return "PATCH";
-	case RequestMethod::DELETE:		return "DELETE";
-	case RequestMethod::HEAD:		return "HEAD";
-	case RequestMethod::OPTIONS:	return "OPTIONS";
-	default:						return "UNKNOWN";
-	}
-}
+// std::string RequestMethodToString(RequestMethod type)
+// {
+// 	switch (type)
+// 	{
+// 	case RequestMethod::GET:		return "GET";
+// 	case RequestMethod::POST:		return "POST";
+// 	case RequestMethod::PUT:		return "PUT";
+// 	case RequestMethod::PATCH:		return "PATCH";
+// 	case RequestMethod::DELETE:		return "DELETE";
+// 	case RequestMethod::HEAD:		return "HEAD";
+// 	case RequestMethod::OPTIONS:	return "OPTIONS";
+// 	default:						return "UNKNOWN";
+// 	}
+// }
 
-void RequestHandler::parseRequest(const std::string& requestBuffer)
-{
-	m_RequestParser.reset();
-	if (m_RequestParser.parse(requestBuffer))
-	{
-		const HttpRequest& request = m_RequestParser.getRequest();
-		std::cout << GREEN << "Method: " << WHITE << RequestMethodToString(request.method) << RESET << std::endl;
-		std::cout << GREEN << "URI: " << WHITE << request.getUri().string() << RESET << std::endl;
-		std::cout << GREEN << "Version: " << WHITE << request.version << RESET << std::endl;
-		for (const auto& header : request.headers) {
-			std::cout << GREEN << header.first << ": " << WHITE << header.second << RESET << std::endl;
-		}
-		// std::cout << GREEN << "Body: " << WHITE << request.body << RESET << std::endl;
-	}
-	else
-	{
-		std::cerr << "Failed to parse request" << std::endl;
-	}
-}
+// void RequestHandler::parseRequest(const std::string& requestBuffer)
+// {
+// 	m_RequestParser.reset();
+// 	if (m_RequestParser.parse(requestBuffer))
+// 	{
+// 		const HttpRequest& request = m_RequestParser.getRequest();
+// 		std::cout << GREEN << "Method: " << WHITE << RequestMethodToString(request.method) << RESET << std::endl;
+// 		std::cout << GREEN << "URI: " << WHITE << request.getUri().string() << RESET << std::endl;
+// 		std::cout << GREEN << "Version: " << WHITE << request.version << RESET << std::endl;
+// 		for (const auto& header : request.headers) {
+// 			std::cout << GREEN << header.first << ": " << WHITE << header.second << RESET << std::endl;
+// 		}
+// 		// std::cout << GREEN << "Body: " << WHITE << request.body << RESET << std::endl;
+// 	}
+// 	else
+// 	{
+// 		std::cerr << "Failed to parse request" << std::endl;
+// 	}
+// }

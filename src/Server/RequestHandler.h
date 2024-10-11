@@ -1,9 +1,5 @@
 #pragma once
 
-#include "ResponseSender.h"
-#include "HttpRequestParser.h"
-
-// #include "Config/ConfigParser.h"
 #include "Config/Config.h"
 
 #include <memory>
@@ -23,5 +19,5 @@ private:
 	void parseRequest(const std::string& request);
 
 private:
-	HttpRequestParser m_RequestParser;
+	// HttpRequestParser m_RequestParser;
 };

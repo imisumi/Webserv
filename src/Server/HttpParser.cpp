@@ -1,4 +1,4 @@
-#include "NewHttpParser.h"
+#include "HttpParser.h"
 
 #include "Core/Log.h"
 
@@ -67,7 +67,7 @@ constexpr bool isSingleValueHeader(std::string_view header)
 	return false;
 }
 
-HttpState NewHttpRequest::parseStream(const std::string& data)
+HttpState HttpRequest::parseStream(const std::string& data)
 {
 	// static std::string m_CurrentHeaderName;
 	for (char c : data)
@@ -253,7 +253,8 @@ HttpState NewHttpRequest::parseStream(const std::string& data)
 	return m_State;
 }
 
-std::vector<std::string> NewHttpRequest::stringSplit(const std::string& str, char delimiter)
+
+std::vector<std::string> HttpRequest::stringSplit(const std::string& str, char delimiter)
 {
 	std::vector<std::string> tokens;
 	std::string token;
@@ -284,7 +285,7 @@ std::vector<std::string> NewHttpRequest::stringSplit(const std::string& str, cha
 
 
 // Function to normalize a given URI
-std::string NewHttpRequest::normalizePath(const std::string& uri)
+std::string HttpRequest::normalizePath(const std::string& uri)
 {
 	std::vector<std::string> parts = stringSplit(uri, '/');
 	std::vector<std::string> stack;

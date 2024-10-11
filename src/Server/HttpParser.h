@@ -14,6 +14,8 @@
 #include <sstream>
 #include <filesystem>
 
+#include "Constants.h"
+
 enum class HttpState : int
 {
 	Error = -1,
@@ -31,7 +33,7 @@ enum class HttpState : int
 	Done,
 };
 
-class NewHttpRequest
+class HttpRequest
 {
 public:
 	// enum class TransferEncoding { NONE, CHUNKED };
@@ -54,10 +56,11 @@ public:
 	bool isComplete = false;  // Whether the full request has been parsed
 	bool isChunkedComplete = false;  // For chunked transfers
 
-	NewHttpRequest() = default;
+	HttpRequest() = default;
 
 	// int parse(const std::string& data);
 	HttpState parseStream(const std::string& data);
+	// HttpState parseStream(const std::array<char, BUFFER_SIZE>& data);
 
 	const std::string getHeaderValue(const std::string& _key) const
 	{
