@@ -6,9 +6,6 @@
 class Cgi
 {
 public:
-
-	static bool isValidCGI(const Config& config, const std::filesystem::path& path);
-
 	static std::string executeCGI(const Client& client, const HttpRequest& request);
 
 private:

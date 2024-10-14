@@ -2,23 +2,6 @@
 #include "Server/Server.h"
 #include "Server/ConnectionManager.h"
 
-
-bool Cgi::isValidCGI(const Config& config, const std::filesystem::path& path)
-{
-	if (path.extension() == ".cgi" || path.extension() == ".py")
-	{
-		std::filesystem::perms perms = std::filesystem::status(path).permissions();
-		if ((perms & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ||
-			(perms & std::filesystem::perms::group_exec) != std::filesystem::perms::none ||
-			(perms & std::filesystem::perms::others_exec) != std::filesystem::perms::none)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-
 #include "Core/Log.h"
 #include <unistd.h>
 #include <sys/wait.h>
@@ -43,28 +26,6 @@ static const char s_TimeoutErrorResponse[] =
     "Content-Type: text/plain\r\n"
     "\r\n"
     "504 Gateway Timeout: The server timed out"; // Body of the response
-
-
-void sigalarm_handler(int signo) {
-	// (void) signo; // Unused parameter
-	// int status;
-	// while (waitpid(-1, &status, WNOHANG) > 0) {
-	// 	if (WIFEXITED(status)) {
-	// 		printf("Child process exited with status %d\n", WEXITSTATUS(status));
-	// 	} else if (WIFSIGNALED(status)) {
-	// 		printf("Child process killed by signal %d\n", WTERMSIG(status));
-	// 	}
-	// }
-
-	// std::cout << s_TimeoutErrorResponse;
-
-	// printf("Child process (PID: %d) timed out and will terminate.\n", getpid());
-	// std::cerr << "Child process (PID: " << getpid() << ") timed out and will terminate." << std::endl;
-	// exit(EXIT_FAILURE); // Terminate the child process
-	// exit(EXIT_SUCCESS); // Terminate the child process
-	_exit(EXIT_FAILURE); // Terminate the child process
-}
-
 
 
 void sigchld_handler(int signo)

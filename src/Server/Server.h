@@ -37,11 +37,12 @@ public:
 		uint16_t fd = std::numeric_limits<uint16_t>::max();
 		uint16_t cgi_fd = std::numeric_limits<uint16_t>::max();
 		int type = -1;
+
 		EpollData& operator=(uint64_t packed)
 		{
-			this->fd = packed >> 48;
-			this->cgi_fd = packed >> 32;
-			this->type = packed & 0xFFFF;
+			fd = static_cast<uint16_t>(packed >> 48);
+			cgi_fd = static_cast<uint16_t>((packed >> 32) & 0xFFFF);
+			type = static_cast<uint16_t>(packed & 0xFFFF);
 			return *this;
 		}
 		operator uint64_t() const
@@ -92,8 +93,8 @@ public:
 
 	int GetClientFromCgi(int cgi_fd) { return m_CgiToClientMap[cgi_fd]; }
 
-	static int AddEpollEvent(int fd, int event, EpollData data);
-	static int ModifyEpollEvent(int fd, int event, EpollData data);
+	static int AddEpollEvent(int fd, uint32_t event, EpollData data);
+	static int ModifyEpollEvent(int fd, uint32_t event, EpollData data);
 	static int RemoveEpollEvent(int fd);
 
 	std::unordered_map<pid_t, int> childProcesses;

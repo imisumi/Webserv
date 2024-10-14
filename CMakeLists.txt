@@ -19,12 +19,31 @@ file(GLOB_RECURSE ALL_SOURCES
 )
 
 list(REMOVE_ITEM ALL_SOURCES "${CMAKE_SOURCE_DIR}/src/Config/test.cpp")
-# Add the spdlog submodule to the project
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${ALL_SOURCES})
 
+# Add include directories
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+# Add the pedantic flag
+# target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wextra -pedantic)
+# target_compile_options(${PROJECT_NAME} PRIVATE 
+#     -Wall 
+#     -Wextra 
+# 	-Wpedantic
+# 	-Wextra
+#     -pedantic 
+#     -Werror 
+#     -Wshadow 
+#     -Wconversion 
+#     -Wsign-conversion 
+#     -Wuninitialized 
+#     -Wfloat-equal 
+#     -Wdeprecated 
+#     -std=c++20
+# )
+# target_compile_options(${PROJECT_NAME} PRIVATE -pedantic)
 
 # Precompiled headers: Add pch.hpp
 # target_precompile_headers(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/pch.h)

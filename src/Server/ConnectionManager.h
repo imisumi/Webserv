@@ -20,7 +20,7 @@ public:
 	static const Client& GetClient(int fd);
 	static Client& GetClientRef(int fd);
 
-	static uint32_t GetConnectedClients();
+	static std::size_t GetConnectedClients();
 
 	// static
 

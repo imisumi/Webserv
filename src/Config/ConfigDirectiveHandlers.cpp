@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ConfigDirectiveHandlers.cpp                        :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/18 12:20:38 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/10/09 16:14:02 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ConfigDirectiveHandlers.cpp                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/18 12:20:38 by kwchu             #+#    #+#             */
+/*   Updated: 2024/10/14 17:08:42 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,6 @@
 
 void	ConfigParser:: handlePort(
 	std::vector<uint64_t>& ports,
-	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
 	TokenVector	hostPort = tokenize(it->second, ":");
@@ -47,7 +46,6 @@ void	ConfigParser:: handlePort(
 
 void	ConfigParser:: handleRoot(
 	std::filesystem::path& root,
-	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
 	if (it->second[0] == '/')
@@ -58,7 +56,6 @@ void	ConfigParser:: handleRoot(
 
 void	ConfigParser:: handleAutoIndex(
 	bool& autoIndex,
-	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
 	if (it->second == "on")
@@ -206,7 +203,6 @@ void	ConfigParser:: handleErrorPage(
 
 void	ConfigParser:: handleMaxBodySize(
 	uint64_t& maxBodySize,
-	const TokenMap::const_iterator& end,
 	TokenMap::const_iterator& it)
 {
 	uint64_t	initialSize;

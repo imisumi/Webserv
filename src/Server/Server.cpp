@@ -48,7 +48,7 @@ int Server::CreateEpollInstance()
 	return s_Instance->m_EpollInstance;
 }
 
-int Server::AddEpollEvent(int fd, int event, EpollData data)
+int Server::AddEpollEvent(int fd, uint32_t event, EpollData data)
 {
 	struct epoll_event ev = {};
 	ev.events = event;
@@ -64,7 +64,7 @@ int Server::RemoveEpollEvent(int fd)
 	return epoll_ctl(s_Instance->m_EpollInstance, EPOLL_CTL_DEL, fd, nullptr);
 }
 
-int Server::ModifyEpollEvent(int fd, int event, EpollData data)
+int Server::ModifyEpollEvent(int fd, uint32_t event, EpollData data)
 {
 	WEB_ASSERT(s_Instance->m_EpollInstance, "Invalid epoll file descriptor!");
 	WEB_ASSERT(fd, "Invalid file descriptor!");
@@ -246,7 +246,7 @@ void Server::Shutdown()
 
 int Server::isServerSocket(int fd)
 {
-	for (auto& [packedIpPort, socket] : s_Instance->m_ServerSockets64)
+	for (const auto& [packedIpPort, socket] : s_Instance->m_ServerSockets64)
 	{
 		if (fd == socket)
 		{
@@ -448,7 +448,7 @@ void Server::HandleSocketInputEvent(Client& client)
 			return;
 		}
 		ssize_t contentLength = std::stoll(client.GetRequest().getHeaderValue("content-length"));
-		if (client.GetRequest().body.size() < contentLength)
+		if (client.GetRequest().body.size() < static_cast<std::string::size_type>(contentLength))
 		{
 			Log::error("Failed to read entire request at once, reregister client with epoll");
 
@@ -567,7 +567,7 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 
 	const std::string& response = client.GetResponse();
 
-	Log::info("response:\n{}", response);
+	// Log::info("response:\n{}", response);
 	ssize_t bytes = ResponseSender::sendResponse(client);
 	if (bytes == -1)
 	{

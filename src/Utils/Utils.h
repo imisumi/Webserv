@@ -1,9 +1,9 @@
 #pragma once
 
-#include <chrono>
-#include <iostream>
 #include <arpa/inet.h>
 #include <array>
+#include <chrono>
+#include <iostream>
 
 namespace Utils
 {
@@ -41,7 +41,7 @@ private:
  * @param port The port number
  * @return A 64-bit integer with the IP address in the upper 32 bits and the port in the lower 32 bits
  */
-static uint64_t packIpAndPort(const std::string& ipStr, uint16_t port)
+inline uint64_t packIpAndPort(const std::string& ipStr, uint16_t port)
 {
 	struct in_addr ipAddr = {};
 
@@ -65,14 +65,15 @@ static uint64_t packIpAndPort(const std::string& ipStr, uint16_t port)
  * @param packedValue The 64-bit integer containing the IP address and port
  * @return A pair containing the IP address as a string and the port number
  */
-static auto unpackIpAndPort(uint64_t packedValue) -> std::pair<std::string, uint16_t>
+inline auto unpackIpAndPort(uint64_t packedValue) -> std::pair<std::string, uint16_t>
 {
 	// Extract the port (lower 16 bits)
 	uint16_t port = packedValue & 0xFFFF;
 
 	// Extract the IP address (upper 32 bits)
 	// uint32_t ipAddress = (packedValue >> 32) & 0xFFFFFFFF;
-	uint32_t ipAddress = packedValue >> 32;
+	// uint32_t ipAddress = packedValue >> 32;
+	uint32_t ipAddress = static_cast<uint32_t>(packedValue >> 32);
 
 	// Convert the 32-bit IP back to string format
 	struct in_addr ipAddr = {};

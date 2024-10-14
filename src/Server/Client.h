@@ -70,13 +70,13 @@ public:
 private:
 	int m_Socket = -1;
 
-	uint16_t m_ClientPort = -1;
+	uint16_t m_ClientPort = 0;
 	std::array<char, INET_ADDRSTRLEN> m_ClientAddress = {};
 
-	uint16_t m_ServerPort = -1;
+	uint16_t m_ServerPort = 0;
 	std::array<char, INET_ADDRSTRLEN> m_ServerAddress = {};
 
-	uint16_t m_PeerPort = -1;
+	uint16_t m_PeerPort = 0;
 	std::array<char, INET_ADDRSTRLEN> m_PeerAddress = {};
 
 	std::string m_Response;

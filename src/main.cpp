@@ -11,13 +11,6 @@
 #include "Config/Config.h"
 
 
-static void SignalHandler(int signal)
-{
-	Log::info("Signal {} received!", signal);
-
-	Server::Stop();
-}
-
 int main()
 {
 	char cwd[1024];

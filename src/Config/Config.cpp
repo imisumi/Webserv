@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   Config.cpp                                         :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/05 13:09:31 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/10/08 15:43:43 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   Config.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/05 13:09:31 by kwchu             #+#    #+#             */
+/*   Updated: 2024/10/14 18:27:55 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,8 +63,8 @@ void	Config:: print()
             std::cout << "\tMethods: " << MethodToString(server->GetGlobalSettings().httpMethods) << '\n';
 			std::cout << "\tRedirect: " << server->GetGlobalSettings().redirect.first << " " << server->GetGlobalSettings().redirect.second << '\n';
 			std::cout << "\tMax Client Body Size: " << server->GetGlobalSettings().maxBodySize << "B\n";
-			for (const auto& [key, value] : server->GetGlobalSettings().errorPageMap)
-				std::cout << "\tError Page: " << key << " - " << value << '\n';
+			for (const auto& [key2, value2] : server->GetGlobalSettings().errorPageMap)
+				std::cout << "\tError Page: " << key2 << " - " << value2 << '\n';
             std::cout << '\n';
             for (const auto& [path, location] : server->GetLocations())
             {
@@ -78,8 +78,8 @@ void	Config:: print()
 					std::cout << "\t\tCgi: " << i << '\n';
 				std::cout << "\t\tRedirect: " << location.redirect.first << " " << location.redirect.second << '\n';
 				std::cout << "\t\tMax Client Body Size: " << location.maxBodySize << "B\n";
-				for (const auto& [key, value] : location.errorPageMap)
-					std::cout << "\t\tError Page: " << key << " - " << value << '\n';
+				for (const auto& [key2, value2] : location.errorPageMap)
+					std::cout << "\t\tError Page: " << key2 << " - " << value2 << '\n';
                 std::cout << "\t\tMethods: " << MethodToString(location.httpMethods) << '\n';
                 std::cout << "\t}\n";
             }

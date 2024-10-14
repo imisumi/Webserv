@@ -139,7 +139,7 @@ Client& ConnectionManager::GetClientRef(int fd)
 	return s_Instance->m_ConnectedClients[fd];
 }
 
-uint32_t ConnectionManager::GetConnectedClients()
+std::size_t ConnectionManager::GetConnectedClients()
 {
 	WEB_ASSERT(s_Instance, "ConnectionManager does not exist!");
 

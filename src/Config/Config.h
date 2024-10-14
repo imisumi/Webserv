@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   Config.h                                           :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi <imisumi@student.42.fr>              +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/05 13:09:45 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/10/08 16:01:19 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   Config.h                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/05 13:09:45 by kwchu             #+#    #+#             */
+/*   Updated: 2024/10/14 17:23:42 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,7 @@ class Config
 			{
 				// throw std::out_of_range("Key not found in the server map");
 				// uint32_t port = static_cast<uint32_t>(key & 0xFFFFFFFF);
-				uint16_t port = key;
+				uint16_t port = static_cast<uint16_t>(key);
 				// std::cout << "port: " << port << std::endl;
 				it = m_ServerMap.find(port);
 				if (it == m_ServerMap.end())
@@ -53,7 +53,8 @@ class Config
 			{
 				// throw std::out_of_range("Key not found in the server map");
 				// uint32_t port = static_cast<uint32_t>(key & 0xFFFFFFFF);
-				uint16_t port = key;
+				// uint16_t port = key;
+				uint16_t port = static_cast<uint16_t>(key);
 				// std::cout << "port: " << port << std::endl;
 				it = m_ServerMap.find(port);
 				if (it == m_ServerMap.end())

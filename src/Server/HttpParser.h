@@ -90,7 +90,7 @@ public:
 		{
 			std::cout << green << key << ": " << white << value << reset << std::endl;
 		}
-		std::cout << green << "Body: " << white << body << reset << std::endl;
+		// std::cout << green << "Body: " << white << body << reset << std::endl;
 	}
 
 private:

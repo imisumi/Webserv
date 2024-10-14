@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ConfigParser.cpp                                   :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2024/09/18 12:53:07 by kwchu         #+#    #+#                 */
-/*   Updated: 2024/10/08 16:02:51 by kwchu         ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ConfigParser.cpp                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/09/18 12:53:07 by kwchu             #+#    #+#             */
+/*   Updated: 2024/10/14 17:11:10 by imisumi-wsl      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -142,13 +142,13 @@ ServerSettings ConfigParser::createServerSettings(const TokenMap::const_iterator
 		else if (it->first == PORT)
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handlePort(server.m_Ports, end, it);
+			handlePort(server.m_Ports, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 		}
 		else if (it->first == ROOT && !(repeatDirective & (1 << ROOT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleRoot(server.m_GlobalSettings.root, end, it);
+			handleRoot(server.m_GlobalSettings.root, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << ROOT);
 		}
@@ -182,14 +182,14 @@ ServerSettings ConfigParser::createServerSettings(const TokenMap::const_iterator
 		else if (it->first == MAX_BODY_SIZE && !(repeatDirective & (1 << MAX_BODY_SIZE)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleMaxBodySize(server.m_GlobalSettings.maxBodySize, end, it);
+			handleMaxBodySize(server.m_GlobalSettings.maxBodySize, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << MAX_BODY_SIZE);
 		}
 		else if (it->first == AUTOINDEX && !(repeatDirective & (1 << AUTOINDEX)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleAutoIndex(server.m_GlobalSettings.autoindex, end, it);
+			handleAutoIndex(server.m_GlobalSettings.autoindex, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << AUTOINDEX);
 		}
@@ -254,7 +254,7 @@ void ConfigParser::handleLocationSettings(ServerSettings::LocationSettings& loca
 		else if (it->first == ROOT && !(repeatDirective & (1 << ROOT)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleRoot(location.root, end, it);
+			handleRoot(location.root, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << ROOT);
 		}
@@ -288,14 +288,14 @@ void ConfigParser::handleLocationSettings(ServerSettings::LocationSettings& loca
 		else if (it->first == MAX_BODY_SIZE && !(repeatDirective & (1 << MAX_BODY_SIZE)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleMaxBodySize(location.maxBodySize, end, it);
+			handleMaxBodySize(location.maxBodySize, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << MAX_BODY_SIZE);
 		}
 		else if (it->first == AUTOINDEX && !(repeatDirective & (1 << AUTOINDEX)))
 		{
 			expectNextToken(end, it, ARGUMENT);
-			handleAutoIndex(location.autoindex, end, it);
+			handleAutoIndex(location.autoindex, it);
 			expectNextToken(end, it, DIRECTIVE_END);
 			repeatDirective |= (1 << AUTOINDEX);
 		}

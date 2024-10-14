@@ -8,14 +8,14 @@
 
 ssize_t ResponseSender::sendResponse(const std::string& response, int epollFd)
 {
-	ssize_t bytesToSend = response.size();
-	ssize_t byteOffset = 0;
+	size_t bytesToSend = response.size();
+	size_t byteOffset = 0;
 
 	Log::debug("Sending response of size: {}", bytesToSend);
 
 	if (bytesToSend > 0)
 	{
-		ssize_t bytesSent = send(epollFd, response.c_str() + byteOffset, bytesToSend, 0);
+		size_t bytesSent = send(epollFd, response.c_str() + byteOffset, bytesToSend, 0);
 
 		if (bytesSent < bytesToSend)
 		{

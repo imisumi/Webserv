@@ -78,6 +78,7 @@ HttpState HttpRequest::parseStream(const std::string& data)
 				if (std::isalpha(c))
 				{
 					m_State = HttpState::Method;
+					[[fallthrough]];
 				}
 				else
 				{
@@ -102,7 +103,10 @@ HttpState HttpRequest::parseStream(const std::string& data)
 				break;
 			case HttpState::URI:
 				if (c == '/')
+				{
 					m_State = HttpState::URI_Path;
+					[[fallthrough]];
+				}
 				else
 				{
 					Log::error("Invalid character in URI: {}", c);
@@ -200,7 +204,9 @@ HttpState HttpRequest::parseStream(const std::string& data)
 					break;
 				}
 				else
+				{
 					m_CurrentHeaderName += std::tolower(c);
+				}
 				break;
 			case HttpState::HeaderValue:
 				// if (c == ' ')

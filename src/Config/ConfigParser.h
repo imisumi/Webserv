@@ -60,14 +60,14 @@ class ConfigParser
 
 		static void	expectNextToken(const TokenMap::const_iterator& end, TokenMap::const_iterator& it, TokenIdentifier expected);
 		static void	handleLocationSettings(ServerSettings::LocationSettings& location, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
-		static void	handlePort(std::vector<uint64_t>& ports, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
-		static void	handleRoot(std::filesystem::path& root, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handlePort(std::vector<uint64_t>& ports, TokenMap::const_iterator& it);
+		static void	handleRoot(std::filesystem::path& root, TokenMap::const_iterator& it);
 		static void	handleIndex(std::vector<std::string>& indexFiles, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleCgi(std::vector<std::string>& cgi, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleRedirect(std::pair<uint16_t, std::string>& redirect, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 		static void	handleErrorPage(std::unordered_map<uint16_t, std::filesystem::path>& errorPageMap, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
-		static void	handleMaxBodySize(uint64_t& maxBodySize, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
-		static void	handleAutoIndex(bool& autoIndex, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
+		static void	handleMaxBodySize(uint64_t& maxBodySize, TokenMap::const_iterator& it);
+		static void	handleAutoIndex(bool& autoIndex, TokenMap::const_iterator& it);
 		static void	handleLimitExcept(uint8_t& httpMethods, const TokenMap::const_iterator& end, TokenMap::const_iterator& it);
 
 		static std::string	readFileIntoBuffer(const std::filesystem::path& path);
