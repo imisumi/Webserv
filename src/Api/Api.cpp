@@ -130,6 +130,10 @@ std::string Api::getImages(const std::filesystem::path& path)
     json += "\"status\": \"success\",\n";
     json += "\"images\": [\n";
     bool firstImage = true;
+
+	// TODO: return custom json
+	if (!std::filesystem::is_directory(path))
+		return "";
     for (const auto& entry : std::filesystem::directory_iterator(path))
     {
         if (entry.is_regular_file())
@@ -167,6 +171,9 @@ std::string Api::getFiles(const std::filesystem::path& path)
     json += "\"status\": \"success\",\n";
     json += "\"files\": [\n";
     bool firstFile = true;
+
+	if (!std::filesystem::is_directory(path))
+		return "";
     for (const auto& entry : std::filesystem::directory_iterator(path))
     {
         if (entry.is_regular_file())
