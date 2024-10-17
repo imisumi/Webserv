@@ -13,6 +13,7 @@ DIR_CONFIG = Config
 DIR_CGI = Cgi
 DIR_CORE = Core
 DIR_SERVER = Server
+DIR_RESPONSE = Response
 DIR_API = Api
 
 SRC = main.cpp
@@ -22,16 +23,19 @@ SRC_CONFIG = ConfigParser.cpp Config.cpp \
 	ConfigTokenizer.cpp
 SRC_CGI = Cgi.cpp
 SRC_CORE = 
-SRC_SERVER = ConnectionManager.cpp HttpRequestParser.cpp \
-	RequestHandler.cpp ResponseGenerator.cpp \
-	ResponseSender.cpp Server.cpp \
-	NewHttpParser.cpp Client.cpp
+SRC_RESPONSE = ResponseGenerator.cpp \
+	ResponseGeneratorDelete.cpp ResponseGeneratorGet.cpp \
+	ResponseGeneratorPost.cpp
+SRC_SERVER = ConnectionManager.cpp HttpParser.cpp \
+	RequestHandler.cpp ResponseSender.cpp Server.cpp \
+	Client.cpp
 SRC_API = Api.cpp
 
 SRC_CONFIG := ${addprefix ${DIR_CONFIG}/, ${SRC_CONFIG}}
 SRC_CGI := ${addprefix ${DIR_CGI}/, ${SRC_CGI}}
 SRC_CORE := ${addprefix ${DIR_CORE}/, ${SRC_CORE}}
-SRC_SERVER := ${addprefix ${DIR_SERVER}/, ${SRC_SERVER}}
+SRC_RESPONSE := ${addprefix ${DIR_RESPONSE}/, ${SRC_RESPONSE}}
+SRC_SERVER := ${addprefix ${DIR_SERVER}/, ${SRC_SERVER} ${SRC_RESPONSE}}
 SRC_API := ${addprefix ${DIR_API}/, ${SRC_API}}
 
 SRC := ${addprefix ${DIR_SRC}/, ${SRC} ${SRC_CONFIG} ${SRC_CGI} ${SRC_CORE} ${SRC_SERVER} ${SRC_API}}
