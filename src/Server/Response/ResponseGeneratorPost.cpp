@@ -177,7 +177,23 @@ std::string ResponseGenerator::parseMultipartContentType(const std::string& body
 	return contentType;
 }
 
+bool savePlainTextToFile(const std::string& body)
+{
+    if (body.size() > 2 * 1024 * 1024)
+    {
+        return false;
+    }
 
+    std::string filePath = getProjectRootDir() + "/database/plaintext.txt";
+    std::ofstream file(filePath, std::ios_base::app);
+    if (!file.is_open())
+    {
+        return false;
+    }
+    file << body << "\n\n";
+    file.close();
+    return !file.fail();
+}
 
 std::string generatePayloadTooLargeResponse()
 {
@@ -206,55 +222,81 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
         return generateBadRequestResponse();
     }
 
-    std::string boundary = extractBoundary(contentType);
-    if (boundary.empty())
+    if (contentType.find("multipart/form-data") != std::string::npos)
     {
-        Log::error("Boundary missing in Content-Type header");
-        return generateBadRequestResponse();
+        std::string boundary = extractBoundary(contentType);
+        if (boundary.empty())
+        {
+            Log::error("Boundary missing in Content-Type header");
+            return generateBadRequestResponse();
+        }
+
+        std::string body = client.GetRequest().body;
+        if (body.empty())
+        {
+            Log::error("Request body is empty");
+            return generateBadRequestResponse();
+        }
+
+        std::string firstName = parseMultipartData(body, boundary, "firstname");
+        std::string lastName = parseMultipartData(body, boundary, "lastname");
+        std::string email = parseMultipartData(body, boundary, "email");
+
+        if (!saveFormDataToFile(firstName, lastName, email, boundary))
+        {
+            Log::error("Failed to save form data to file");
+            return generateInternalServerErrorResponse();
+        }
+
+        std::string fileContentType = parseMultipartContentType(body, boundary, "file");
+        if (fileContentType.empty())
+        {
+            Log::error("File content type missing");
+            return generateBadRequestResponse();
+        }
+
+        Log::info("Detected file content type: " + fileContentType);
+
+        std::string uploadDir;
+        if (isSupportedFileType(fileContentType))
+        {
+            uploadDir = getProjectRootDir() + "/database/images";
+        }
+        else
+        {
+            uploadDir = getProjectRootDir() + "/database/files";
+        }
+
+        if (!saveUploadedFile(body, boundary, "file", uploadDir))
+        {
+            Log::error("Failed to save uploaded file");
+            return generatePayloadTooLargeResponse();
+        }
+
+        Log::info("Successfully handled POST request, saved form data, and saved file");
+        return generateOKResponse(client);
     }
-
-    std::string body = client.GetRequest().body;
-    if (body.empty())
+    else if (contentType.find("text/plain") != std::string::npos)
     {
-        Log::error("Request body is empty");
-        return generateBadRequestResponse();
-    }
+        std::string body = client.GetRequest().body;
+        if (body.empty())
+        {
+            Log::error("Request body is empty");
+            return generateBadRequestResponse();
+        }
 
-    std::string firstName = parseMultipartData(body, boundary, "firstname");
-    std::string lastName = parseMultipartData(body, boundary, "lastname");
-    std::string email = parseMultipartData(body, boundary, "email");
+        if (!savePlainTextToFile(body))
+        {
+            Log::error("Failed to save plain text or payload too large");
+            return generatePayloadTooLargeResponse();
+        }
 
-    if (!saveFormDataToFile(firstName, lastName, email, boundary))
-    {
-        Log::error("Failed to save form data to file");
-        return generateInternalServerErrorResponse();
-    }
-
-    std::string fileContentType = parseMultipartContentType(body, boundary, "file");
-    if (fileContentType.empty())
-    {
-        Log::error("File content type missing");
-        return generateBadRequestResponse();
-    }
-
-    Log::info("Detected file content type: " + fileContentType);
-
-    std::string uploadDir;
-    if (isSupportedFileType(fileContentType))
-    {
-        uploadDir = getProjectRootDir() + "/database/images";
+        Log::info("Successfully handled POST request, saved plain text");
+        return generateOKResponse(client);
     }
     else
     {
-        uploadDir = getProjectRootDir() + "/database/files";
+        Log::error("Unsupported Content-Type");
+        return generateBadRequestResponse();
     }
-
-    if (!saveUploadedFile(body, boundary, "file", uploadDir))
-    {
-        Log::error("Failed to save uploaded file");
-        return generatePayloadTooLargeResponse();
-    }
-
-    Log::info("Successfully handled POST request, saved form data, and saved file");
-    return generateOKResponse(client);
 }
