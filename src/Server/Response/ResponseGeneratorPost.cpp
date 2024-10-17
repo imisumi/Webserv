@@ -7,6 +7,7 @@
 #include <regex>
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 
 std::string getProjectRootDir()
 {
@@ -177,6 +178,30 @@ std::string ResponseGenerator::parseMultipartContentType(const std::string& body
 	return contentType;
 }
 
+bool ensureDirectoriesExist()
+{
+    std::string baseDir = getProjectRootDir() + "/database";
+    std::string filesDir = baseDir + "/files";
+    std::string imagesDir = baseDir + "/images";
+
+    if (!std::filesystem::exists(baseDir))
+    {
+        if (!std::filesystem::create_directory(baseDir))
+            return false;
+    }
+    if (!std::filesystem::exists(filesDir))
+    {
+        if (!std::filesystem::create_directory(filesDir))
+            return false;
+    }
+    if (!std::filesystem::exists(imagesDir))
+    {
+        if (!std::filesystem::create_directory(imagesDir))
+            return false;
+    }
+    return true;
+}
+
 bool savePlainTextToFile(const std::string& body, const uint64_t maxClientBodySize)
 {
     if (body.size() > maxClientBodySize)
@@ -220,6 +245,12 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
     {
         Log::error("Missing Content-Type header");
         return generateBadRequestResponse();
+    }
+
+    if (!ensureDirectoriesExist())
+    {
+        Log::error("Failed to create necessary directories");
+        return generateInternalServerErrorResponse();
     }
 
     if (contentType.find("multipart/form-data") != std::string::npos)
