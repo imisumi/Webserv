@@ -5,6 +5,7 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 	const HttpRequest& request = Client.GetRequest();
 
 	// delete the file
+	Log::info("hello");
 	if (std::filesystem::exists(request.mappedPath) && std::filesystem::is_regular_file(request.mappedPath))
 	{
 		if (std::filesystem::remove(request.mappedPath))

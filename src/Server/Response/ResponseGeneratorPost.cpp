@@ -79,7 +79,7 @@ bool saveFormDataToFile(std::string& firstName, std::string lastName, std::strin
 }
 
 bool saveUploadedFile(const std::string& body, const std::string& boundary, const std::string& fieldName,
-                      const std::string& uploadDir)
+                      const std::string& uploadDir, const uint64_t maxClientBodySize)
 {
     std::regex fileRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName +
                          R"(\"; filename=\"([^\"]+)\")" + R"([\r\n]+Content-Type: ([^\r\n]+)[\r\n]+[\r\n]+)");
@@ -94,7 +94,7 @@ bool saveUploadedFile(const std::string& body, const std::string& boundary, cons
 
         std::string fileContent = body.substr(fileStartPos, fileEndPos - fileStartPos);
 
-        if (fileContent.size() > 2 * 1024 * 1024)
+        if (fileContent.size() > maxClientBodySize)
         {
             return false;
         }
@@ -177,9 +177,9 @@ std::string ResponseGenerator::parseMultipartContentType(const std::string& body
 	return contentType;
 }
 
-bool savePlainTextToFile(const std::string& body)
+bool savePlainTextToFile(const std::string& body, const uint64_t maxClientBodySize)
 {
-    if (body.size() > 2 * 1024 * 1024)
+    if (body.size() > maxClientBodySize)
     {
         return false;
     }
@@ -267,7 +267,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
             uploadDir = getProjectRootDir() + "/database/files";
         }
 
-        if (!saveUploadedFile(body, boundary, "file", uploadDir))
+        if (!saveUploadedFile(body, boundary, "file", uploadDir, client.GetLocationSettings().maxBodySize))
         {
             Log::error("Failed to save uploaded file");
             return generatePayloadTooLargeResponse();
@@ -285,7 +285,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
             return generateBadRequestResponse();
         }
 
-        if (!savePlainTextToFile(body))
+        if (!savePlainTextToFile(body, client.GetLocationSettings().maxBodySize))
         {
             Log::error("Failed to save plain text or payload too large");
             return generatePayloadTooLargeResponse();
