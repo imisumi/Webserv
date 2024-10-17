@@ -1,18 +1,18 @@
 #pragma once
 
-#include <iostream>
 #include <cassert>
+#include <iostream>
 
-#include <string_view>
 #include <array>
 #include <stdexcept>
+#include <string_view>
 
+#include <filesystem>
+#include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <memory>
-#include <sstream>
-#include <filesystem>
 
 #include "Constants.h"
 
@@ -30,31 +30,42 @@ enum class HttpState : int
 	EndOfLine,
 	BodyBegin,
 	Body,
+	ChunkSize,
+	ChunkSizeCR,
+	ChunkData,
+	ChunkDataCR,
+	ChunkDataLF,
+	LastChunkCR,
+	LastChunkLF,
 	Done,
 };
 
 class HttpRequest
 {
 public:
-	// enum class TransferEncoding { NONE, CHUNKED };
-	
+	enum class TransferEncoding
+	{
+		NONE,
+		CHUNKED
+	};
+
 	// Basic properties
 	std::string method;
 	std::string uri;
 	std::filesystem::path path;
-	std::filesystem::path mappedPath; //? Path to the file/directory on the server
+	std::filesystem::path mappedPath;  //? Path to the file/directory on the server
 	std::string query;
 	std::string httpVersion;
 	std::unordered_map<std::string, std::string> headers;
 	std::string body;
 
 	// For handling chunked transfer
-	// TransferEncoding transferEncoding = TransferEncoding::NONE;
+	TransferEncoding transferEncoding = TransferEncoding::NONE;
 	std::vector<std::string> chunks;  // Store received chunks
 
 	// State tracking
-	bool isComplete = false;  // Whether the full request has been parsed
-	bool isChunkedComplete = false;  // For chunked transfers
+	bool isComplete = false;		 // Whether the full request has been parsed
+	bool isChunkedComplete = false;	 // For chunked transfers
 
 	HttpRequest() = default;
 
@@ -74,6 +85,8 @@ public:
 		return std::string();
 	}
 
+	HttpState GetState() const { return m_State; }
+
 	void print()
 	{
 		const char green[] = "\033[32m";
@@ -90,7 +103,8 @@ public:
 		{
 			std::cout << green << key << ": " << white << value << reset << std::endl;
 		}
-		// std::cout << green << "Body: " << white << body << reset << std::endl;
+		if (getHeaderValue("content-type") == "text/plain")
+			std::cout << green << "Body: " << white << body << reset << std::endl;
 	}
 
 private:
@@ -98,4 +112,9 @@ private:
 	std::string normalizePath(const std::string& uri);
 	HttpState m_State = HttpState::Start;
 	std::string m_CurrentHeaderName;
+
+	// For chunked transfer encoding
+	std::string chunkSizeStr;
+	int currentChunkSize = 0;
+	int bytesRemaining = 0;
 };

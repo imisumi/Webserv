@@ -403,6 +403,24 @@ void Server::HandleSocketInputEvent(Client& client)
 		return;
 	}
 
+	// Log::info("Raw data\n {}", buffer.data());
+	// for (char c : buffer)
+	// {
+	// 	if (c == '\r')
+	// 	{
+	// 		std::cout << "\\r";
+	// 	}
+	// 	else if (c == '\n')
+	// 	{
+	// 		std::cout << "\\n";
+	// 		std::cout << c;
+	// 	}
+	// 	else
+	// 	{
+	// 		std::cout << c;
+	// 	}
+	// }
+
 	// TODO: find way to avoid this copy
 	const std::string bufferStr(buffer.data(), n);
 	HttpState state = client.parseRequest(bufferStr);
@@ -439,7 +457,7 @@ void Server::HandleSocketInputEvent(Client& client)
 	}
 	else if (client.GetRequest().method == "POST")
 	{
-		if (client.GetRequest().getHeaderValue("content-length").empty())
+		if (client.GetRequest().getHeaderValue("content-length").empty() && client.GetRequest().transferEncoding == HttpRequest::TransferEncoding::NONE)
 		{
 			Log::error("Content-Length header is missing");
 			close(client);
@@ -447,14 +465,13 @@ void Server::HandleSocketInputEvent(Client& client)
 			ConnectionManager::UnregisterClient(client);
 			return;
 		}
-		ssize_t contentLength = std::stoll(client.GetRequest().getHeaderValue("content-length"));
-		if (client.GetRequest().body.size() < static_cast<std::string::size_type>(contentLength))
+		if (client.GetRequest().transferEncoding == HttpRequest::TransferEncoding::CHUNKED)
 		{
 			Log::error("Failed to read entire request at once, reregister client with epoll");
 
-			client.GetRequest().body.reserve(contentLength);
-
-			EpollData data{.fd = static_cast<uint16_t>(client),
+			if (client.GetRequest().GetState() != HttpState::Done)
+			{
+				EpollData data{.fd = static_cast<uint16_t>(client),
 						   .cgi_fd = std::numeric_limits<uint16_t>::max(),
 						   .type = EPOLL_TYPE_SOCKET};
 
@@ -464,6 +481,28 @@ void Server::HandleSocketInputEvent(Client& client)
 				Stop();
 			}
 			return;
+			}
+		}
+		else
+		{
+			ssize_t contentLength = std::stoll(client.GetRequest().getHeaderValue("content-length"));
+			if (client.GetRequest().body.size() < static_cast<std::string::size_type>(contentLength))
+			{
+				Log::error("Failed to read entire request at once, reregister client with epoll");
+
+				client.GetRequest().body.reserve(contentLength);
+
+				EpollData data{.fd = static_cast<uint16_t>(client),
+							.cgi_fd = std::numeric_limits<uint16_t>::max(),
+							.type = EPOLL_TYPE_SOCKET};
+
+				if (ModifyEpollEvent(client, EPOLLIN | EPOLLET, data) == -1)
+				{
+					Log::error("Failed to modify client socket in epoll!");
+					Stop();
+				}
+				return;
+			}
 		}
 	}
 	else

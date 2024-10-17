@@ -10,7 +10,7 @@
 #define CONTENT_LENGTH "content-length"
 #define TRANSFER_ENCODING "transfer-encoding"
 #define UPGRADE "upgrade"
-#define CHUNKED "chunked"
+// #define CHUNKED "chunked"
 #define KEEP_ALIVE "keep-alive"
 #define CLOSE "close"
 
@@ -72,6 +72,7 @@ HttpState HttpRequest::parseStream(const std::string& data)
 	// static std::string m_CurrentHeaderName;
 	for (char c : data)
 	{
+		// std::cout << c << " (" << (int)c << ") ";
 		switch (m_State)
 		{
 			case HttpState::Start:
@@ -196,7 +197,9 @@ HttpState HttpRequest::parseStream(const std::string& data)
 					m_State = HttpState::HeaderValue;
 				}
 				else if (c == CR)
+				{
 					m_State = HttpState::BodyBegin;
+				}
 				else if (c == LF)
 				{
 					Log::error("Invalid character in header name: {}", c);
@@ -212,7 +215,13 @@ HttpState HttpRequest::parseStream(const std::string& data)
 				// if (c == ' ')
 				// 	continue;
 				if (c == CR)
+				{
 					m_State = HttpState::EndOfLine;
+					if (m_CurrentHeaderName == "transfer-encoding" && headers[m_CurrentHeaderName] == "chunked")
+					{
+						transferEncoding = TransferEncoding::CHUNKED;
+					}
+				}
 				else if (c == LF)
 				{
 					Log::error("Invalid character in header value: {}", c);
@@ -220,11 +229,22 @@ HttpState HttpRequest::parseStream(const std::string& data)
 					break;
 				}
 				else
+				{
 					headers[m_CurrentHeaderName] += c;
+				}
 				break;
 			case HttpState::BodyBegin:
 				if (c == LF)
-					m_State = HttpState::Body;
+				{
+					if (transferEncoding == TransferEncoding::CHUNKED)
+					{
+						m_State = HttpState::ChunkSize;
+					}
+					else
+					{
+						m_State = HttpState::Body;
+					}
+				}
 				else
 				{
 					Log::error("Invalid character in body begin: {}", c);
@@ -235,6 +255,107 @@ HttpState HttpRequest::parseStream(const std::string& data)
 			case HttpState::Body:
 				body += c;
 				break;
+			case HttpState::ChunkSize:
+				if (c == CR)
+				{
+					try
+					{
+						currentChunkSize = std::stoi(chunkSizeStr);
+					}
+					catch (const std::exception& e)
+					{
+						Log::error("Invalid chunk size: {}", currentChunkSize);
+						m_State = HttpState::Error;
+						break;
+					}
+					chunkSizeStr.clear();
+					m_State = HttpState::ChunkSizeCR;
+				}
+				else
+				{
+					chunkSizeStr += c;
+				}
+				break;
+			case HttpState::ChunkSizeCR:
+				if (c == '\n')
+				{
+					if (currentChunkSize == 0)
+					{
+						m_State = HttpState::LastChunkCR;
+					}
+					else
+					{
+						m_State = HttpState::ChunkData;
+						bytesRemaining = currentChunkSize;
+					}
+				}
+				else
+				{
+					Log::error("Expected LF after chunk size");
+					m_State = HttpState::Error;
+					break;
+				}
+				break;
+			case HttpState::ChunkData:
+				body += c;
+				bytesRemaining--;
+
+				if (bytesRemaining == 0)
+				{
+					// m_State = HttpState::ChunkSize;
+					m_State = HttpState::ChunkDataCR;
+				}
+				break;
+			case HttpState::ChunkDataCR:
+				if (c == '\r')
+				{
+					m_State = HttpState::ChunkDataLF;
+				}
+				else
+				{
+					Log::error("Expected CR after chunk data");
+					m_State = HttpState::Error;
+					break;
+				}
+				break;
+			case HttpState::ChunkDataLF:
+				if (c == '\n')
+				{
+					m_State = HttpState::ChunkSize;
+				}
+				else
+				{
+					Log::error("Expected LF after chunk data CR");
+					m_State = HttpState::Error;
+					break;
+				}
+				break;
+			case HttpState::LastChunkCR:
+				if (c == '\r')
+				{
+					m_State = HttpState::LastChunkLF;
+				}
+				else
+				{
+					Log::error("Expected CR after last chunk");
+					m_State = HttpState::Error;
+					break;
+				}
+				break;
+			case HttpState::LastChunkLF:
+				if (c == '\n')
+				{
+					m_State = HttpState::Done;
+					isChunkedComplete = true;
+				}
+				else
+				{
+					Log::error("Expected LF after last chunk CR");
+					m_State = HttpState::Error;
+					break;
+				}
+				break;
+
 			case HttpState::Error:
 			{
 				Log::error("Error parsing request");
@@ -258,7 +379,6 @@ HttpState HttpRequest::parseStream(const std::string& data)
 
 	return m_State;
 }
-
 
 std::vector<std::string> HttpRequest::stringSplit(const std::string& str, char delimiter)
 {
