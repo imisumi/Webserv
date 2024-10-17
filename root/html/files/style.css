@@ -1,0 +1,104 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #181818; /* Dark background */
+    color: #f0f0f0; /* Light text color */
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #ffffff; /* Title color */
+}
+
+.gallery {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+}
+
+.gallery-item {
+    position: relative;
+    margin: 10px;
+    border: 1px solid #444; /* Darker border */
+    border-radius: 8px;
+    background-color: #292929; /* Item background color */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    text-align: center;
+    width: 120px; /* Fixed width */
+    height: 160px; /* Fixed height to accommodate the box and filename */
+    transition: transform 0.3s;
+}
+
+.gallery-item:hover {
+    transform: scale(1.05); /* Scale effect on hover */
+}
+
+.file-icon {
+    width: 50px;
+    height: 50px;
+    margin: 20px auto 10px auto;
+    background-color: #555; /* Grey background for the box */
+    border-radius: 4px;
+}
+
+.filename {
+    padding: 10px;
+    font-size: 14px;
+    color: #d0d0d0; /* Light color for filename */
+    word-wrap: break-word;
+}
+
+.checkbox {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    opacity: 0.7; /* Semi-transparent when not selected */
+    transition: opacity 0.2s;
+}
+
+.checkbox:checked {
+    opacity: 1; /* Fully opaque when checked */
+}
+
+.delete-button {
+    display: none; /* Hidden by default */
+    position: fixed; /* Fixed position to stay visible */
+    bottom: 20px; /* Position at the bottom */
+    right: 20px; /* Position at the right */
+    padding: 10px 20px;
+    background-color: #e74c3c; /* Red color for delete button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.delete-button:hover {
+    background-color: #c0392b; /* Darker red on hover */
+}
+
+.home-button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #3498db; /* Blue color for home button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    text-align: center;
+}
+
+.home-button:hover {
+    background-color: #2980b9; /* Darker blue on hover */
+}

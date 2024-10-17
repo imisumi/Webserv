@@ -15,7 +15,6 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 	Api api;
 	api.addApiRoute("/api/v1/images");
 	api.addApiRoute("/api/v1/files");
-
 	if (api.isApiRoute(client.GetRequest().path.string()))
 	{
 		if (client.GetRequest().path.string() == "/api/v1/images")

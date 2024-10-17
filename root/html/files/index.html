@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Files Gallery</title>
+    <link rel="stylesheet" href="files/style.css"> <!-- Link to the CSS file -->
+</head>
+<body>
+
+    <h1>Files Gallery</h1>
+    <div class="gallery" id="gallery"></div>
+    <button class="delete-button" id="deleteSelectedButton" onclick="toggleDeleteConfirmation()" style="display:none;">Delete Selected</button>
+
+    <script>
+        let selectedFiles = [];
+        let deleteConfirmation = false;
+
+        async function fetchFiles() {
+            try {
+                const response = await fetch(`${window.location.origin}/api/v1/files`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const gallery = document.getElementById('gallery');
+                    gallery.innerHTML = '';
+
+                    for (const file of data.files) {
+                        const filename = file.filename;
+                        const fileUrl = file.url;
+                        const imgSrc = '/html/file.png'; // Path to your static image (optional)
+
+                        const item = document.createElement('div');
+                        item.className = 'gallery-item';
+                        item.innerHTML = `
+                            <input type="checkbox" class="checkbox" onchange="toggleFileSelection('${filename}', this)">
+                            <div class="file-icon"></div>
+                            <div class="filename">${filename}</div>
+                        `;
+                        gallery.appendChild(item);
+                    }
+                } else {
+                    console.error('Error fetching files:', data.status);
+                    // Optional: Implement error handling or notifications here
+                }
+            } catch (error) {
+                console.error('Error fetching files:', error);
+                // Optional: Implement error handling or notifications here
+            }
+        }
+
+        function toggleFileSelection(filename, checkbox) {
+            if (checkbox.checked) {
+                selectedFiles.push(filename);
+            } else {
+                selectedFiles = selectedFiles.filter(file => file !== filename);
+            }
+
+            document.getElementById('deleteSelectedButton').style.display = selectedFiles.length > 0 ? 'block' : 'none';
+            deleteConfirmation = false;
+            document.getElementById('deleteSelectedButton').innerText = 'Delete Selected';
+        }
+
+        function toggleDeleteConfirmation() {
+            const deleteButton = document.getElementById('deleteSelectedButton');
+            if (!deleteConfirmation) {
+                deleteButton.innerText = 'Confirm Delete';
+                deleteConfirmation = true;
+            } else {
+                deleteSelectedFiles();
+            }
+        }
+
+        async function deleteSelectedFiles() {
+            if (selectedFiles.length === 0) {
+                // Optional: Implement notification for no files selected
+                return;
+            }
+
+            try {
+                for (const filename of selectedFiles) {
+                    const deleteURI = `/files/${encodeURIComponent(filename)}`;
+                    const response = await fetch(deleteURI, { method: 'DELETE' });
+
+                    if (response.ok) {
+                        // Optional: Implement success notification
+                        console.log(`Successfully deleted ${filename}.`);
+                    } else {
+                        // Optional: Implement error notification
+                        console.error(`Error deleting ${filename}:`, response.status);
+                    }
+                }
+                selectedFiles = [];
+                document.getElementById('deleteSelectedButton').style.display = 'none';
+                deleteConfirmation = false;
+                document.getElementById('deleteSelectedButton').innerText = 'Delete Selected';
+                fetchFiles();
+            } catch (error) {
+                console.error('Error deleting files:', error);
+                // Optional: Implement error notification
+            }
+        }
+
+        window.onload = fetchFiles;
+    </script>
+
+    <button class="home-button" onclick="window.location.href='/'">Home</button>
+
+</body>
+</html>
