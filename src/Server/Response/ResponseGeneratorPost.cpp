@@ -228,6 +228,8 @@ std::string ResponseGenerator::generatePayloadTooLargeResponse()
     return response;
 }
 
+#include "Cgi/Cgi.h"
+
 const std::string ResponseGenerator::handlePostRequest(const Client& client)
 {
     Utils::Timer timer;
@@ -236,6 +238,33 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
     if (client.GetLocationSettings().redirect.first != 0)
         return GenerateRedirectResponse(client.GetLocationSettings().redirect.first,
                                         client.GetLocationSettings().redirect.second);
+
+
+	{
+		const std::filesystem::path& path = client.GetRequest().mappedPath;
+		if (std::filesystem::is_regular_file(path))
+		{
+			Log::debug("Requested path is a file: POST");
+			const ServerSettings::LocationSettings& location = client.GetLocationSettings();
+
+			//? check if the file is a CGI script
+			if (location.cgi.size() > 0)
+			{
+				Log::info("Requested path is a CGI script");
+				for (const auto& cgi : location.cgi)
+				{
+					Log::info("CGI: {}", cgi);
+					if (path.extension() == cgi)
+					{
+						Log::info("CGI script found: {}", path.string());
+						return Cgi::executeCGI(client, client.GetRequest());
+					}
+				}
+				return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
+			}
+
+		}
+	}
 
     std::string contentType = client.GetRequest().getHeaderValue("content-type");
     if (contentType.empty())

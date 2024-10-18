@@ -1,8 +1,8 @@
 #include "ResponseGenerator.h"
 
-#include "Utils/Utils.h"
 #include "Api/Api.h"
 #include "Cgi/Cgi.h"
+#include "Utils/Utils.h"
 
 const std::string ResponseGenerator::handleGetRequest(const Client& client)
 {
@@ -10,7 +10,8 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 	Log::info("Handling GET request");
 
 	if (client.GetLocationSettings().redirect.first != 0)
-		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first, client.GetLocationSettings().redirect.second);
+		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first,
+										client.GetLocationSettings().redirect.second);
 
 	Api api;
 	api.addApiRoute("/api/v1/images");
@@ -31,6 +32,7 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 	//? Validate the requested path
 
 	const std::filesystem::path& path = client.GetRequest().mappedPath;
+	
 	if (std::filesystem::exists(path))
 	{
 		//? Check if the requested path is a directory or a file
@@ -101,7 +103,7 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		}
 		else
 		{
-			//TODO: send 405 response???
+			// TODO: send 405 response???
 			Log::error("Requested path is not a file or directory");
 
 			return GenerateErrorResponse(HTTPStatusCode::NotFound, client);

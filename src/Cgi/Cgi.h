@@ -10,5 +10,4 @@ public:
 
 private:
 	static void handleChildProcess(const Client& client, int pipefd[]);
-	static const std::string handleParentProcess(int pipefd[], pid_t pid);
 };

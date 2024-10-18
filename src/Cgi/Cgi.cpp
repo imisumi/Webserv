@@ -125,7 +125,6 @@ void sigchld_handler(int signo)
 // }
 
 
-
 std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 {
 	// std::string path = request.getUri().string();
@@ -173,7 +172,6 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
 	}
 
-
 	pid_t pid = fork();
 	if (pid == -1)
 	{
@@ -189,41 +187,23 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 	}
 	Server::RegisterCgiProcess(pid, (int)client);
 	Log::info("Child process (PID: {}) created for client FD: {}", pid, (int)client);
+
+	ssize_t bytes_written = write(pipefd[WRITE_END], client.GetRequest().body.data(), client.GetRequest().body.size());
+	if (bytes_written == -1) {
+		perror("write");
+	}
+	Log::info("Written {} bytes to the pipe", bytes_written);
+
 	close(pipefd[WRITE_END]); // Close the write end of the pipe
 
 	return "";
 }
 
-constexpr std::array<const char*, 22> headers = {
-	"CONTENT_LENGTH=",
-	"QUERY_STRING=", // Add query string if available
-	"REQUESTED_URI=", // Add request URI
-	"REDIRECT_STATUS=200",
-	"SCRIPT_NAME=", // Add script name
-	"SCRIPT_FILENAME=", // Add script filename
-	"DOCUMENT_ROOT=", // Add document root
-	"REQUEST_METHOD=GET", // Add request method (GET/POST etc.)
-	"SERVER_PROTOCOL=HTTP/1.1",
-	"SERVER_SOFTWARE=Webserv/1.0",
-	"SERVER_PORT=8080",
-	"SERVER_ADDR=",
-	"SERVER_NAME=",
-	"REMOTE_ADDR=", // Add remote address
-	"REMOTE_PORT=", // Add remote port
-	"HTTP_HOST=", // Add host
-	"HTTP_USER_AGENT=", // Add user agent
-	"HTTP_ACCEPT=", // Add accept
-	"HTTP_ACCEPT_LANGUAGE=", // Add accept language
-	"HTTP_ACCEPT_ENCODING=", // Add accept encoding
-	"HTTP_CONNECTION=", // Add connection
-	nullptr
-};
-
 
 void Cgi::handleChildProcess(const Client& client, int pipefd[])
 {
 	const HttpRequest& request = client.GetRequest();
-	std::array<std::string, 21> envpArray;
+	std::array<std::string, 22> envpArray;
 	envpArray[0] = "CONTENT_LENGTH=" + std::to_string(request.body.size());
 	envpArray[1] = "QUERY_STRING=" + request.query;
 	envpArray[2] = "REQUESTED_URI=" + request.path.string();
@@ -245,31 +225,18 @@ void Cgi::handleChildProcess(const Client& client, int pipefd[])
 	envpArray[18] = "HTTP_ACCEPT_LANGUAGE=" + request.getHeaderValue("accept-language");
 	envpArray[19] = "HTTP_ACCEPT_ENCODING=" + request.getHeaderValue("accept-encoding");
 	envpArray[20] = "HTTP_CONNECTION=" + request.getHeaderValue("connection");
+	envpArray[21] = "PATH_INFO=" + request.path.string();
 
-
-
-
-	// struct sigaction sa;
-	// sa.sa_handler = sigalarm_handler;  // Assign the custom handler
-	// sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
-	// sa.sa_flags = 0;         // Restart interrupted system calls
-
-	// // Register the handler for SIGALRM
-	// if (sigaction(SIGALRM, &sa, NULL) == -1)
-	// {
-	// 	perror("sigaction");
-	// 	exit(1);
-	// }
 	alarm(3); // Set the alarm for CGI timeout
 
-	// std::string path = request.getUri().string();
-	// std::string path = request.path.string();
 	std::string path = request.mappedPath.string();
 
-	// alarm(3); // Set the alarm for CGI timeout
-
 	close(pipefd[READ_END]); // Close the read end of the pipe
-	dup2(pipefd[WRITE_END], STDOUT_FILENO); // Redirect stdout to the pipe
+	// dup2(pipefd[WRITE_END], STDOUT_FILENO); // Redirect stdout to the pipe
+	if (dup2(pipefd[WRITE_END], STDOUT_FILENO) == -1) { // Redirect stdout to the pipe
+        perror("dup2");
+        exit(EXIT_FAILURE);
+    }
 	close(pipefd[WRITE_END]); // Close the original write end of the pipe
 
 	char* argv[] = { const_cast<char*>(path.c_str()), NULL };
@@ -295,41 +262,11 @@ void Cgi::handleChildProcess(const Client& client, int pipefd[])
 		envpArray[18].data(),
 		envpArray[19].data(),
 		envpArray[20].data(),
+		envpArray[21].data(),
 		nullptr
 	};
-	// const char* envp[] = {
-	// 	"CONTENT_LENGTH=",
-	// 	"QUERY_STRING=", // Add query string if available
-	// 	"REQUESTED_URI=", // Add request URI
-	// 	"REDIRECT_STATUS=200",
-	// 	"SCRIPT_NAME=", // Add script name
-	// 	"SCRIPT_FILENAME=", // Add script filename
-	// 	"DOCUMENT_ROOT=", // Add document root
-	// 	"REQUEST_METHOD=GET", // Add request method (GET/POST etc.)
-	// 	"SERVER_PROTOCOL=HTTP/1.1",
-	// 	"SERVER_SOFTWARE=Webserv/1.0",
-	// 	"SERVER_PORT=8080",
-	// 	"SERVER_ADDR=",
-	// 	"SERVER_NAME=",
-	// 	"REMOTE_ADDR=", // Add remote address
-	// 	"REMOTE_PORT=", // Add remote port
-	// 	"HTTP_HOST=", // Add host
-	// 	"HTTP_USER_AGENT=", // Add user agent
-	// 	"HTTP_ACCEPT=", // Add accept
-	// 	"HTTP_ACCEPT_LANGUAGE=", // Add accept language
-	// 	"HTTP_ACCEPT_ENCODING=", // Add accept encoding
-	// 	"HTTP_CONNECTION=", // Add connection
-	// 	nullptr
-	// };
 
 	execve(argv[0], argv, const_cast<char *const *>(envp));
 	perror("execve");
 	exit(EXIT_FAILURE);
-}
-
-const std::string Cgi::handleParentProcess(int pipefd[], pid_t pid)
-{
-	close(pipefd[WRITE_END]); // Close the write end of the pipe
-
-	return "";
 }

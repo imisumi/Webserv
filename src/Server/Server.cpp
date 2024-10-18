@@ -560,6 +560,7 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd, Client& client)
 		else
 		{
 			Log::error("CGI script did not produce valid headers");
+			Log::error("Output:\n{}", output);
 			client.SetResponse(ResponseGenerator::InternalServerError(s_Instance->m_Config));
 		}
 

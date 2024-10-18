@@ -1,0 +1,79 @@
+execve("./bin/Linux/Webserv", ["./bin/Linux/Webserv"], 0x7ffe2b23a490 /* 92 vars */) = 0
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=100103, ...}, AT_EMPTY_PATH) = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libstdc++.so.6", O_RDONLY|O_CLOEXEC) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=2260296, ...}, AT_EMPTY_PATH) = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libm.so.6", O_RDONLY|O_CLOEXEC) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=940560, ...}, AT_EMPTY_PATH) = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=125488, ...}, AT_EMPTY_PATH) = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0755, st_size=2220400, ...}, AT_EMPTY_PATH) = 0
+getcwd("/home/imisumi/Desktop/Webserv", 1024) = 30
+newfstatat(1, "", {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0x1), ...}, AT_EMPTY_PATH) = 0
+openat(AT_FDCWD, "conf/default.conf", O_RDONLY) = 3
+getcwd("/home/imisumi/Desktop/Webserv", 4096) = 30
+openat(AT_FDCWD, "/etc/localtime", O_RDONLY|O_CLOEXEC) = 3
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=2910, ...}, AT_EMPTY_PATH) = 0
+newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=2910, ...}, AT_EMPTY_PATH) = 0
+socket(AF_INET, SOCK_STREAM|SOCK_NONBLOCK, IPPROTO_IP) = 4
+setsockopt(4, SOL_SOCKET, SO_REUSEPORT, [1], 4) = 0
+bind(4, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("0.0.0.0")}, 16) = 0
+listen(4, 4096)                         = 0
+accept(4, {sa_family=AF_INET, sin_port=htons(33600), sin_addr=inet_addr("127.0.0.1")}, [16]) = 5
+getpeername(5, {sa_family=AF_INET, sin_port=htons(33600), sin_addr=inet_addr("127.0.0.1")}, [16]) = 0
+getsockname(5, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("127.0.0.1")}, [16]) = 0
+recvfrom(5, "GET / HTTP/1.1\r\nHost: localhost:"..., 8191, 0, NULL, NULL) = 163
+openat(AT_FDCWD, "conf/default.conf", O_RDONLY) = 6
+getcwd("/home/imisumi/Desktop/Webserv", 4096) = 30
+newfstatat(AT_FDCWD, "/", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/.", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/.", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+openat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", O_RDONLY) = 6
+newfstatat(AT_FDCWD, "/etc/localtime", {st_mode=S_IFREG|0644, st_size=2910, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/etc/localtime", {st_mode=S_IFREG|0644, st_size=2910, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+accept(4, {sa_family=AF_INET, sin_port=htons(33606), sin_addr=inet_addr("127.0.0.1")}, [16]) = 6
+getpeername(6, {sa_family=AF_INET, sin_port=htons(33606), sin_addr=inet_addr("127.0.0.1")}, [16]) = 0
+getsockname(6, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("127.0.0.1")}, [16]) = 0
+sendto(5, "HTTP/1.1 200 OK\r\nServer: Webserv"..., 927, 0, NULL, 0) = 927
+recvfrom(6, "GET / HTTP/1.1\r\nHost: localhost:"..., 8191, 0, NULL, NULL) = 163
+openat(AT_FDCWD, "conf/default.conf", O_RDONLY) = 5
+getcwd("/home/imisumi/Desktop/Webserv", 4096) = 30
+newfstatat(AT_FDCWD, "/", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/.", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/.", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+openat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", O_RDONLY) = 5
+newfstatat(AT_FDCWD, "/etc/localtime", {st_mode=S_IFREG|0644, st_size=2910, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/etc/localtime", {st_mode=S_IFREG|0644, st_size=2910, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+sendto(6, "HTTP/1.1 200 OK\r\nServer: Webserv"..., 927, 0, NULL, 0) = 927
+accept(4, {sa_family=AF_INET, sin_port=htons(33614), sin_addr=inet_addr("127.0.0.1")}, [16]) = 5
+getpeername(5, {sa_family=AF_INET, sin_port=htons(33614), sin_addr=inet_addr("127.0.0.1")}, [16]) = 0
+getsockname(5, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("127.0.0.1")}, [16]) = 0
+recvfrom(5, "GET / HTTP/1.1\r\nHost: localhost:"..., 8191, 0, NULL, NULL) = 163
+openat(AT_FDCWD, "conf/default.conf", O_RDONLY) = 6
+getcwd("/home/imisumi/Desktop/Webserv", 4096) = 30
+newfstatat(AT_FDCWD, "/", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/.", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/.", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+openat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", O_RDONLY) = 6
+newfstatat(AT_FDCWD, "/etc/localtime", {st_mode=S_IFREG|0644, st_size=2910, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/etc/localtime", {st_mode=S_IFREG|0644, st_size=2910, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/home/imisumi/Desktop/Webserv/root/html/./index.html", {st_mode=S_IFREG|0644, st_size=683, ...}, 0) = 0
+sendto(5, "HTTP/1.1 200 OK\r\nServer: Webserv"..., 927, 0, NULL, 0) = 927
+--- SIGINT {si_signo=SIGINT, si_code=SI_KERNEL} ---
++++ killed by SIGINT +++
