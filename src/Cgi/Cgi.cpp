@@ -60,7 +60,8 @@ void sigchld_handler(int signo)
 				Server::ModifyEpollEvent(client_fd, EPOLLOUT | EPOLLET, data);
 
 				// server.m_ClientResponses[client_fd] = ResponseGenerator::InternalServerError();
-				client.SetResponse(ResponseGenerator::InternalServerError());
+				client.SetResponse(ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client));
+				// client.SetResponse(ResponseGenerator::InternalServerError());
 			}
 		}
 		else if (WIFSIGNALED(status))
@@ -137,7 +138,8 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 	if (pipe(pipefd) == -1)
 	{
 		perror("pipe");
-		return ResponseGenerator::InternalServerError();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
+		// return ResponseGenerator::InternalServerError();
 	}
 
 	int flags = fcntl(pipefd[READ_END], F_GETFL);
@@ -169,7 +171,8 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 	{
 		perror("sigaction");
 		// exit(1);
-		return ResponseGenerator::InternalServerError();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
+		// return ResponseGenerator::InternalServerError();
 	}
 
 
@@ -179,7 +182,8 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 		perror("fork");
 		close(pipefd[READ_END]);
 		close(pipefd[WRITE_END]);
-		return ResponseGenerator::InternalServerError();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
+		// return ResponseGenerator::InternalServerError();
 	}
 
 	if (pid == CHILD_PROCESS)

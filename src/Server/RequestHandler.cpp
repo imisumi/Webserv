@@ -93,7 +93,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 			return ResponseGenerator::handleGetRequest(client);
 		}
 		Log::error("Method not allowed");
-		return ResponseGenerator::MethodNotAllowed();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::MethodNotAllowed, client);
 	}
 	else if (parsedRequest.method == "HEAD")
 	{
@@ -108,7 +108,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 			return ResponseGenerator::handleGetRequest(client);
 		}
 		Log::error("Method not allowed");
-		return ResponseGenerator::MethodNotAllowed();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::MethodNotAllowed, client);
 	}
 	else if (parsedRequest.method == "POST")
 	{
@@ -118,7 +118,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 			return ResponseGenerator::handlePostRequest(client);
 		}
 		Log::error("Method not allowed");
-		return ResponseGenerator::MethodNotAllowed();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::MethodNotAllowed, client);
 	}
 	else if (parsedRequest.method == "DELETE")
 	{
@@ -128,13 +128,13 @@ const std::string RequestHandler::HandleRequest(Client& client)
 			return ResponseGenerator::handleDeleteRequest(client);
 		}
 		Log::error("Method not allowed");
-		return ResponseGenerator::MethodNotAllowed();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::MethodNotAllowed, client);
 	}
 	else
 	{
 		Log::error("Unsupported method");
 		Log::error("Allowed methods: {}", parsedRequest.method);
-		return ResponseGenerator::MethodNotImplemented();
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::NotImplemented, client);
 	}
 }
 

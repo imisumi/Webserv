@@ -129,8 +129,6 @@ static const std::unordered_map<std::string, std::string> supportedFileTypes = {
 	{".jpg", "image/jpeg"}, {".jpeg", "image/jpeg"}, {".png", "image/png"}};
 
 
-
-// Function to trim whitespace from both ends of a string
 std::string trim(const std::string& str)
 {
 	size_t first = str.find_first_not_of(' ');
@@ -138,7 +136,6 @@ std::string trim(const std::string& str)
 	return (first == std::string::npos) ? "" : str.substr(first, last - first + 1);
 }
 
-// Function to convert string to lowercase
 std::string toLowerCase(const std::string& str)
 {
 	std::string lowerStr = str;
@@ -220,7 +217,7 @@ bool savePlainTextToFile(const std::string& body, const uint64_t maxClientBodySi
     return !file.fail();
 }
 
-std::string generatePayloadTooLargeResponse()
+std::string ResponseGenerator::generatePayloadTooLargeResponse()
 {
     std::string response = "HTTP/1.1 413 Payload Too Large\r\n";
     response += "Content-Type: text/html\r\n";
@@ -244,7 +241,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
     if (contentType.empty())
     {
         Log::error("Missing Content-Type header");
-        return generateBadRequestResponse();
+        return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
     }
 
     if (!ensureDirectoriesExist())
@@ -259,14 +256,14 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
         if (boundary.empty())
         {
             Log::error("Boundary missing in Content-Type header");
-            return generateBadRequestResponse();
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
         }
 
         std::string body = client.GetRequest().body;
         if (body.empty())
         {
             Log::error("Request body is empty");
-            return generateBadRequestResponse();
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
         }
 
         std::string firstName = parseMultipartData(body, boundary, "firstname");
@@ -283,7 +280,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
         if (fileContentType.empty())
         {
             Log::error("File content type missing");
-            return generateBadRequestResponse();
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
         }
 
         Log::info("Detected file content type: " + fileContentType);
@@ -301,7 +298,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
         if (!saveUploadedFile(body, boundary, "file", uploadDir, client.GetLocationSettings().maxBodySize))
         {
             Log::error("Failed to save uploaded file");
-            return generatePayloadTooLargeResponse();
+			return GenerateErrorResponse(HTTPStatusCode::PayloadTooLarge, client);
         }
 
         Log::info("Successfully handled POST request, saved form data, and saved file");
@@ -313,13 +310,13 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
         if (body.empty())
         {
             Log::error("Request body is empty");
-            return generateBadRequestResponse();
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
         }
 
         if (!savePlainTextToFile(body, client.GetLocationSettings().maxBodySize))
         {
             Log::error("Failed to save plain text or payload too large");
-            return generatePayloadTooLargeResponse();
+			return GenerateErrorResponse(HTTPStatusCode::PayloadTooLarge, client);
         }
 
         Log::info("Successfully handled POST request, saved plain text");
@@ -328,6 +325,6 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
     else
     {
         Log::error("Unsupported Content-Type");
-        return generateBadRequestResponse();
+		return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
     }
 }

@@ -4,8 +4,6 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 {
 	const HttpRequest& request = Client.GetRequest();
 
-	// delete the file
-	Log::info("hello");
 	if (std::filesystem::exists(request.mappedPath) && std::filesystem::is_regular_file(request.mappedPath))
 	{
 		if (std::filesystem::remove(request.mappedPath))
@@ -21,10 +19,12 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 	}
 	else if (!std::filesystem::exists(request.mappedPath))
 	{
-		return NotFound();
+		Log::error("file does not exist");
+		return GenerateErrorResponse(HTTPStatusCode::NotFound, Client);
 	}
 	else
 	{
-		return BadRequest();
+		Log::error("bad request");
+		return GenerateErrorResponse(HTTPStatusCode::BadRequest, Client);
 	}
 }

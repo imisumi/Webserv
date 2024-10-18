@@ -94,12 +94,12 @@ static const std::unordered_map<std::string, std::string> s_SupportedMineTypes =
 			{ ".png", "image/png" }
 		};
 
-std::string generateDirectoryListing(const std::string& path)
+std::string generateDirectoryListing(const std::string& path, const Client& client)
 {
 	// Check if the path exists
 	if (!std::filesystem::exists(path)) {
 		std::cerr << "Error: The directory '" << path << "' does not exist." << std::endl;
-		return "";
+		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::NotFound, client);
 	}
 
 	// HTML template for the directory listing
@@ -336,14 +336,15 @@ static std::string generateETagv2(const std::filesystem::path& path)
 	return "\"" + ss.str() + "\"";
 }
 
-std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPStatusCode code, const HttpRequest& request)
+std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPStatusCode code, const HttpRequest& request, const Client& client)
 {
 	std::ostringstream response;
 
 	std::string contentType = determineContentType(request.mappedPath);
 	if (contentType.empty())
 	{
-		return generateForbiddenResponse();
+		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
+		// return generateForbiddenResponse();
 	}
 
 	const std::string statusCode = HTTPStatusCodeToString(code);
@@ -437,9 +438,9 @@ std::string ReadImageFile(const std::filesystem::path& path)
 	return favicon_content;
 }
 
-const std::string ResponseGenerator::generateDirectoryListingResponse(const std::filesystem::path& path)
+const std::string ResponseGenerator::generateDirectoryListingResponse(const std::filesystem::path& path, const Client& client)
 {
-	std::string dirListing = generateDirectoryListing(path.string());
+	std::string dirListing = generateDirectoryListing(path.string(), client);
 	std::string restult = "HTTP/1.1 200 OK\r\n";
 	restult += "Content-Type: text/html\r\n";
 	restult += "Content-Length: " + std::to_string(dirListing.size()) + "\r\n";
@@ -481,22 +482,22 @@ bool ResponseGenerator::isFileModified(const HttpRequest& request)
 std::string ResponseGenerator::generateOKResponse(const Client& client)
 {
 	Log::info("Generating 200 OK response");
-
 	const HttpRequest& request = client.GetRequest();
 
 	auto fileContents = readFileContents(request.mappedPath);
 	if (fileContents == std::nullopt)
 	{
 		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
-		return generateForbiddenResponse();
+		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
+		// return generateForbiddenResponse();
 	}
 	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
-	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request);
+	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request, client);
 
 	return "";
 }
 
-std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request)
+std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request, const Client& client)
 {
 	Log::info("Generating 200 OK response");
 
@@ -504,10 +505,10 @@ std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& p
 	if (fileContents == std::nullopt)
 	{
 		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
-		return generateForbiddenResponse();
+		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
 	}
 	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
-	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request);
+	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request, client);
 }
 
 std::string ResponseGenerator::generateForbiddenResponse()
@@ -527,12 +528,13 @@ std::string ResponseGenerator::generateForbiddenResponse()
 	if (fileContents == std::nullopt)
 	{
 		Log::critical("Failed to read file contents: {}",  "403-Forbidden.html");
+		
 		return std::string(s_ForbiddenResponse);
 	}
 	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::Forbidden);
 }
 
-std::string ResponseGenerator::generateFileResponse(const HttpRequest& request)
+std::string ResponseGenerator::generateFileResponse(const HttpRequest& request, const Client& client)
 {
 	Log::trace("Generating file response");
 	Log::trace("Request URI: {}", request.mappedPath.string());
@@ -541,10 +543,11 @@ std::string ResponseGenerator::generateFileResponse(const HttpRequest& request)
 	{
 		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
 		// return generateForbiddenResponse(path);
-		return generateForbiddenResponse();
+		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
+		// return generateForbiddenResponse();
 	}
 	// return buildHttpResponse(request.getUri(), fileContents, HTTPStatusCode::OK, request);
-	return buildHttpResponse(fileContents, HTTPStatusCode::OK, request);
+	return buildHttpResponse(fileContents, HTTPStatusCode::OK, request, client);
 }
 
 std::string ResponseGenerator::generateNotFoundResponse()
@@ -662,6 +665,51 @@ std::string ResponseGenerator::GenerateRedirectResponse(const uint16_t redirectC
 		return InternalServerError();
 	response = it->second + "Location: " + location + "\r\n\r\n";
 	return response;
+}
+
+const std::string ResponseGenerator::GenerateErrorResponse(const HTTPStatusCode code, const Client& client)
+{
+	auto it = client.GetLocationSettings().errorPageMap.find(static_cast<uint16_t>(code));
+
+	if (it != client.GetLocationSettings().errorPageMap.end())
+	{
+		std::string	path;
+
+		if (it->second.c_str()[0] == '/')
+			path = client.GetServerConfig()->GetGlobalSettings().root.string() + it->second.string();
+		else
+			path = client.GetLocationSettings().root.string() + it->second.string();
+		
+		if (!std::filesystem::exists(path))
+		{
+			if (code == HTTPStatusCode::NotFound)
+				return NotFound();
+			return GenerateErrorResponse(HTTPStatusCode::NotFound, client);
+		}
+
+		auto fileContents = readFileContents(std::filesystem::path(path));
+
+		if (fileContents == std::nullopt)
+		{
+			Log::critical("Failed to read file contents: {}",  "500-InternalServerError.html");
+			return InternalServerError();
+		}
+
+		return buildHttpResponse(ContentType::HTML, *fileContents, code);
+	}
+
+	switch (code)
+	{
+		case HTTPStatusCode::BadRequest:		return BadRequest();
+		case HTTPStatusCode::Unauthorized:		return ""; // TODO: add unauthorized response
+		case HTTPStatusCode::Forbidden:			return generateForbiddenResponse();
+		case HTTPStatusCode::NotFound:			return NotFound();
+		case HTTPStatusCode::MethodNotAllowed:	return MethodNotAllowed();
+		case HTTPStatusCode::PayloadTooLarge:	return generatePayloadTooLargeResponse();
+		default:								return InternalServerError();
+	}
+
+	return InternalServerError();
 }
 
 const std::string ResponseGenerator::InternalServerError(const Config& config)

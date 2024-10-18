@@ -62,14 +62,14 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 
 					HttpRequest updatedRequest = client.GetRequest();
 					updatedRequest.mappedPath = indexPath;
-					return generateOKResponse(indexPath, updatedRequest);
+					return generateOKResponse(indexPath, updatedRequest, client);
 				}
 			}
 			if (client.GetLocationSettings().autoindex)
 			{
-				return generateDirectoryListingResponse(path);
+				return generateDirectoryListingResponse(path, client);
 			}
-			return generateNotFoundResponse();
+			return GenerateErrorResponse(HTTPStatusCode::NotFound, client);
 		}
 		else if (std::filesystem::is_regular_file(path))
 		{
@@ -89,7 +89,7 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 						return Cgi::executeCGI(client, client.GetRequest());
 					}
 				}
-				return ResponseGenerator::generateForbiddenResponse();
+				return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
 			}
 
 			// if (!isFileModified(client.GetRequest()))
@@ -97,16 +97,16 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 			// 	return generateNotModifiedResponse();
 			// }
 
-			return generateFileResponse(client.GetRequest());
+			return generateFileResponse(client.GetRequest(), client);
 		}
 		else
 		{
 			//TODO: send 405 response???
 			Log::error("Requested path is not a file or directory");
 
-			return generateNotFoundResponse();
+			return GenerateErrorResponse(HTTPStatusCode::NotFound, client);
 		}
 	}
 	Log::debug("Requested path does not exist");
-	return generateNotFoundResponse();
+	return GenerateErrorResponse(HTTPStatusCode::NotFound, client);
 }
