@@ -139,7 +139,6 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 	{
 		perror("pipe");
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
-		// return ResponseGenerator::InternalServerError();
 	}
 
 	int flags = fcntl(pipefd[READ_END], F_GETFL);
@@ -172,7 +171,6 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 		perror("sigaction");
 		// exit(1);
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
-		// return ResponseGenerator::InternalServerError();
 	}
 
 
@@ -183,7 +181,6 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 		close(pipefd[READ_END]);
 		close(pipefd[WRITE_END]);
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
-		// return ResponseGenerator::InternalServerError();
 	}
 
 	if (pid == CHILD_PROCESS)
