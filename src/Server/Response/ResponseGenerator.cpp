@@ -354,7 +354,7 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 	if (connection != "keep-alive")
 	{
 		// connection = "keep-alive";
-		// connection = "close";
+		connection = "close";
 	}
 	//tofix hardcoded not kept alive
 	// connection = "close";
