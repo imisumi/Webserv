@@ -1,9 +1,10 @@
 #include "ResponseGenerator.h"
 
-#include "Utils/Utils.h"
 #include "Api/Api.h"
 #include "Cgi/Cgi.h"
 #include "Server/Server.h"
+#include "Utils/Utils.h"
+
 
 const std::string ResponseGenerator::handleGetRequest(const Client& client)
 {
@@ -11,7 +12,8 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 	Log::info("Handling GET request");
 
 	if (client.GetLocationSettings().redirect.first != 0)
-		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first, client.GetLocationSettings().redirect.second);
+		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first,
+										client.GetLocationSettings().redirect.second);
 
 	Api& api = Server::Get().GetApi();
 	if (api.isApiRoute(client.GetRequest().path.string()))
@@ -19,8 +21,8 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		return api.handleRoute(client.GetRequest().path.string());
 	}
 	//? Validate the requested path
-
 	const std::filesystem::path& path = client.GetRequest().mappedPath;
+	// Log::error("Mapped path: {}", path);
 	if (std::filesystem::exists(path))
 	{
 		//? Check if the requested path is a directory or a file
@@ -91,7 +93,7 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 		}
 		else
 		{
-			//TODO: send 405 response???
+			// TODO: send 405 response???
 			Log::error("Requested path is not a file or directory");
 
 			return GenerateErrorResponse(HTTPStatusCode::NotFound, client);

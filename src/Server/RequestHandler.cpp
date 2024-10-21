@@ -52,15 +52,24 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	Log::info("Directory: {}", locationPrefix.string());
 
 	//? find the longest path prefix that has location settings
+	std::filesystem::path previousPath;
 	for (std::filesystem::path longestPathPrefix = parsedRequest.path; longestPathPrefix != "/"; longestPathPrefix = longestPathPrefix.parent_path())
 	{
 		Log::info("Longest path prefix: {}", longestPathPrefix.string());
 		if (client.GetServerConfig()->hasLocationSettings(longestPathPrefix))
 		{
+			std::filesystem::path remainingPath = std::filesystem::relative(locationPrefix, previousPath);
+			remainingPath = "/" / remainingPath;
+
 			locationPrefix = longestPathPrefix;
 			Log::debug("Location settings found for: {}", locationPrefix.string());
+			Log::debug("Backtracking: Previous path was: {}", previousPath.string());
+			Log::debug("Remaining path: {}", remainingPath.string());
+			parsedRequest.pathInfo = remainingPath;
+			parsedRequest.path = previousPath;
 			break;
 		}
+		previousPath = longestPathPrefix;
 	}
 
 	Log::info("Location prefix: {}", locationPrefix.string());
@@ -68,7 +77,7 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	Log::error("ALLOWED METHODS: {}", location.httpMethods);
 	client.SetLocationSettings(location);
 
-	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
+	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.path, "/");
 	parsedRequest.print();
 
 	client.SetRequest(parsedRequest);
