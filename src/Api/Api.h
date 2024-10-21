@@ -1,34 +1,38 @@
-#pragma once 
+#pragma once
 
-#include <unordered_map>
-#include <string>
-#include <functional>
 #include <filesystem>
-#include <unordered_set>
+#include <functional>
+#include <string>
+#include <unordered_map>
 
+// Define the handler type
+using RouteHandler = std::function<std::string()>;
+
+// API class with a route map
 class Api
 {
 public:
-	Api() {};
-	~Api() {};
-
+	// Add route with a handler
+	void addApiRoute(const std::string& route, RouteHandler handler) { m_ApiRoutes[route] = handler; }
 	bool isApiRoute(const std::string& route) const { return m_ApiRoutes.find(route) != m_ApiRoutes.end(); }
 
-	// void addApiRoute(const std::string& route, std::function<void()> callback);
-	void addApiRoute(const std::string& route) { m_ApiRoutes.insert(route); }
-
-	// std::string handleRequest(const std::string& route);
+	// Check if a route exists and call its handler
+	std::string handleRoute(const std::string& path)
+	{
+		if (m_ApiRoutes.find(path) != m_ApiRoutes.end())
+		{
+			return m_ApiRoutes[path]();	 // Call the route handler and return the result
+		}
+		return "HTTP/1.1 404 Not Found\r\n"
+			   "Content-Type: text/plain\r\n"
+			   "Content-Length: 21\r\n"
+			   "\r\n"
+			   "404 - Route not found";
+	}
 
 	static std::string getImages(const std::filesystem::path& path);
 	static std::string getFiles(const std::filesystem::path& path);
 
 private:
-	// std::string getFiles();
-	// std::string getImages();
-
-
-private:
-	std::unordered_set<std::string> m_ApiRoutes;
-	// std::unordered_map<std::string, std::string> m_ApiRoutes;
-	// std::unordered_map<std::string, std::function<void()>> m_ApiRoutes;
+	std::unordered_map<std::string, RouteHandler> m_ApiRoutes;	// Route map
 };

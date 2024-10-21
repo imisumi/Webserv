@@ -14,6 +14,8 @@
 // #include "Config/ConfigParser.h"
 #include <assert.h>
 
+#include "Api/Api.h"
+
 #include "Client.h"
 #include "Config/Config.h"
 #include "Core/Core.h"
@@ -108,6 +110,7 @@ public:
 
 	const std::unordered_map<uint64_t, int>& GetServerSockets() const { return m_ServerSockets64; }
 
+	static Api& GetApi() { return Get().m_Api; }
 private:
 	Server(const Config& config);
 	~Server();
@@ -149,4 +152,7 @@ private:
 	std::unordered_map<int, int> m_CgiToClientMap;
 
 	std::array<struct epoll_event, MAX_EVENTS> m_Events;
+
+
+	Api m_Api;
 };

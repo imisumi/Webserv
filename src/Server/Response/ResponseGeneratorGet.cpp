@@ -3,6 +3,7 @@
 #include "Utils/Utils.h"
 #include "Api/Api.h"
 #include "Cgi/Cgi.h"
+#include "Server/Server.h"
 
 const std::string ResponseGenerator::handleGetRequest(const Client& client)
 {
@@ -12,21 +13,10 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 	if (client.GetLocationSettings().redirect.first != 0)
 		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first, client.GetLocationSettings().redirect.second);
 
-	Api api;
-	api.addApiRoute("/api/v1/images");
-	api.addApiRoute("/api/v1/files");
+	Api& api = Server::Get().GetApi();
 	if (api.isApiRoute(client.GetRequest().path.string()))
 	{
-		if (client.GetRequest().path.string() == "/api/v1/images")
-		{
-			std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
-			return Api::getImages(databaseImagePath);
-		}
-		else if (client.GetRequest().path.string() == "/api/v1/files")
-		{
-			std::filesystem::path databaseFilePath = std::filesystem::current_path() / "database" / "files";
-			return Api::getFiles(databaseFilePath);
-		}
+		return api.handleRoute(client.GetRequest().path.string());
 	}
 	//? Validate the requested path
 

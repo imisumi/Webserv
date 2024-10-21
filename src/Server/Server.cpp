@@ -231,6 +231,15 @@ void Server::Init(const Config& config)
 			return;
 		}
 	}
+	
+	s_Instance->m_Api.addApiRoute("/api/v1/images", []() {
+        std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
+        return Api::getImages(databaseImagePath);  // Return the string response
+    });
+    s_Instance->m_Api.addApiRoute("/api/v1/files", []() {
+        std::filesystem::path databaseFilePath = std::filesystem::current_path() / "database" / "files";
+        return Api::getFiles(databaseFilePath);  // Return the string response
+    });
 }
 
 void Server::Shutdown()
