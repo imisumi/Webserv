@@ -231,15 +231,21 @@ void Server::Init(const Config& config)
 			return;
 		}
 	}
-	
-	s_Instance->m_Api.addApiRoute("/api/v1/images", []() {
-        std::filesystem::path databaseImagePath = std::filesystem::current_path() / "database" / "images";
-        return Api::getImages(databaseImagePath);  // Return the string response
-    });
-    s_Instance->m_Api.addApiRoute("/api/v1/files", []() {
-        std::filesystem::path databaseFilePath = std::filesystem::current_path() / "database" / "files";
-        return Api::getFiles(databaseFilePath);  // Return the string response
-    });
+
+	s_Instance->m_Api.addApiRoute("/api/v1/images",
+								  []()
+								  {
+									  std::filesystem::path databaseImagePath =
+										  std::filesystem::current_path() / "database" / "images";
+									  return Api::getImages(databaseImagePath);	 // Return the string response
+								  });
+	s_Instance->m_Api.addApiRoute("/api/v1/files",
+								  []()
+								  {
+									  std::filesystem::path databaseFilePath =
+										  std::filesystem::current_path() / "database" / "files";
+									  return Api::getFiles(databaseFilePath);  // Return the string response
+								  });
 }
 
 void Server::Shutdown()
@@ -466,7 +472,8 @@ void Server::HandleSocketInputEvent(Client& client)
 	}
 	else if (client.GetRequest().method == "POST")
 	{
-		if (client.GetRequest().getHeaderValue("content-length").empty() && client.GetRequest().transferEncoding == HttpRequest::TransferEncoding::NONE)
+		if (client.GetRequest().getHeaderValue("content-length").empty() &&
+			client.GetRequest().transferEncoding == HttpRequest::TransferEncoding::NONE)
 		{
 			Log::error("Content-Length header is missing");
 			close(client);
@@ -481,15 +488,15 @@ void Server::HandleSocketInputEvent(Client& client)
 			if (client.GetRequest().GetState() != HttpState::Done)
 			{
 				EpollData data{.fd = static_cast<uint16_t>(client),
-						   .cgi_fd = std::numeric_limits<uint16_t>::max(),
-						   .type = EPOLL_TYPE_SOCKET};
+							   .cgi_fd = std::numeric_limits<uint16_t>::max(),
+							   .type = EPOLL_TYPE_SOCKET};
 
-			if (ModifyEpollEvent(client, EPOLLIN | EPOLLET, data) == -1)
-			{
-				Log::error("Failed to modify client socket in epoll!");
-				Stop();
-			}
-			return;
+				if (ModifyEpollEvent(client, EPOLLIN | EPOLLET, data) == -1)
+				{
+					Log::error("Failed to modify client socket in epoll!");
+					Stop();
+				}
+				return;
 			}
 		}
 		else
@@ -502,8 +509,8 @@ void Server::HandleSocketInputEvent(Client& client)
 				client.GetRequest().body.reserve(contentLength);
 
 				EpollData data{.fd = static_cast<uint16_t>(client),
-							.cgi_fd = std::numeric_limits<uint16_t>::max(),
-							.type = EPOLL_TYPE_SOCKET};
+							   .cgi_fd = std::numeric_limits<uint16_t>::max(),
+							   .type = EPOLL_TYPE_SOCKET};
 
 				if (ModifyEpollEvent(client, EPOLLIN | EPOLLET, data) == -1)
 				{
@@ -646,6 +653,8 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 		}
 		return;
 	}
+	const HttpRequest& request = client.GetRequest();
+	Log::release("{} {} {} {}", request.method, request.uri, "\"TODO: status code 200\"", request.getHeaderValue("host"));
 	Log::debug("Sent response to client: {}", epoll_fd);
 
 	EpollData data{.fd = static_cast<uint16_t>(epoll_fd),

@@ -5,6 +5,12 @@ project(Webserv LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DWEBSERV_DEBUG)  # Define DEBUG_BUILD for Debug mode
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_definitions(-DWEBSERV_RELEASE)  # Define RELEASE_BUILD for Release mode
+endif()
+
 # Set the output directory
 set(FullOutputDir ${CMAKE_SOURCE_DIR}/bin/${CMAKE_SYSTEM_NAME})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${FullOutputDir})

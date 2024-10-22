@@ -78,7 +78,9 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	client.SetLocationSettings(location);
 
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.path, "/");
+#ifdef WEBSERV_DEBUG
 	parsedRequest.print();
+#endif
 
 	client.SetRequest(parsedRequest);
 

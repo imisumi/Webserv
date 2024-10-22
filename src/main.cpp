@@ -25,6 +25,12 @@ int main()
 		return 1;
 	}
 
+	// Logger::set_log_level(Logger::LogLevel::CRITICAL);
+#ifdef WEBSERV_RELEASE
+	auto logger = Logger::getLogger("SERVER");
+	logger->set_log_level(Logger::LogLevel::RELEASE);
+#endif
+
 	Log::trace("trace");
 	Log::info("info");
 	Log::debug("debug");

@@ -11,7 +11,8 @@ class Timer
 {
 public:
 	Timer() { reset(); }
-	~Timer() { std::cout << "Elapsed time: " << elapsedMillis() << "ms\n"; }
+	// ~Timer() { std::cout << "Elapsed time: " << elapsedMillis() << "ms\n"; }
+	~Timer() { }
 	void reset() { start = std::chrono::high_resolution_clock::now(); }
 
 	// elapsed time in microseconds

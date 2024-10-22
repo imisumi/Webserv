@@ -113,6 +113,12 @@ public:
 		log(LogLevel::CRITICAL, format, std::forward<Args>(args)...);
 	}
 
+	template <typename... Args>
+	void release(const std::string& format, Args&&... args)
+	{
+		log(LogLevel::RELEASE, format, std::forward<Args>(args)...);
+	}
+
 	void set_log_level(LogLevel level) { current_log_level = level; }
 
 private:
@@ -147,6 +153,8 @@ private:
 				return "\033[0;31m";  // Red
 			case LogLevel::CRITICAL:
 				return "\033[0;97;41m";	 // White text, red background
+			case LogLevel::RELEASE:
+				return "\033[0;97m";  // White
 			default:
 				return reset_color;
 		}
@@ -235,5 +243,10 @@ public:
 	static void critical(const std::string& format, auto&&... args)
 	{
 		Logger::getLogger("SERVER")->critical(format, std::forward<decltype(args)>(args)...);
+	}
+
+	static void release(const std::string& format, auto&&... args)
+	{
+		Logger::getLogger("SERVER")->release(format, std::forward<decltype(args)>(args)...);
 	}
 };
