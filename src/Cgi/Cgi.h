@@ -9,6 +9,6 @@ public:
 	static std::string executeCGI(const Client& client, const HttpRequest& request);
 
 private:
-	static void handleChildProcess(const Client& client, int pipefd[]);
-	static const std::string handleParentProcess(int pipefd[], pid_t pid);
+	// static void handleChildProcess(const Client& client, int pipefd[]);
+	static void handleChildProcess(const Client& client, int inPipe[], int outPipe[]);
 };

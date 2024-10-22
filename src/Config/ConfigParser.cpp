@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ConfigParser.cpp                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/09/18 12:53:07 by kwchu             #+#    #+#             */
-/*   Updated: 2024/10/14 17:11:10 by imisumi-wsl      ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ConfigParser.cpp                                   :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: imisumi-wsl <imisumi-wsl@student.42.fr>      +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2024/09/18 12:53:07 by kwchu         #+#    #+#                 */
+/*   Updated: 2024/10/22 17:39:31 by kwchu         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,11 +20,16 @@
 #include <unordered_map>
 #include <vector>
 
-Config ConfigParser::createDefaultConfig()
+Config ConfigParser::createConfig(const char* input)
 {
-	Config config = createConfigFromFile(DEFAULT_PATH);
-
-	return config;
+	if (!input)
+	{
+		return createConfigFromFile(DEFAULT_PATH);
+	}
+	else
+	{
+		return createConfigFromFile(input);
+	}
 }
 
 Config ConfigParser::createConfigFromFile(const std::filesystem::path& path)

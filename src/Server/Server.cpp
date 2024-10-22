@@ -576,6 +576,7 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd, Client& client)
 		else
 		{
 			Log::error("CGI script did not produce valid headers");
+			Log::error("Output:\n{}", output);
 			client.SetResponse(ResponseGenerator::InternalServerError(s_Instance->m_Config));
 		}
 
@@ -622,7 +623,8 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 
 	const std::string& response = client.GetResponse();
 
-	// Log::info("response:\n{}", response);
+	if (response.size() < BUFFER_SIZE)
+		Log::info("response:\n{}", response);
 	ssize_t bytes = ResponseSender::sendResponse(client);
 	if (bytes == -1)
 	{
@@ -654,7 +656,7 @@ void Server::HandleOutputEvent(Client& client, int epoll_fd)
 		return;
 	}
 	const HttpRequest& request = client.GetRequest();
-	Log::release("{} {} {} {}", request.method, request.uri, "\"TODO: status code 200\"", request.getHeaderValue("host"));
+	Log::release("{} {} {} {}", request.method, request.uri, response.substr(0, response.find_first_of("\r\n")), request.getHeaderValue("host"));
 	Log::debug("Sent response to client: {}", epoll_fd);
 
 	EpollData data{.fd = static_cast<uint16_t>(epoll_fd),

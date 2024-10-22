@@ -7,7 +7,7 @@ mkdir -p build
 cd build
 
 # Run CMake with Debug configuration
-cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
 
 # Build the project
 make -j8

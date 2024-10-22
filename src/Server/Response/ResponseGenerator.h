@@ -63,14 +63,16 @@ public:
 	ResponseGenerator() {};
 	~ResponseGenerator() {};
 
-	static const std::string GenerateErrorResponse(const HTTPStatusCode code, const Client& client);
-	static const std::string InternalServerError(const Config& config);
-	static const std::string InternalServerError();
-	static const std::string MethodNotAllowed();
-	static const std::string OkResponse();
-	static const std::string MethodNotImplemented();
-	static const std::string BadRequest();
-	static const std::string NotFound();
+	static std::string GenerateRedirectResponse(const uint16_t redirectCode, const std::string& location);
+	static std::string GenerateErrorResponse(const HTTPStatusCode code, const Client& client);
+	static std::string InternalServerError(const Config& config);
+	static std::string InternalServerError();
+	static std::string MethodNotAllowed();
+	static std::string Forbidden();
+	static std::string OkResponse();
+	static std::string MethodNotImplemented();
+	static std::string BadRequest();
+	static std::string NotFound();
 
 
 	static const std::string handleGetRequest(const Client& client);
@@ -101,7 +103,6 @@ private:
 	static std::string parseMultipartContentType(const std::string& body, const std::string& boundary, const std::string& fieldName);
 
 
-	static std::string GenerateRedirectResponse(const uint16_t redirectCode, const std::string& location);
 	static std::string generateOKResponse(const Client& client);
 	static std::string generateOKResponse(const std::filesystem::path& path, const HttpRequest& request, const Client& client);
 
@@ -110,7 +111,6 @@ private:
 
 	static std::string generateForbiddenResponse();
 
-	static std::string generateNotFoundResponse();
 
 
 	static std::string generateNotModifiedResponse();

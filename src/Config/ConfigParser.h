@@ -72,7 +72,7 @@ class ConfigParser
 
 		static std::string	readFileIntoBuffer(const std::filesystem::path& path);
 	public:
-		static Config	createDefaultConfig();
+		static Config	createConfig(const char* input);
 		static Config	createConfigFromFile(const std::filesystem::path& path);
 
 };

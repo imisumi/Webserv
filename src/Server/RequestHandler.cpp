@@ -66,7 +66,8 @@ const std::string RequestHandler::HandleRequest(Client& client)
 			Log::debug("Backtracking: Previous path was: {}", previousPath.string());
 			Log::debug("Remaining path: {}", remainingPath.string());
 			parsedRequest.pathInfo = remainingPath;
-			parsedRequest.path = previousPath;
+			if (previousPath.has_extension())
+				parsedRequest.path = previousPath;
 			break;
 		}
 		previousPath = longestPathPrefix;
@@ -76,6 +77,9 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	const ServerSettings::LocationSettings& location = client.GetServerConfig()->GetLocationSettings(locationPrefix);
 	Log::error("ALLOWED METHODS: {}", location.httpMethods);
 	client.SetLocationSettings(location);
+	if (client.GetLocationSettings().redirect.first != 0)
+        return ResponseGenerator::GenerateRedirectResponse(client.GetLocationSettings().redirect.first,
+                                        client.GetLocationSettings().redirect.second);
 
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.path, "/");
 #ifdef WEBSERV_DEBUG

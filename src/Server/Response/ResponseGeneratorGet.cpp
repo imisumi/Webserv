@@ -84,10 +84,10 @@ const std::string ResponseGenerator::handleGetRequest(const Client& client)
 				return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
 			}
 
-			// if (!isFileModified(client.GetRequest()))
-			// {
-			// 	return generateNotModifiedResponse();
-			// }
+			if (!isFileModified(client.GetRequest()))
+			{
+				return generateNotModifiedResponse();
+			}
 
 			return generateFileResponse(client.GetRequest(), client);
 		}

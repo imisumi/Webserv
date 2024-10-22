@@ -99,66 +99,32 @@ void sigchld_handler(int signo)
 	}
 }
 
-// Custom SIGCHLD handler to reap the specific child that has exited
-
-// void sigchld_handler(int signo)
-// {
-// 	int status;
-// 	pid_t pid;
-
-// 	// Use WNOHANG to only reap child processes that have exited
-// 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-// 		if (WIFEXITED(status)) {
-// 			std::cout << "Child process " << pid << " exited with status: " << WEXITSTATUS(status) << std::endl;
-// 		} else if (WIFSIGNALED(status)) {
-// 			std::cout << "Child process " << pid << " was terminated by signal: " << WTERMSIG(status) << std::endl;
-// 		}
-
-// 		// Remove the child from the list of running processes
-// 		// childProcesses.erase(pid);
-// 	}
-// }
-
 std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 {
-	// std::string path = request.getUri().string();
-	// std::string path = request.path.string();
-	// std::string path = request.mappedPath.string();
 	std::string path = client.GetRequest().mappedPath.string();
 	Log::info("Executing CGI script: {}", path);
-	int pipefd[2];
 
-	if (pipe(pipefd) == -1)
+	int inPipe[2];	 // Pipe to send data (POST body) to CGI
+	int outPipe[2];	 // Pipe to receive data (CGI output) from CGI
+
+	if (pipe(inPipe) == -1 || pipe(outPipe) == -1)
 	{
 		perror("pipe");
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
 	}
 
-	int flags = fcntl(pipefd[READ_END], F_GETFL);
-	fcntl(pipefd[READ_END], F_SETFL, flags | O_NONBLOCK);
-
-	int flags2 = fcntl(pipefd[WRITE_END], F_GETFL);
-	fcntl(pipefd[WRITE_END], F_SETFL, flags2 | O_NONBLOCK);
-
-	// Server::CgiRedirect(pipefd[READ_END], (int)client);
-	// #if 0
-	Server::EpollData data{
-		.fd = static_cast<uint16_t>(client), .cgi_fd = static_cast<uint16_t>(pipefd[READ_END]), .type = EPOLL_TYPE_CGI};
-
-	Log::info("Forwarding client FD: {} to CGI handler", (int)client);
-
-	Server::AddEpollEvent(pipefd[READ_END], EPOLLIN | EPOLLET, data);
+	// Set the output pipe to non-blocking
+	fcntl(outPipe[READ_END], F_SETFL, O_NONBLOCK);
 
 	struct sigaction sa;
-	sa.sa_handler = sigchld_handler;  // Assign the custom handler
-	sigemptyset(&sa.sa_mask);		  // Clear the signal mask (no blocked signals)
-	sa.sa_flags = SA_RESTART;		  // Restart interrupted system calls
+	sa.sa_handler = sigchld_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
 
-	// Register the handler for SIGCHLD
+	// Register signal handler for SIGCHLD
 	if (sigaction(SIGCHLD, &sa, NULL) == -1)
 	{
 		perror("sigaction");
-		// exit(1);
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
 	}
 
@@ -166,117 +132,100 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 	if (pid == -1)
 	{
 		perror("fork");
-		close(pipefd[READ_END]);
-		close(pipefd[WRITE_END]);
+		close(inPipe[READ_END]);
+		close(inPipe[WRITE_END]);
+		close(outPipe[READ_END]);
+		close(outPipe[WRITE_END]);
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
 	}
 
 	if (pid == CHILD_PROCESS)
-	{  // Child process
-		handleChildProcess(client, pipefd);
+	{
+		handleChildProcess(client, inPipe, outPipe);
 	}
-	Server::RegisterCgiProcess(pid, (int)client);
-	Log::info("Child process (PID: {}) created for client FD: {}", pid, (int)client);
-	close(pipefd[WRITE_END]);  // Close the write end of the pipe
+
+	Server::RegisterCgiProcess(pid, static_cast<int>(client));
+	Log::info("Child process (PID: {}) created for client FD: {}", pid, static_cast<int>(client));
+
+	// Parent process: handle sending the POST body (if POST method) to the CGI script
+	if (request.method == "POST")
+	{
+		ssize_t bytes_written =
+			write(inPipe[WRITE_END], client.GetRequest().body.data(), client.GetRequest().body.size());
+		if (bytes_written == -1)
+		{
+			perror("write");
+		}
+		Log::info("Written {} bytes to the pipe", bytes_written);
+	}
+
+	close(inPipe[WRITE_END]);  // Close the write end of the input pipe after sending the POST body
+
+	// Register the output pipe with epoll for reading the CGI response
+	Server::EpollData data{.fd = static_cast<uint16_t>(client),
+						   .cgi_fd = static_cast<uint16_t>(outPipe[READ_END]),
+						   .type = EPOLL_TYPE_CGI};
+
+	Server::AddEpollEvent(outPipe[READ_END], EPOLLIN | EPOLLET, data);	// Register output pipe with epoll
 
 	return "";
 }
 
-void Cgi::handleChildProcess(const Client& client, int pipefd[])
+void Cgi::handleChildProcess(const Client& client, int inPipe[], int outPipe[])
 {
 	const HttpRequest& request = client.GetRequest();
-	std::array<std::string, 22> envpArray;
+
+	std::array<std::string, 23> envpArray;
 	envpArray[0] = "CONTENT_LENGTH=" + std::to_string(request.body.size());
 	envpArray[1] = "QUERY_STRING=" + request.query;
 	envpArray[2] = "REQUESTED_URI=" + request.path.string();
-	envpArray[3] = "PATH_INFO=" + request.pathInfo.string();								  // Previously at index 4
-	envpArray[4] = "REDIRECT_STATUS=";														  // Previously at index 5
-	envpArray[5] = "SCRIPT_NAME=" + request.path.string();									  // Previously at index 6
-	envpArray[6] = "SCRIPT_FILENAME=" + request.mappedPath.string();						  // Previously at index 7
-	envpArray[7] = "DOCUMENT_ROOT=" + client.GetLocationSettings().root.string();			  // Previously at index 8
-	envpArray[8] = "REQUEST_METHOD=" + request.method;										  // Previously at index 9
-	envpArray[9] = "SERVER_PROTOCOL=" + std::string(SERVER_PROTOCOL);						  // Previously at index 10
-	envpArray[10] = "SERVER_SOFTWARE=" + std::string(SERVER_SOFTWARE);						  // Previously at index 11
-	envpArray[11] = "SERVER_PORT=" + std::to_string(client.GetServerPort());				  // Previously at index 12
-	envpArray[12] = "SERVER_ADDR=" + std::string(client.GetServerAddress());				  // Previously at index 13
-	envpArray[13] = "SERVER_NAME=" + std::string(client.GetServerConfig()->GetServerName());  // Previously at index 14
-	envpArray[14] = "REMOTE_ADDR=" + std::string(client.GetClientAddress());				  // Previously at index 15
-	envpArray[15] = "REMOTE_PORT=" + std::to_string(client.GetClientPort());				  // Previously at index 16
-	envpArray[16] = "HTTP_HOST=" + request.getHeaderValue("host");							  // Previously at index 17
-	envpArray[17] = "HTTP_USER_AGENT=" + request.getHeaderValue("user-agent");				  // Previously at index 18
-	envpArray[18] = "HTTP_ACCEPT=" + request.getHeaderValue("accept");						  // Previously at index 19
-	envpArray[19] = "HTTP_ACCEPT_LANGUAGE=" + request.getHeaderValue("accept-language");	  // Previously at index 20
-	envpArray[20] = "HTTP_ACCEPT_ENCODING=" + request.getHeaderValue("accept-encoding");	  // Previously at index 21
-	envpArray[21] = "HTTP_CONNECTION=" + request.getHeaderValue("connection");				  // Previously at index 22
+	envpArray[3] = "REDIRECT_STATUS=";
+	envpArray[4] = "SCRIPT_NAME=" + request.path.string();
+	envpArray[5] = "SCRIPT_FILENAME=" + request.mappedPath.string();
+	envpArray[6] = "DOCUMENT_ROOT=" + client.GetLocationSettings().root.string();
+	envpArray[7] = "REQUEST_METHOD=" + request.method;
+	envpArray[8] = "SERVER_PROTOCOL=" + std::string(SERVER_PROTOCOL);
+	envpArray[9] = "SERVER_SOFTWARE=" + std::string(SERVER_SOFTWARE);
+	envpArray[10] = "SERVER_PORT=" + std::to_string(client.GetServerPort());
+	envpArray[11] = "SERVER_ADDR=" + std::string(client.GetServerAddress());
+	envpArray[12] = "SERVER_NAME=" + std::string(client.GetServerConfig()->GetServerName());
+	envpArray[13] = "REMOTE_ADDR=" + std::string(client.GetClientAddress());
+	envpArray[14] = "REMOTE_PORT=" + std::to_string(client.GetClientPort());
+	envpArray[15] = "HTTP_HOST=" + request.getHeaderValue("host");
+	envpArray[16] = "HTTP_USER_AGENT=" + request.getHeaderValue("user-agent");
+	envpArray[17] = "HTTP_ACCEPT=" + request.getHeaderValue("accept");
+	envpArray[18] = "HTTP_ACCEPT_LANGUAGE=" + request.getHeaderValue("accept-language");
+	envpArray[19] = "HTTP_ACCEPT_ENCODING=" + request.getHeaderValue("accept-encoding");
+	envpArray[20] = "HTTP_CONNECTION=" + request.getHeaderValue("connection");
+	envpArray[21] = "PATH_INFO=" + request.pathInfo.string();
+	envpArray[22] = "CONTENT_TYPE=" + request.getHeaderValue("content-type");
 
-	// struct sigaction sa;
-	// sa.sa_handler = sigalarm_handler;  // Assign the custom handler
-	// sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
-	// sa.sa_flags = 0;         // Restart interrupted system calls
+	alarm(3);  // Set an alarm for CGI timeout
 
-	// // Register the handler for SIGALRM
-	// if (sigaction(SIGALRM, &sa, NULL) == -1)
-	// {
-	// 	perror("sigaction");
-	// 	exit(1);
-	// }
-	alarm(3);  // Set the alarm for CGI timeout
-
-	// std::string path = request.getUri().string();
-	// std::string path = request.path.string();
 	std::string path = request.mappedPath.string();
 
-	// alarm(3); // Set the alarm for CGI timeout
+	// Redirect stdin to the input pipe and stdout to the output pipe
+	if (dup2(inPipe[READ_END], STDIN_FILENO) == -1 || dup2(outPipe[WRITE_END], STDOUT_FILENO) == -1)
+	{
+		perror("dup2");
+		exit(EXIT_FAILURE);
+	}
 
-	close(pipefd[READ_END]);				 // Close the read end of the pipe
-	dup2(pipefd[WRITE_END], STDOUT_FILENO);	 // Redirect stdout to the pipe
-	close(pipefd[WRITE_END]);				 // Close the original write end of the pipe
+	// Close unused pipe ends in the child process
+	close(inPipe[READ_END]);
+	close(inPipe[WRITE_END]);
+	close(outPipe[READ_END]);
+	close(outPipe[WRITE_END]);
 
 	char* argv[] = {const_cast<char*>(path.c_str()), NULL};
-	char* envp[] = {envpArray[0].data(),  envpArray[1].data(),
-					envpArray[2].data(),  envpArray[3].data(),
-					envpArray[4].data(),  envpArray[5].data(),
-					envpArray[6].data(),  envpArray[7].data(),
-					envpArray[8].data(),  envpArray[9].data(),
-					envpArray[10].data(), envpArray[11].data(),
-					envpArray[12].data(), envpArray[13].data(),
-					envpArray[14].data(), envpArray[15].data(),
-					envpArray[16].data(), envpArray[17].data(),
-					envpArray[18].data(), envpArray[19].data(),
-					envpArray[20].data(), nullptr};
-	// const char* envp[] = {
-	// 	"CONTENT_LENGTH=",
-	// 	"QUERY_STRING=", // Add query string if available
-	// 	"REQUESTED_URI=", // Add request URI
-	// 	"REDIRECT_STATUS=200",
-	// 	"SCRIPT_NAME=", // Add script name
-	// 	"SCRIPT_FILENAME=", // Add script filename
-	// 	"DOCUMENT_ROOT=", // Add document root
-	// 	"REQUEST_METHOD=GET", // Add request method (GET/POST etc.)
-	// 	"SERVER_PROTOCOL=HTTP/1.1",
-	// 	"SERVER_SOFTWARE=Webserv/1.0",
-	// 	"SERVER_PORT=8080",
-	// 	"SERVER_ADDR=",
-	// 	"SERVER_NAME=",
-	// 	"REMOTE_ADDR=", // Add remote address
-	// 	"REMOTE_PORT=", // Add remote port
-	// 	"HTTP_HOST=", // Add host
-	// 	"HTTP_USER_AGENT=", // Add user agent
-	// 	"HTTP_ACCEPT=", // Add accept
-	// 	"HTTP_ACCEPT_LANGUAGE=", // Add accept language
-	// 	"HTTP_ACCEPT_ENCODING=", // Add accept encoding
-	// 	"HTTP_CONNECTION=", // Add connection
-	// 	nullptr
-	// };
+	char* envp[] = {envpArray[0].data(),  envpArray[1].data(),	envpArray[2].data(),  envpArray[3].data(),
+					envpArray[4].data(),  envpArray[5].data(),	envpArray[6].data(),  envpArray[7].data(),
+					envpArray[8].data(),  envpArray[9].data(),	envpArray[10].data(), envpArray[11].data(),
+					envpArray[12].data(), envpArray[13].data(), envpArray[14].data(), envpArray[15].data(),
+					envpArray[16].data(), envpArray[17].data(), envpArray[18].data(), envpArray[19].data(),
+					envpArray[20].data(), envpArray[21].data(), envpArray[22].data(), nullptr};
 
 	execve(argv[0], argv, const_cast<char* const*>(envp));
 	perror("execve");
 	exit(EXIT_FAILURE);
-}
-
-const std::string Cgi::handleParentProcess(int pipefd[], pid_t pid)
-{
-	close(pipefd[WRITE_END]);  // Close the write end of the pipe
-
-	return "";
 }

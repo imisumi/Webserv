@@ -11,8 +11,24 @@
 #include "Config/Config.h"
 
 
-int main()
+int main(int argc, char **argv)
 {
+	Config conf;
+	if (argc > 2)
+	{
+		Log::error("Too many arguments");
+		return 0;
+	}
+	try
+	{
+		conf = ConfigParser::createConfig(argv[1]);
+	}
+	catch (const std::exception& e)
+	{
+		Log::error("Error creating config: {}", e.what());
+		return 1;
+	}
+
 	char cwd[1024];
 	if (getcwd(cwd, sizeof(cwd)) != NULL)
 	{
@@ -21,15 +37,15 @@ int main()
 	std::string root = cwd;
 	if (setenv("WEBSERV_ROOT", cwd, 1) != 0)
 	{
-		std::cerr << "Error setting environment variable" << std::endl;
+		Log::error("Error setting environment variable");
 		return 1;
 	}
 
 	// Logger::set_log_level(Logger::LogLevel::CRITICAL);
-#ifdef WEBSERV_RELEASE
-	auto logger = Logger::getLogger("SERVER");
-	logger->set_log_level(Logger::LogLevel::RELEASE);
-#endif
+// #ifdef WEBSERV_RELEASE
+// 	auto logger = Logger::getLogger("SERVER");
+// 	logger->set_log_level(Logger::LogLevel::RELEASE);
+// #endif
 
 	Log::trace("trace");
 	Log::info("info");
@@ -49,12 +65,6 @@ int main()
 
 
 	root += "/root/html";
-	
-	if (setenv("WORKING_DIR", cwd, 1) != 0)
-	{
-		std::cerr << "Error setting environment variable" << std::endl;
-		return 1;
-	}
 
 	if (setenv("HTML_ROOT_DIR", root.c_str(), 1) != 0)
 	{
@@ -67,16 +77,6 @@ int main()
 	if (setenv("CGI_ROOT_DIR", cgiRoot.c_str(), 1) != 0)
 	{
 		std::cerr << "Error setting environment variable" << std::endl;
-		return 1;
-	}
-	Config conf;
-	try
-	{
-		conf = ConfigParser::createDefaultConfig();
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << "Error while creating config." << std::endl;
 		return 1;
 	}
 	{
