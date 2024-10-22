@@ -1,32 +1,31 @@
 #include "Cgi.h"
-#include "Server/Server.h"
 #include "Server/ConnectionManager.h"
+#include "Server/Server.h"
 
-#include "Core/Log.h"
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
+#include "Core/Log.h"
 
 #include "Server/Response/ResponseGenerator.h"
 
-
 #include "Constants.h"
 
-#include <fcntl.h> // For fcntl
+#include <fcntl.h>	// For fcntl
 
 #include <chrono>
 
-void handle_alarm(int signal) {
+void handle_alarm(int signal)
+{
 	// This signal handler does nothing but allows us to handle timeouts
 }
 
 static const char s_TimeoutErrorResponse[] =
-    "HTTP/1.1 504 Gateway Timeout\r\n"
-    "Content-Length: 41\r\n" // Length of the body below
-    "Connection: close\r\n"
-    "Content-Type: text/plain\r\n"
-    "\r\n"
-    "504 Gateway Timeout: The server timed out"; // Body of the response
-
+	"HTTP/1.1 504 Gateway Timeout\r\n"
+	"Content-Length: 41\r\n"  // Length of the body below
+	"Connection: close\r\n"
+	"Content-Type: text/plain\r\n"
+	"\r\n"
+	"504 Gateway Timeout: The server timed out";  // Body of the response
 
 void sigchld_handler(int signo)
 {
@@ -41,7 +40,7 @@ void sigchld_handler(int signo)
 		{
 			int exit_code = WEXITSTATUS(status);
 			std::cout << "Child process: " << pid << " exited with status: " << exit_code << std::endl;
-			
+
 			if (exit_code == EXIT_FAILURE)
 			{
 				std::cerr << "Child process: " << pid << " failed with exit code: " << exit_code << std::endl;
@@ -51,16 +50,15 @@ void sigchld_handler(int signo)
 				Client& client = ConnectionManager::GetClientRef(client_fd);
 				Log::info("Child process: {}, Client FD: {}", pid, client_fd);
 
-				Server::EpollData data{
-					.fd = static_cast<uint16_t>(client_fd),
-					.cgi_fd = std::numeric_limits<uint16_t>::max(),
-					.type = EPOLL_TYPE_SOCKET
-				};
+				Server::EpollData data{.fd = static_cast<uint16_t>(client_fd),
+									   .cgi_fd = std::numeric_limits<uint16_t>::max(),
+									   .type = EPOLL_TYPE_SOCKET};
 
 				Server::ModifyEpollEvent(client_fd, EPOLLOUT | EPOLLET, data);
 
 				// server.m_ClientResponses[client_fd] = ResponseGenerator::InternalServerError();
-				client.SetResponse(ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client));
+				client.SetResponse(
+					ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client));
 				// client.SetResponse(ResponseGenerator::InternalServerError());
 			}
 		}
@@ -80,11 +78,9 @@ void sigchld_handler(int signo)
 
 				// struct Server::EpollData *ev_data = server.GetEpollData(client_fd);
 				Log::info("Client FD: {}", client_fd);
-				Server::EpollData data{
-					.fd = static_cast<uint16_t>(client_fd),
-					.cgi_fd = std::numeric_limits<uint16_t>::max(),
-					.type = EPOLL_TYPE_SOCKET
-				};
+				Server::EpollData data{.fd = static_cast<uint16_t>(client_fd),
+									   .cgi_fd = std::numeric_limits<uint16_t>::max(),
+									   .type = EPOLL_TYPE_SOCKET};
 				Server::ModifyEpollEvent(client_fd, EPOLLOUT | EPOLLET, data);
 
 				std::string response = s_TimeoutErrorResponse;
@@ -103,72 +99,32 @@ void sigchld_handler(int signo)
 	}
 }
 
-
-// Custom SIGCHLD handler to reap the specific child that has exited
-
-// void sigchld_handler(int signo)
-// {
-// 	int status;
-// 	pid_t pid;
-
-// 	// Use WNOHANG to only reap child processes that have exited
-// 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-// 		if (WIFEXITED(status)) {
-// 			std::cout << "Child process " << pid << " exited with status: " << WEXITSTATUS(status) << std::endl;
-// 		} else if (WIFSIGNALED(status)) {
-// 			std::cout << "Child process " << pid << " was terminated by signal: " << WTERMSIG(status) << std::endl;
-// 		}
-
-// 		// Remove the child from the list of running processes
-// 		// childProcesses.erase(pid);
-// 	}
-// }
-
-
 std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 {
-	// std::string path = request.getUri().string();
-	// std::string path = request.path.string();
-	// std::string path = request.mappedPath.string();
 	std::string path = client.GetRequest().mappedPath.string();
 	Log::info("Executing CGI script: {}", path);
-	int pipefd[2];
-		
-	if (pipe(pipefd) == -1)
+
+	int inPipe[2];	 // Pipe to send data (POST body) to CGI
+	int outPipe[2];	 // Pipe to receive data (CGI output) from CGI
+
+	if (pipe(inPipe) == -1 || pipe(outPipe) == -1)
 	{
 		perror("pipe");
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
 	}
 
-	int flags = fcntl(pipefd[READ_END], F_GETFL);
-	fcntl(pipefd[READ_END], F_SETFL, flags | O_NONBLOCK);
-
-	int flags2 = fcntl(pipefd[WRITE_END], F_GETFL);
-	fcntl(pipefd[WRITE_END], F_SETFL, flags2 | O_NONBLOCK);
-
-
-	// Server::CgiRedirect(pipefd[READ_END], (int)client);
-// #if 0
-	Server::EpollData data{
-			.fd = static_cast<uint16_t>(client),
-			.cgi_fd = static_cast<uint16_t>(pipefd[READ_END]),
-			.type = EPOLL_TYPE_CGI
-	};
-
-	Log::info("Forwarding client FD: {} to CGI handler", (int)client);
-
-	Server::AddEpollEvent(pipefd[READ_END], EPOLLIN | EPOLLET, data);
+	// Set the output pipe to non-blocking
+	fcntl(outPipe[READ_END], F_SETFL, O_NONBLOCK);
 
 	struct sigaction sa;
-	sa.sa_handler = sigchld_handler;  // Assign the custom handler
-	sigemptyset(&sa.sa_mask);         // Clear the signal mask (no blocked signals)
-	sa.sa_flags = SA_RESTART;         // Restart interrupted system calls
+	sa.sa_handler = sigchld_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
 
-	// Register the handler for SIGCHLD
+	// Register signal handler for SIGCHLD
 	if (sigaction(SIGCHLD, &sa, NULL) == -1)
 	{
 		perror("sigaction");
-		// exit(1);
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
 	}
 
@@ -176,34 +132,50 @@ std::string Cgi::executeCGI(const Client& client, const HttpRequest& request)
 	if (pid == -1)
 	{
 		perror("fork");
-		close(pipefd[READ_END]);
-		close(pipefd[WRITE_END]);
+		close(inPipe[READ_END]);
+		close(inPipe[WRITE_END]);
+		close(outPipe[READ_END]);
+		close(outPipe[WRITE_END]);
 		return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
 	}
 
 	if (pid == CHILD_PROCESS)
-	{ // Child process
-		handleChildProcess(client, pipefd);
+	{
+		handleChildProcess(client, inPipe, outPipe);
 	}
-	Server::RegisterCgiProcess(pid, (int)client);
-	Log::info("Child process (PID: {}) created for client FD: {}", pid, (int)client);
 
-	ssize_t bytes_written = write(pipefd[WRITE_END], client.GetRequest().body.data(), client.GetRequest().body.size());
-	if (bytes_written == -1) {
-		perror("write");
+	Server::RegisterCgiProcess(pid, static_cast<int>(client));
+	Log::info("Child process (PID: {}) created for client FD: {}", pid, static_cast<int>(client));
+
+	// Parent process: handle sending the POST body (if POST method) to the CGI script
+	if (request.method == "POST")
+	{
+		ssize_t bytes_written =
+			write(inPipe[WRITE_END], client.GetRequest().body.data(), client.GetRequest().body.size());
+		if (bytes_written == -1)
+		{
+			perror("write");
+		}
+		Log::info("Written {} bytes to the pipe", bytes_written);
 	}
-	Log::info("Written {} bytes to the pipe", bytes_written);
 
-	close(pipefd[WRITE_END]); // Close the write end of the pipe
+	close(inPipe[WRITE_END]);  // Close the write end of the input pipe after sending the POST body
+
+	// Register the output pipe with epoll for reading the CGI response
+	Server::EpollData data{.fd = static_cast<uint16_t>(client),
+						   .cgi_fd = static_cast<uint16_t>(outPipe[READ_END]),
+						   .type = EPOLL_TYPE_CGI};
+
+	Server::AddEpollEvent(outPipe[READ_END], EPOLLIN | EPOLLET, data);	// Register output pipe with epoll
 
 	return "";
 }
 
-
-void Cgi::handleChildProcess(const Client& client, int pipefd[])
+void Cgi::handleChildProcess(const Client& client, int inPipe[], int outPipe[])
 {
 	const HttpRequest& request = client.GetRequest();
-	std::array<std::string, 22> envpArray;
+
+	std::array<std::string, 23> envpArray;
 	envpArray[0] = "CONTENT_LENGTH=" + std::to_string(request.body.size());
 	envpArray[1] = "QUERY_STRING=" + request.query;
 	envpArray[2] = "REQUESTED_URI=" + request.path.string();
@@ -226,47 +198,34 @@ void Cgi::handleChildProcess(const Client& client, int pipefd[])
 	envpArray[19] = "HTTP_ACCEPT_ENCODING=" + request.getHeaderValue("accept-encoding");
 	envpArray[20] = "HTTP_CONNECTION=" + request.getHeaderValue("connection");
 	envpArray[21] = "PATH_INFO=" + request.path.string();
+	envpArray[22] = "CONTENT_TYPE=" + request.getHeaderValue("content-type");
 
-	alarm(3); // Set the alarm for CGI timeout
+	alarm(3);  // Set an alarm for CGI timeout
 
 	std::string path = request.mappedPath.string();
 
-	close(pipefd[READ_END]); // Close the read end of the pipe
-	// dup2(pipefd[WRITE_END], STDOUT_FILENO); // Redirect stdout to the pipe
-	if (dup2(pipefd[WRITE_END], STDOUT_FILENO) == -1) { // Redirect stdout to the pipe
-        perror("dup2");
-        exit(EXIT_FAILURE);
-    }
-	close(pipefd[WRITE_END]); // Close the original write end of the pipe
+	// Redirect stdin to the input pipe and stdout to the output pipe
+	if (dup2(inPipe[READ_END], STDIN_FILENO) == -1 || dup2(outPipe[WRITE_END], STDOUT_FILENO) == -1)
+	{
+		perror("dup2");
+		exit(EXIT_FAILURE);
+	}
 
-	char* argv[] = { const_cast<char*>(path.c_str()), NULL };
-	char* envp[] = {
-		envpArray[0].data(),
-		envpArray[1].data(),
-		envpArray[2].data(),
-		envpArray[3].data(),
-		envpArray[4].data(),
-		envpArray[5].data(),
-		envpArray[6].data(),
-		envpArray[7].data(),
-		envpArray[8].data(),
-		envpArray[9].data(),
-		envpArray[10].data(),
-		envpArray[11].data(),
-		envpArray[12].data(),
-		envpArray[13].data(),
-		envpArray[14].data(),
-		envpArray[15].data(),
-		envpArray[16].data(),
-		envpArray[17].data(),
-		envpArray[18].data(),
-		envpArray[19].data(),
-		envpArray[20].data(),
-		envpArray[21].data(),
-		nullptr
-	};
+	// Close unused pipe ends in the child process
+	close(inPipe[READ_END]);
+	close(inPipe[WRITE_END]);
+	close(outPipe[READ_END]);
+	close(outPipe[WRITE_END]);
 
-	execve(argv[0], argv, const_cast<char *const *>(envp));
+	char* argv[] = {const_cast<char*>(path.c_str()), NULL};
+	char* envp[] = {envpArray[0].data(),  envpArray[1].data(),	envpArray[2].data(),  envpArray[3].data(),
+					envpArray[4].data(),  envpArray[5].data(),	envpArray[6].data(),  envpArray[7].data(),
+					envpArray[8].data(),  envpArray[9].data(),	envpArray[10].data(), envpArray[11].data(),
+					envpArray[12].data(), envpArray[13].data(), envpArray[14].data(), envpArray[15].data(),
+					envpArray[16].data(), envpArray[17].data(), envpArray[18].data(), envpArray[19].data(),
+					envpArray[20].data(), envpArray[21].data(), envpArray[22].data(), nullptr};
+
+	execve(argv[0], argv, const_cast<char* const*>(envp));
 	perror("execve");
 	exit(EXIT_FAILURE);
 }

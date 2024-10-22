@@ -67,6 +67,9 @@ const std::string RequestHandler::HandleRequest(Client& client)
 	const ServerSettings::LocationSettings& location = client.GetServerConfig()->GetLocationSettings(locationPrefix);
 	Log::error("ALLOWED METHODS: {}", location.httpMethods);
 	client.SetLocationSettings(location);
+	if (client.GetLocationSettings().redirect.first != 0)
+        return ResponseGenerator::GenerateRedirectResponse(client.GetLocationSettings().redirect.first,
+                                        client.GetLocationSettings().redirect.second);
 
 	parsedRequest.mappedPath = location.root / std::filesystem::relative(parsedRequest.mappedPath, "/");
 	parsedRequest.print();

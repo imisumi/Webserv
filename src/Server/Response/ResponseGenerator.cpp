@@ -9,23 +9,57 @@
 #include "Cgi/Cgi.h"
 
 
+// static const std::unordered_map<uint16_t, std::string> s_RedirectResponseMap = {
+// 	{301,	"HTTP/1.1 301 Moved Permanently\r\n"
+// 			"Content-Length: 0\r\n"
+// 			"Connection: close\r\n"},
+// 	{302,	"HTTP/1.1 302 Found\r\n"
+// 			"Content-Length: 0\r\n"
+// 			"Connection: close\r\n"},
+// 	{303, 	"HTTP/1.1 303 See Other\r\n"
+// 			"Content-Length: 0\r\n"
+// 			"Connection: close\r\n"},
+// 	{307, 	"HTTP/1.1 307 Temporary Redirect\r\n"
+// 			"Content-Length: 0\r\n"
+// 			"Connection: close\r\n"},
+// 	{308, 	"HTTP/1.1 308 Permanent Redirect\r\n"
+// 			"Content-Length: 0\r\n"
+// 			"Connection: close\r\n"},
+// };
+
 static const std::unordered_map<uint16_t, std::string> s_RedirectResponseMap = {
 	{301,	"HTTP/1.1 301 Moved Permanently\r\n"
 			"Content-Length: 0\r\n"
-			"Connection: close\r\n"},
+			"Connection: close\r\n"
+			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"Pragma: no-cache\r\n"
+			"Expires: 0\r\n"},
 	{302,	"HTTP/1.1 302 Found\r\n"
 			"Content-Length: 0\r\n"
-			"Connection: close\r\n"},
+			"Connection: close\r\n"
+			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"Pragma: no-cache\r\n"
+			"Expires: 0\r\n"},
 	{303, 	"HTTP/1.1 303 See Other\r\n"
 			"Content-Length: 0\r\n"
-			"Connection: close\r\n"},
+			"Connection: close\r\n"
+			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"Pragma: no-cache\r\n"
+			"Expires: 0\r\n"},
 	{307, 	"HTTP/1.1 307 Temporary Redirect\r\n"
 			"Content-Length: 0\r\n"
-			"Connection: close\r\n"},
+			"Connection: close\r\n"
+			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"Pragma: no-cache\r\n"
+			"Expires: 0\r\n"},
 	{308, 	"HTTP/1.1 308 Permanent Redirect\r\n"
 			"Content-Length: 0\r\n"
-			"Connection: close\r\n"},
+			"Connection: close\r\n"
+			"Cache-Control: no-cache, no-store, must-revalidate\r\n"
+			"Pragma: no-cache\r\n"
+			"Expires: 0\r\n"},
 };
+
 
 static const char s_ForbiddenResponse[] = 
 		"HTTP/1.1 403 Forbidden\r\n"
@@ -667,7 +701,7 @@ std::string ResponseGenerator::GenerateRedirectResponse(const uint16_t redirectC
 	return response;
 }
 
-const std::string ResponseGenerator::GenerateErrorResponse(const HTTPStatusCode code, const Client& client)
+std::string ResponseGenerator::GenerateErrorResponse(const HTTPStatusCode code, const Client& client)
 {
 	auto it = client.GetLocationSettings().errorPageMap.find(static_cast<uint16_t>(code));
 
@@ -712,49 +746,49 @@ const std::string ResponseGenerator::GenerateErrorResponse(const HTTPStatusCode 
 	return InternalServerError();
 }
 
-const std::string ResponseGenerator::InternalServerError(const Config& config)
+std::string ResponseGenerator::InternalServerError(const Config& config)
 {
 	static std::string response = s_InternalServerErrorResponse;
 
 	return response;
 }
 
-const std::string ResponseGenerator::OkResponse()
+std::string ResponseGenerator::OkResponse()
 {
 	static std::string response = s_OkResponse;
 
 	return response;
 }
 
-const std::string ResponseGenerator::InternalServerError()
+std::string ResponseGenerator::InternalServerError()
 {
 	static std::string response = s_InternalServerErrorResponse;
 
 	return response;
 }
 
-const std::string ResponseGenerator::MethodNotAllowed()
+std::string ResponseGenerator::MethodNotAllowed()
 {
 	static std::string response = s_MethodNotAllowedResponse;
 
 	return response;
 }
 
-const std::string ResponseGenerator::MethodNotImplemented()
+std::string ResponseGenerator::MethodNotImplemented()
 {
 	static std::string response = s_MethodNotImplementedResponse;
 
 	return response;
 }
 
-const std::string ResponseGenerator::BadRequest()
+std::string ResponseGenerator::BadRequest()
 {
 	static std::string response = s_BadRequestResponse;
 
 	return response;
 }
 
-const std::string ResponseGenerator::NotFound()
+std::string ResponseGenerator::NotFound()
 {
 	static std::string response = s_NotFoundResponse;
 
