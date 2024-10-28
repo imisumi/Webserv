@@ -65,7 +65,6 @@ public:
 
 	static std::string GenerateRedirectResponse(const uint16_t redirectCode, const std::string& location);
 	static std::string GenerateErrorResponse(const HTTPStatusCode code, const Client& client);
-	static std::string InternalServerError(const Config& config);
 	static std::string InternalServerError();
 	static std::string MethodNotAllowed();
 	static std::string Forbidden();
@@ -109,15 +108,9 @@ private:
 	static std::string generateFileResponse(const HttpRequest& request, const Client& client);
 	// static std::string generateFileResponse(const HttpRequest& request);
 
-	static std::string generateForbiddenResponse();
-
-
 
 	static std::string generateNotModifiedResponse();
-
-	static std::string generateNotImplementedResponse();
-	static std::string generateBadRequestResponse();
-	static std::string generateInternalServerErrorResponse();
+	// static std::string InternalServerError();
 
 	static std::string generatePayloadTooLargeResponse();
 

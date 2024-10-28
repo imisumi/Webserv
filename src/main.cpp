@@ -63,22 +63,6 @@ int main(int argc, char **argv)
 	// Log::trace("This is a critical message {}: {}: {", 123, "Hello", 10.12f);
 	Log::trace("trace: ", 123);
 
-
-	root += "/root/html";
-
-	if (setenv("HTML_ROOT_DIR", root.c_str(), 1) != 0)
-	{
-		std::cerr << "Error setting environment variable" << std::endl;
-		return 1;
-	}
-
-	std::string cgiRoot = cwd;
-	cgiRoot += "/root/webserv/cgi-bin";
-	if (setenv("CGI_ROOT_DIR", cgiRoot.c_str(), 1) != 0)
-	{
-		std::cerr << "Error setting environment variable" << std::endl;
-		return 1;
-	}
 	{
 		Utils::Timer timer;
 		Server::Init(conf);

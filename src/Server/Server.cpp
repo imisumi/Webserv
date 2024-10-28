@@ -577,7 +577,7 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd, Client& client)
 		{
 			Log::error("CGI script did not produce valid headers");
 			Log::error("Output:\n{}", output);
-			client.SetResponse(ResponseGenerator::InternalServerError(s_Instance->m_Config));
+			client.SetResponse(ResponseGenerator::InternalServerError());
 		}
 
 		EpollData data{.fd = static_cast<uint16_t>(client_fd),

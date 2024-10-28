@@ -276,7 +276,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
     if (!ensureDirectoriesExist())
     {
         Log::error("Failed to create necessary directories");
-        return generateInternalServerErrorResponse();
+        return InternalServerError();
     }
 
     if (contentType.find("multipart/form-data") != std::string::npos)
@@ -302,7 +302,7 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
         if (!saveFormDataToFile(firstName, lastName, email, boundary))
         {
             Log::error("Failed to save form data to file");
-            return generateInternalServerErrorResponse();
+            return InternalServerError();
         }
 
         std::string fileContentType = parseMultipartContentType(body, boundary, "file");

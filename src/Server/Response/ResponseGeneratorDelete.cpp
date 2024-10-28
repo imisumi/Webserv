@@ -14,7 +14,7 @@ const std::string ResponseGenerator::handleDeleteRequest(const Client& Client)
 		else
 		{
 			Log::error("Failed to delete file: {}", request.mappedPath.string());
-			return generateInternalServerErrorResponse();
+			return InternalServerError();
 		}
 	}
 	else if (!std::filesystem::exists(request.mappedPath))

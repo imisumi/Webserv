@@ -57,9 +57,7 @@ void sigchld_handler(int signo)
 				Server::ModifyEpollEvent(client_fd, EPOLLOUT | EPOLLET, data);
 
 				// server.m_ClientResponses[client_fd] = ResponseGenerator::InternalServerError();
-				client.SetResponse(
-					ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::InternalServerError, client));
-				// client.SetResponse(ResponseGenerator::InternalServerError());
+				client.SetResponse(ResponseGenerator::InternalServerError());
 			}
 		}
 		else if (WIFSIGNALED(status))

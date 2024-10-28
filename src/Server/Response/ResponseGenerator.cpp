@@ -77,13 +77,22 @@ static const char s_NotFoundResponse[] =
 		"\r\n"
 		"404 Not Found: Resource Not Found"; //? body of the response
 
-static const char s_InternalServerErrorResponse[] = 
+// static const char s_InternalServerErrorResponse[] = 
+// 		"HTTP/1.1 500 Internal Server Error\r\n"
+// 		"Content-Length: 39\r\n" //? length has to match the length of the body
+// 		"Connection: close\r\n"
+// 		"Content-Type: text/plain\r\n"
+// 		"\r\n"
+// 		"500 Internal Server Error: Server Error"; //? body of the response
+
+static const std::string s_InternalServerErrorResponse = 
 		"HTTP/1.1 500 Internal Server Error\r\n"
 		"Content-Length: 39\r\n" //? length has to match the length of the body
 		"Connection: close\r\n"
 		"Content-Type: text/plain\r\n"
 		"\r\n"
 		"500 Internal Server Error: Server Error"; //? body of the response
+
 
 static const char s_OkResponse[] = 
 		"HTTP/1.1 200 OK\r\n"
@@ -378,7 +387,6 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 	if (contentType.empty())
 	{
 		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
-		// return generateForbiddenResponse();
 	}
 
 	const std::string statusCode = HTTPStatusCodeToString(code);
@@ -523,12 +531,8 @@ std::string ResponseGenerator::generateOKResponse(const Client& client)
 	{
 		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
 		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
-		// return generateForbiddenResponse();
 	}
-	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
 	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request, client);
-
-	return "";
 }
 
 std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request, const Client& client)
@@ -541,31 +545,7 @@ std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& p
 		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
 		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
 	}
-	// return buildHttpResponse(request.getUri(), *fileContents, HTTPStatusCode::OK, request);
 	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request, client);
-}
-
-std::string ResponseGenerator::generateForbiddenResponse()
-{
-	Log::info("Generating 403 Forbidden response");
-
-	const char* root = std::getenv("HTML_ROOT_DIR");
-	if (root == nullptr)
-	{
-		WEB_ASSERT(false, "HTML_ROOT_DIR environment variable not set!");
-		return nullptr;
-	}
-
-	std::filesystem::path value(root);
-
-	auto fileContents = readFileContents(std::filesystem::path(value / "403-Forbidden.html"));
-	if (fileContents == std::nullopt)
-	{
-		Log::critical("Failed to read file contents: {}",  "403-Forbidden.html");
-		
-		return std::string(s_ForbiddenResponse);
-	}
-	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::Forbidden);
 }
 
 std::string ResponseGenerator::generateFileResponse(const HttpRequest& request, const Client& client)
@@ -576,11 +556,8 @@ std::string ResponseGenerator::generateFileResponse(const HttpRequest& request, 
 	if (fileContents.empty())
 	{
 		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
-		// return generateForbiddenResponse(path);
 		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
-		// return generateForbiddenResponse();
 	}
-	// return buildHttpResponse(request.getUri(), fileContents, HTTPStatusCode::OK, request);
 	return buildHttpResponse(fileContents, HTTPStatusCode::OK, request, client);
 }
 
@@ -599,70 +576,15 @@ std::string ResponseGenerator::generateNotModifiedResponse()
 	return res.str();
 }
 
-std::string ResponseGenerator::generateNotImplementedResponse()
-{
-	Log::info("Generating 404 Not Found response");
-
-	const char* root = std::getenv("HTML_ROOT_DIR");
-	if (root == nullptr)
-	{
-		WEB_ASSERT(false, "HTML_ROOT_DIR environment variable not set!");
-		return nullptr;
-	}
-
-	std::filesystem::path value(root);
-
-	auto fileContents = readFileContents(std::filesystem::path(value / "501-NotImplemented.html"));
-	if (fileContents == std::nullopt)
-	{
-		Log::critical("Failed to read file contents: {}",  "501-NotImplemented.html");
-		return std::string(s_NotFoundResponse);
-	}
-	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
-}
-
-std::string ResponseGenerator::generateBadRequestResponse()
-{
-	Log::info("Generating 400 Bad Request response");
-
-	const char* root = std::getenv("HTML_ROOT_DIR");
-	if (root == nullptr)
-	{
-		WEB_ASSERT(false, "HTML_ROOT_DIR environment variable not set!");
-		return nullptr;
-	}
-
-	std::filesystem::path value(root);
-
-	auto fileContents = readFileContents(std::filesystem::path(value / "400-BadRequest.html"));
-	if (fileContents == std::nullopt)
-	{
-		Log::critical("Failed to read file contents: {}",  "400-BadRequest.html");
-		return std::string(s_NotFoundResponse);
-	}
-	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
-}
-
-std::string ResponseGenerator::generateInternalServerErrorResponse()
+std::string ResponseGenerator::InternalServerError()
 {
 	Log::info("Generating 500 Internal Server Error response");
 
-	const char* root = std::getenv("HTML_ROOT_DIR");
-	if (root == nullptr)
-	{
-		WEB_ASSERT(false, "HTML_ROOT_DIR environment variable not set!");
-		return nullptr;
-	}
+	// const static std::string response = s_InternalServerErrorResponse;
+	return s_InternalServerErrorResponse;
 
-	std::filesystem::path value(root);
 
-	auto fileContents = readFileContents(std::filesystem::path(value / "500-InternalServerError.html"));
-	if (fileContents == std::nullopt)
-	{
-		Log::critical("Failed to read file contents: {}",  "500-InternalServerError.html");
-		return std::string(s_NotFoundResponse);
-	}
-	return buildHttpResponse(ContentType::HTML, *fileContents, HTTPStatusCode::NotFound);
+	// return response;
 }
 
 
@@ -723,12 +645,6 @@ std::string ResponseGenerator::GenerateErrorResponse(const HTTPStatusCode code, 
 	return InternalServerError();
 }
 
-std::string ResponseGenerator::InternalServerError(const Config& config)
-{
-	static std::string response = s_InternalServerErrorResponse;
-
-	return response;
-}
 
 std::string ResponseGenerator::Forbidden()
 {
@@ -740,13 +656,6 @@ std::string ResponseGenerator::Forbidden()
 std::string ResponseGenerator::OkResponse()
 {
 	static std::string response = s_OkResponse;
-
-	return response;
-}
-
-std::string ResponseGenerator::InternalServerError()
-{
-	static std::string response = s_InternalServerErrorResponse;
 
 	return response;
 }
