@@ -401,7 +401,7 @@ std::string ResponseGenerator::buildHttpResponse(const std::string& body, HTTPSt
 
 	WEB_ASSERT(!statusCode.empty(), "Invalid HTTP status code! (add a custom code or use a valid one)");
 
-	std::string connection = request.getHeaderValue("Connection");
+	std::string connection = request.getHeaderValue("connection");
 	if (connection != "keep-alive")
 	{
 		// connection = "keep-alive";
@@ -455,7 +455,7 @@ std::string ResponseGenerator::buildHttpResponse(ContentType type, const std::st
 			<< "Content-Length: " << body.size() << "\r\n"
 			// << "Last-Modified: " << getFileModifigit push --set-upstream origin merged-postandmaincationTime(path) << "\r\n"
 			//TODO: hard coded values should check this
-			<< "Connection: keep-alive\r\n"
+			<< "Connection: close\r\n"
 			// << "ETag: \"" << generateETag(body) << "\"\r\n"
 			// << "Accept-Ranges: bytes\r\n"
 			// Disable caching

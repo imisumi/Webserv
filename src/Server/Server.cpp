@@ -599,7 +599,7 @@ void Server::HandleCgiInputEvent(int cgi_fd, int client_fd, Client& client)
 			size_t bodyLength = output.size() - header_end - 4;
 			std::string httpResponse = "HTTP/1.1 200 OK\r\n";
 			httpResponse += "Content-Length: " + std::to_string(bodyLength) + "\r\n";
-			httpResponse += "Connection: close\r\n";
+			httpResponse += "connection: " + client.GetRequest().getHeaderValue("connection") + "\r\n";
 			httpResponse += output;
 
 			Log::debug("Response:\n{}", httpResponse);
