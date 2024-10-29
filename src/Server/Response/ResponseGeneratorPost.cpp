@@ -4,10 +4,10 @@
 
 #include "Utils/Utils.h"
 
-#include <regex>
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <regex>
 
 std::string getProjectRootDir()
 {
@@ -23,7 +23,7 @@ std::string getProjectRootDir()
 
 bool isBoundaryString(const std::string& value, const std::string& boundary)
 {
-    return value == boundary;
+	return value == boundary;
 }
 
 std::string extractBoundary(const std::string& contentType)
@@ -51,83 +51,76 @@ std::string parseMultipartData(const std::string& body, const std::string& bound
 
 bool saveFormDataToFile(std::string& firstName, std::string lastName, std::string email, const std::string& boundary)
 {
-    if (isBoundaryString(firstName, boundary))
-    {
-        firstName = "EMPTY";
-    }
-    if (isBoundaryString(lastName, boundary))
-    {
-        lastName = "EMPTY";
-    }
-    if (isBoundaryString(email, boundary))
-    {
-        email = "EMPTY";
-    }
+	if (isBoundaryString(firstName, boundary))
+	{
+		firstName = "EMPTY";
+	}
+	if (isBoundaryString(lastName, boundary))
+	{
+		lastName = "EMPTY";
+	}
+	if (isBoundaryString(email, boundary))
+	{
+		email = "EMPTY";
+	}
 
-    std::string filePath = getProjectRootDir() + "/database/text.txt";
-    std::ofstream file(filePath, std::ios_base::app);
-    if (!file.is_open())
-    {
-        std::cerr << "[ERROR] Failed to open file: " << filePath << std::endl;
-        return false;
-    }
-    file << "First Name: " << (firstName.empty() ? "EMPTY" : firstName) << "\n";
-    file << "Last Name: " << (lastName.empty() ? "EMPTY" : lastName) << "\n";
-    file << "Email: " << (email.empty() ? "EMPTY" : email) << "\n\n";
+	std::string filePath = getProjectRootDir() + "/database/text.txt";
+	std::ofstream file(filePath, std::ios_base::app);
+	if (!file.is_open())
+	{
+		std::cerr << "[ERROR] Failed to open file: " << filePath << std::endl;
+		return false;
+	}
+	file << "First Name: " << (firstName.empty() ? "EMPTY" : firstName) << "\n";
+	file << "Last Name: " << (lastName.empty() ? "EMPTY" : lastName) << "\n";
+	file << "Email: " << (email.empty() ? "EMPTY" : email) << "\n\n";
 
-    file.close();
-    return !file.fail();
+	file.close();
+	return !file.fail();
 }
 
 bool saveUploadedFile(const std::string& body, const std::string& boundary, const std::string& fieldName,
-                      const std::string& uploadDir, const uint64_t maxClientBodySize)
+					  const std::string& uploadDir, const uint64_t maxClientBodySize)
 {
-    std::regex fileRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName +
-                         R"(\"; filename=\"([^\"]+)\")" + R"([\r\n]+Content-Type: ([^\r\n]+)[\r\n]+[\r\n]+)");
-    std::smatch match;
-    if (std::regex_search(body, match, fileRegex))
-    {
-        std::string fileName = match[1].str();
-        std::string contentType = match[2].str();
+	std::regex fileRegex(boundary + R"([\r\n]+Content-Disposition: form-data; name=\")" + fieldName +
+						 R"(\"; filename=\"([^\"]+)\")" + R"([\r\n]+Content-Type: ([^\r\n]+)[\r\n]+[\r\n]+)");
+	std::smatch match;
+	if (std::regex_search(body, match, fileRegex))
+	{
+		std::string fileName = match[1].str();
+		std::string contentType = match[2].str();
 
-        size_t fileStartPos = body.find(match[0]) + match[0].length();
-        size_t fileEndPos = body.find(boundary, fileStartPos) - 4;
+		size_t fileStartPos = body.find(match[0]) + match[0].length();
+		size_t fileEndPos = body.find(boundary, fileStartPos) - 4;
 
-        std::string fileContent = body.substr(fileStartPos, fileEndPos - fileStartPos);
+		if (fileName.empty())
+		{
+			return true;
+		}
 
-        if (fileContent.size() > maxClientBodySize)
-        {
-            return false;
-        }
+		std::string filePath = uploadDir + "/" + fileName;
+		std::ofstream file(filePath, std::ios::binary);
+		if (!file.is_open())
+		{
+			return false;
+		}
 
-        if (fileName.empty())
-        {
-            return true;
-        }
+		file.write(body.data() + fileStartPos, fileEndPos - fileStartPos);
+		if (file.fail())
+		{
+			file.close();
+			return false;
+		}
+		file.close();
+		return true;
+	}
 
-        std::string filePath = uploadDir + "/" + fileName;
-        std::ofstream file(filePath, std::ios::binary);
-        if (!file.is_open())
-        {
-            return false;
-        }
-
-        file.write(fileContent.c_str(), fileContent.size());
-        file.close();
-        if (file.fail())
-        {
-            return false;
-        }
-        return true;
-    }
-
-    return false;
+	return false;
 }
 
 static const std::unordered_map<std::string, std::string> supportedFileTypes = {
 	{".html", "text/html"}, {".css", "text/css"},	 {".ico", "image/x-icon"},
 	{".jpg", "image/jpeg"}, {".jpeg", "image/jpeg"}, {".png", "image/png"}};
-
 
 std::string trim(const std::string& str)
 {
@@ -177,68 +170,62 @@ std::string ResponseGenerator::parseMultipartContentType(const std::string& body
 
 bool ensureDirectoriesExist()
 {
-    std::string baseDir = getProjectRootDir() + "/database";
-    std::string filesDir = baseDir + "/files";
-    std::string imagesDir = baseDir + "/images";
+	std::string baseDir = getProjectRootDir() + "/database";
+	std::string filesDir = baseDir + "/files";
+	std::string imagesDir = baseDir + "/images";
 
-    if (!std::filesystem::exists(baseDir))
-    {
-        if (!std::filesystem::create_directory(baseDir))
-            return false;
-    }
-    if (!std::filesystem::exists(filesDir))
-    {
-        if (!std::filesystem::create_directory(filesDir))
-            return false;
-    }
-    if (!std::filesystem::exists(imagesDir))
-    {
-        if (!std::filesystem::create_directory(imagesDir))
-            return false;
-    }
-    return true;
+	if (!std::filesystem::exists(baseDir))
+	{
+		if (!std::filesystem::create_directory(baseDir))
+			return false;
+	}
+	if (!std::filesystem::exists(filesDir))
+	{
+		if (!std::filesystem::create_directory(filesDir))
+			return false;
+	}
+	if (!std::filesystem::exists(imagesDir))
+	{
+		if (!std::filesystem::create_directory(imagesDir))
+			return false;
+	}
+	return true;
 }
 
 bool savePlainTextToFile(const std::string& body, const uint64_t maxClientBodySize)
 {
-    if (body.size() > maxClientBodySize)
-    {
-        return false;
-    }
-
-    std::string filePath = getProjectRootDir() + "/database/plaintext.txt";
-    std::ofstream file(filePath, std::ios_base::app);
-    if (!file.is_open())
-    {
-        return false;
-    }
-    file << body << "\n\n";
-    file.close();
-    return !file.fail();
+	std::string filePath = getProjectRootDir() + "/database/plaintext.txt";
+	std::ofstream file(filePath, std::ios_base::app);
+	if (!file.is_open())
+	{
+		return false;
+	}
+	file << body << "\n\n";
+	file.close();
+	return !file.fail();
 }
 
 std::string ResponseGenerator::generatePayloadTooLargeResponse()
 {
-    std::string response = "HTTP/1.1 413 Payload Too Large\r\n";
-    response += "Content-Type: text/html\r\n";
-    std::string body = "<html><body><h1>413 Payload Too Large</h1></body></html>";
-    response += "Content-Length: " + std::to_string(body.length()) + "\r\n";
-    response += "\r\n";
-    response += body;
-    return response;
+	std::string response = "HTTP/1.1 413 Payload Too Large\r\n";
+	response += "Content-Type: text/html\r\n";
+	std::string body = "<html><body><h1>413 Payload Too Large</h1></body></html>";
+	response += "Content-Length: " + std::to_string(body.length()) + "\r\n";
+	response += "\r\n";
+	response += body;
+	return response;
 }
 
 #include "Cgi/Cgi.h"
 
 const std::string ResponseGenerator::handlePostRequest(const Client& client)
 {
-    Utils::Timer timer;
-    Log::info("Handling POST request");
+	Utils::Timer timer;
+	Log::info("Handling POST request");
 
-    if (client.GetLocationSettings().redirect.first != 0)
-        return GenerateRedirectResponse(client.GetLocationSettings().redirect.first,
-                                        client.GetLocationSettings().redirect.second);
-
+	if (client.GetLocationSettings().redirect.first != 0)
+		return GenerateRedirectResponse(client.GetLocationSettings().redirect.first,
+										client.GetLocationSettings().redirect.second);
 
 	{
 		const std::filesystem::path& path = client.GetRequest().mappedPath;
@@ -262,98 +249,97 @@ const std::string ResponseGenerator::handlePostRequest(const Client& client)
 				}
 				return ResponseGenerator::GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
 			}
-
 		}
 	}
 
-    std::string contentType = client.GetRequest().getHeaderValue("content-type");
-    if (contentType.empty())
-    {
-        Log::error("Missing Content-Type header");
-        return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
-    }
-
-    if (!ensureDirectoriesExist())
-    {
-        Log::error("Failed to create necessary directories");
-        return InternalServerError();
-    }
-
-    if (contentType.find("multipart/form-data") != std::string::npos)
-    {
-        std::string boundary = extractBoundary(contentType);
-        if (boundary.empty())
-        {
-            Log::error("Boundary missing in Content-Type header");
-			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
-        }
-
-        std::string body = client.GetRequest().body;
-        if (body.empty())
-        {
-            Log::error("Request body is empty");
-			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
-        }
-
-        std::string firstName = parseMultipartData(body, boundary, "firstname");
-        std::string lastName = parseMultipartData(body, boundary, "lastname");
-        std::string email = parseMultipartData(body, boundary, "email");
-
-        if (!saveFormDataToFile(firstName, lastName, email, boundary))
-        {
-            Log::error("Failed to save form data to file");
-            return InternalServerError();
-        }
-
-        std::string fileContentType = parseMultipartContentType(body, boundary, "file");
-        if (fileContentType.empty())
-        {
-            Log::error("File content type missing");
-			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
-        }
-
-        Log::info("Detected file content type: " + fileContentType);
-
-        std::string uploadDir;
-        if (isSupportedFileType(fileContentType))
-        {
-            uploadDir = getProjectRootDir() + "/database/images";
-        }
-        else
-        {
-            uploadDir = getProjectRootDir() + "/database/files";
-        }
-
-        if (!saveUploadedFile(body, boundary, "file", uploadDir, client.GetLocationSettings().maxBodySize))
-        {
-            Log::error("Failed to save uploaded file");
-			return GenerateErrorResponse(HTTPStatusCode::PayloadTooLarge, client);
-        }
-
-        Log::info("Successfully handled POST request, saved form data, and saved file");
-        return generateOKResponse(client);
-    }
-    else if (contentType.find("text/plain") != std::string::npos)
-    {
-        std::string body = client.GetRequest().body;
-        if (body.empty())
-        {
-            Log::error("Request body is empty");
-			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
-        }
-
-        if (!savePlainTextToFile(body, client.GetLocationSettings().maxBodySize))
-        {
-            Log::error("Failed to save plain text or payload too large");
-			return GenerateErrorResponse(HTTPStatusCode::PayloadTooLarge, client);
-        }
-
-        Log::info("Successfully handled POST request, saved plain text");
-        return generateOKResponse(client);
-    }
-    else
-    {
-        Log::error("Unsupported Content-Type");
+	std::string contentType = client.GetRequest().getHeaderValue("content-type");
+	if (contentType.empty())
+	{
+		Log::error("Missing Content-Type header");
 		return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
-    }
+	}
+
+	if (!ensureDirectoriesExist())
+	{
+		Log::error("Failed to create necessary directories");
+		return InternalServerError();
+	}
+
+	if (contentType.find("multipart/form-data") != std::string::npos)
+	{
+		std::string boundary = extractBoundary(contentType);
+		if (boundary.empty())
+		{
+			Log::error("Boundary missing in Content-Type header");
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
+		}
+
+		std::string body = client.GetRequest().body;
+		if (body.empty())
+		{
+			Log::error("Request body is empty");
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
+		}
+
+		std::string firstName = parseMultipartData(body, boundary, "firstname");
+		std::string lastName = parseMultipartData(body, boundary, "lastname");
+		std::string email = parseMultipartData(body, boundary, "email");
+
+		if (!saveFormDataToFile(firstName, lastName, email, boundary))
+		{
+			Log::error("Failed to save form data to file");
+			return InternalServerError();
+		}
+
+		std::string fileContentType = parseMultipartContentType(body, boundary, "file");
+		if (fileContentType.empty())
+		{
+			Log::error("File content type missing");
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
+		}
+
+		Log::info("Detected file content type: " + fileContentType);
+
+		std::string uploadDir;
+		if (isSupportedFileType(fileContentType))
+		{
+			uploadDir = getProjectRootDir() + "/database/images";
+		}
+		else
+		{
+			uploadDir = getProjectRootDir() + "/database/files";
+		}
+
+		if (!saveUploadedFile(body, boundary, "file", uploadDir, client.GetLocationSettings().maxBodySize))
+		{
+			Log::error("Failed to save uploaded file");
+			return GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
+		}
+
+		Log::info("Successfully handled POST request, saved form data, and saved file");
+		return generateOKResponse(client);
+	}
+	else if (contentType.find("text/plain") != std::string::npos)
+	{
+		std::string body = client.GetRequest().body;
+		if (body.empty())
+		{
+			Log::error("Request body is empty");
+			return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
+		}
+
+		if (!savePlainTextToFile(body, client.GetLocationSettings().maxBodySize))
+		{
+			Log::error("Failed to save plain text or payload too large");
+			return GenerateErrorResponse(HTTPStatusCode::InternalServerError, client);
+		}
+
+		Log::info("Successfully handled POST request, saved plain text");
+		return generateOKResponse(client);
+	}
+	else
+	{
+		Log::error("Unsupported Content-Type");
+		return GenerateErrorResponse(HTTPStatusCode::BadRequest, client);
+	}
 }

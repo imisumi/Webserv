@@ -126,6 +126,14 @@ static const char s_BadRequestResponse[] =
 		"\r\n"
 		"400 Bad Request: Invalid Request"; //? body of the response
 
+static const char s_TimeoutResponse[] = 
+		"HTTP/1.1 408 Request Timeout\r\n"
+		"Content-Length: 28\r\n"
+		"Connection: close\r\n"
+		"Content-Type: text/plain\r\n"
+		"\r\n"
+		"408 Request Timeout: Timeout";
+
 
 //? Multipurpose Internet Mail Extensions (MIME) type
 static const std::unordered_map<std::string, std::string> s_SupportedMineTypes = {
@@ -526,13 +534,32 @@ std::string ResponseGenerator::generateOKResponse(const Client& client)
 	Log::info("Generating 200 OK response");
 	const HttpRequest& request = client.GetRequest();
 
-	auto fileContents = readFileContents(request.mappedPath);
-	if (fileContents == std::nullopt)
+	const std::filesystem::path& path = client.GetRequest().mappedPath;
+	const std::vector<std::string>& indexes = client.GetLocationSettings().index;
+
+	for (const auto& index : indexes)
 	{
-		Log::critical("Failed to read file contents: {}", request.mappedPath.string());
-		return GenerateErrorResponse(HTTPStatusCode::Forbidden, client);
+		Log::info("Looking for: {}", index);
+		std::filesystem::path indexPath = path / index;
+		if (std::filesystem::exists(indexPath))
+		{
+			Log::info("Index found: {}", indexPath.string());
+
+			if (!isFileModified(client.GetRequest()))
+			{
+				return generateNotModifiedResponse();
+			}
+			HttpRequest updatedRequest = client.GetRequest();
+			updatedRequest.mappedPath = indexPath;
+			return generateOKResponse(indexPath, updatedRequest, client);
+		}
 	}
-	return buildHttpResponse(*fileContents, HTTPStatusCode::OK, request, client);
+
+	if (client.GetLocationSettings().autoindex)
+	{
+		return generateDirectoryListingResponse(path, client);
+	}
+	return GenerateErrorResponse(HTTPStatusCode::NotFound, client);
 }
 
 std::string ResponseGenerator::generateOKResponse(const std::filesystem::path& path, const HttpRequest& request, const Client& client)
@@ -684,6 +711,13 @@ std::string ResponseGenerator::BadRequest()
 std::string ResponseGenerator::NotFound()
 {
 	static std::string response = s_NotFoundResponse;
+
+	return response;
+}
+
+std::string ResponseGenerator::Timeout()
+{
+	static std::string response = s_TimeoutResponse;
 
 	return response;
 }

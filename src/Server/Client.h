@@ -10,6 +10,8 @@
 
 #include "Constants.h"
 
+#include "Utils/Utils.h"
+
 class Client
 {
 public:
@@ -67,7 +69,11 @@ public:
 	size_t GetBytesSent() const { return m_BytesSent; }
 	void SetBytesSent(size_t bytesSent) { m_BytesSent = bytesSent; }
 
+	auto& GetTimer() { return m_Timer; }
+	const auto GetTimer() const { return m_Timer; }
+
 private:
+	Utils::Timer m_Timer;
 	int m_Socket = -1;
 
 	uint16_t m_ClientPort = 0;

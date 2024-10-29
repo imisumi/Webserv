@@ -282,16 +282,16 @@ void Server::Run()
 
 	while (s_Instance->m_Running)
 	{
-		Log::info(
-			"-----------------------------------------------------------------"
-			"-------------------------");
-		Log::info("Waiting for events...");
-		Log::info(
-			"-----------------------------------------------------------------"
-			"-------------------------\n\n");
+		// Log::info(
+		// 	"-----------------------------------------------------------------"
+		// 	"-------------------------");
+		// Log::info("Waiting for events...");
+		// Log::info(
+		// 	"-----------------------------------------------------------------"
+		// 	"-------------------------\n\n");
 
 		//? EPOLL_WAIT: wait for events on the epoll instance
-		const int eventCount = epoll_wait(s_Instance->m_EpollInstance, events, MAX_EVENTS, -1);
+		const int eventCount = epoll_wait(s_Instance->m_EpollInstance, events, MAX_EVENTS, EPOLL_TIMEOUT);
 		if (eventCount == -1)
 		{
 			if (errno == EINTR)
@@ -335,6 +335,7 @@ void Server::Run()
 				continue;
 			}
 			Client& client = ConnectionManager::GetClientRef(epoll_fd);
+			client.GetTimer().reset();
 			Log::info("epoll fd: {}, client socket: {}", epoll_fd, (int)client);
 			if ((event & EPOLLIN) != 0U)
 			{
@@ -369,6 +370,38 @@ void Server::Run()
 			else
 			{
 				Log::critical("Unhandled event type");
+			}
+		}
+
+
+
+
+
+
+		for (auto& [fd, client] : ConnectionManager::GetConnectedClientsMap())
+		{
+
+			if (client.GetRequest().GetState() == HttpState::Start)
+			{
+				continue;
+			}
+			Log::info("Client: {}, elapsed time: {}", (int)fd, client.GetTimer().elapsedMillis());
+
+			if (client.GetTimer().elapsedMillis() > CLIENT_TIMEOUT)
+			{
+				Log::info("Client timeout, closing connection...");
+
+				client.SetBytesSent(0);
+				client.SetResponse(ResponseGenerator::Timeout());
+
+				EpollData data{.fd = static_cast<uint16_t>(client),
+							   .cgi_fd = std::numeric_limits<uint16_t>::max(),
+							   .type = EPOLL_TYPE_SOCKET};
+				if (ModifyEpollEvent(fd, EPOLLOUT | EPOLLET, data) == -1)
+				{
+					Log::error("Failed to modify client socket in epoll!");
+					Stop();
+				}
 			}
 		}
 	}

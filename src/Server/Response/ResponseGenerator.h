@@ -72,6 +72,7 @@ public:
 	static std::string MethodNotImplemented();
 	static std::string BadRequest();
 	static std::string NotFound();
+	static std::string Timeout();
 
 
 	static const std::string handleGetRequest(const Client& client);

@@ -21,3 +21,7 @@ constexpr int MAX_EVENTS = 4096;
 constexpr size_t BUFFER_SIZE = static_cast<size_t>(64 * 1024);
 // constexpr size_t BUFFER_SIZE = static_cast<size_t>(2);
 static_assert(BUFFER_SIZE > 1, "BUFFER_SIZE must be greater than 1");
+
+
+constexpr int EPOLL_TIMEOUT = 1000;
+constexpr int CLIENT_TIMEOUT = 5000;

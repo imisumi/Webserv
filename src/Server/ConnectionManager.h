@@ -22,7 +22,7 @@ public:
 
 	static std::size_t GetConnectedClients();
 
-	// static
+	static std::unordered_map<int, Client>& GetConnectedClientsMap() { return Get().m_ConnectedClients; }
 
 private:
 	ConnectionManager();
